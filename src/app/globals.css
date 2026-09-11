@@ -3,25 +3,87 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f5f7fa;
+  --foreground: #111827;
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --border: #e5e7eb;
+  --muted: #6b7280;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  color: var(--foreground);
+  margin: 0;
+  padding: 0;
   background: var(--background);
+  color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  text-decoration: none;
+}
+
+::selection {
+  background: #2563eb;
+  color: white;
+}
+
+.container-main {
+  width: min(1280px, calc(100% - 32px));
+  margin: 0 auto;
+}
+
+.marketplace-shadow {
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.06);
+}
+
+.card-shadow {
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
+}
+
+.hero-gradient {
+  background:
+    radial-gradient(
+      circle at 80% 20%,
+      rgba(96, 165, 250, 0.35),
+      transparent 30%
+    ),
+    radial-gradient(
+      circle at 70% 80%,
+      rgba(37, 99, 235, 0.25),
+      transparent 35%
+    ),
+    linear-gradient(135deg, #0f172a 0%, #172554 50%, #1d4ed8 100%);
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
 }
