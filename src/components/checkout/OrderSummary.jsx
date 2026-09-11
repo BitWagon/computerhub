@@ -2,7 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, Package, Truck } from "lucide-react";
+import {
+  ArrowLeft,
+  Package,
+  Truck,
+} from "lucide-react";
 
 export default function OrderSummary({
   cartItems,
@@ -26,7 +30,10 @@ export default function OrderSummary({
           </p>
         </div>
 
-        <Package className="text-blue-600" size={24} />
+        <Package
+          className="text-blue-600"
+          size={24}
+        />
       </div>
 
       <div className="max-h-[380px] space-y-4 overflow-y-auto pr-1">
@@ -80,7 +87,9 @@ export default function OrderSummary({
 
       <div className="mt-5 space-y-3 border-t border-gray-200 pt-5">
         <div className="flex items-center justify-between text-sm">
-          <span className="text-gray-600">Subtotal</span>
+          <span className="text-gray-600">
+            Subtotal
+          </span>
 
           <span className="font-semibold text-gray-900">
             ${subtotal.toLocaleString()}
@@ -117,7 +126,9 @@ export default function OrderSummary({
         disabled={isPlacingOrder}
         className="mt-6 flex w-full items-center justify-center rounded-xl bg-blue-600 px-5 py-3.5 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {isPlacingOrder ? "Processing..." : "Place Order"}
+        {isPlacingOrder
+          ? "Processing..."
+          : "Place Order"}
       </button>
 
       <Link

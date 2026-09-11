@@ -115,6 +115,7 @@ export default function PaymentForm({
                 id="cardNumber"
                 type="text"
                 inputMode="numeric"
+                autoComplete="cc-number"
                 placeholder="1234 5678 9012 3456"
                 className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               />
@@ -132,6 +133,8 @@ export default function PaymentForm({
                 <input
                   id="expiry"
                   type="text"
+                  inputMode="numeric"
+                  autoComplete="cc-exp"
                   placeholder="MM / YY"
                   className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                 />
@@ -149,6 +152,7 @@ export default function PaymentForm({
                   id="cvv"
                   type="password"
                   inputMode="numeric"
+                  autoComplete="cc-csc"
                   placeholder="•••"
                   maxLength={4}
                   className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
@@ -167,10 +171,17 @@ export default function PaymentForm({
               <input
                 id="cardName"
                 type="text"
+                autoComplete="cc-name"
                 placeholder="Enter name on card"
                 className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               />
             </div>
+
+            <p className="text-xs leading-5 text-gray-500">
+              Card details are only displayed for checkout UI. A real
+              payment gateway should process card information securely
+              before accepting live payments.
+            </p>
           </div>
         </div>
       )}
@@ -194,7 +205,10 @@ export default function PaymentForm({
       )}
 
       <div className="mt-6 flex items-center gap-3 rounded-xl bg-gray-50 p-4">
-        <ShieldCheck className="shrink-0 text-green-600" size={22} />
+        <ShieldCheck
+          className="shrink-0 text-green-600"
+          size={22}
+        />
 
         <div>
           <p className="text-sm font-semibold text-gray-800">
