@@ -25,12 +25,15 @@ export async function POST(request) {
     console.log("Email:", email);
     console.log("====================================");
 
+    // ==========================================
+    // VALIDATE INPUT
+    // ==========================================
+
     if (!email?.trim()) {
       return NextResponse.json(
         {
           success: false,
-          message:
-            "Email address is required.",
+          message: "Email address is required.",
         },
         { status: 400 }
       );
@@ -49,12 +52,138 @@ export async function POST(request) {
     const normalizedEmail =
       email.trim().toLowerCase();
 
+    // ==========================================
+    // ENV ADMIN SETTINGS
+    // ==========================================
+
+    const adminEmail =
+      process.env.ADMIN_EMAIL
+        ?.trim()
+        .toLowerCase();
+
+    const adminPassword =
+      process.env.ADMIN_PASSWORD;
+
+    // ==========================================
+    // ENV ADMIN LOGIN
+    // ==========================================
+    //
+    // If the entered email/password exactly
+    // match ADMIN_EMAIL and ADMIN_PASSWORD,
+    // automatically create/update that user
+    // as an admin in MongoDB.
+    //
+    // The password is NEVER stored as plain text.
+    // It is stored using bcrypt.
+    // ==========================================
+
+    if (
+      adminEmail &&
+      adminPassword &&
+      normalizedEmail === adminEmail &&
+      password === adminPassword
+    ) {
+      console.log("🔐 ENV ADMIN CREDENTIALS MATCHED");
+
+      let adminUser =
+        await User.findOne({
+          email: adminEmail,
+        });
+
+      const hashedPassword =
+        await bcrypt.hash(
+          adminPassword,
+          12
+        );
+
+      if (!adminUser) {
+        adminUser =
+          await User.create({
+            firstName: "ComputerHub",
+            lastName: "Admin",
+            email: adminEmail,
+            password: hashedPassword,
+            role: "admin",
+            isActive: true,
+          });
+
+        console.log(
+          "✅ ADMIN USER CREATED FROM .env.local"
+        );
+      } else {
+        adminUser.password =
+          hashedPassword;
+
+        adminUser.role = "admin";
+        adminUser.isActive = true;
+
+        await adminUser.save();
+
+        console.log(
+          "✅ ADMIN USER UPDATED FROM .env.local"
+        );
+      }
+
+      const token =
+        createToken(adminUser);
+
+      setAuthCookie(
+        token,
+        remember !== false
+      );
+
+      console.log("====================================");
+      console.log("✅ ADMIN LOGIN SUCCESS");
+      console.log(
+        "User:",
+        `${adminUser.firstName} ${adminUser.lastName}`
+      );
+      console.log(
+        "Email:",
+        adminUser.email
+      );
+      console.log(
+        "Role:",
+        adminUser.role
+      );
+      console.log("====================================");
+
+      return NextResponse.json(
+        {
+          success: true,
+          message:
+            "Admin login successful.",
+          user: {
+            id: adminUser._id.toString(),
+            firstName:
+              adminUser.firstName,
+            lastName:
+              adminUser.lastName,
+            email:
+              adminUser.email,
+            role:
+              adminUser.role,
+          },
+        },
+        { status: 200 }
+      );
+    }
+
+    // ==========================================
+    // NORMAL USER LOGIN
+    // ==========================================
+
     const user =
       await User.findOne({
         email: normalizedEmail,
       });
 
     if (!user) {
+      console.log(
+        "❌ USER NOT FOUND:",
+        normalizedEmail
+      );
+
       return NextResponse.json(
         {
           success: false,
@@ -65,7 +194,16 @@ export async function POST(request) {
       );
     }
 
+    // ==========================================
+    // CHECK ACCOUNT STATUS
+    // ==========================================
+
     if (!user.isActive) {
+      console.log(
+        "❌ ACCOUNT DISABLED:",
+        user.email
+      );
+
       return NextResponse.json(
         {
           success: false,
@@ -76,6 +214,10 @@ export async function POST(request) {
       );
     }
 
+    // ==========================================
+    // CHECK PASSWORD
+    // ==========================================
+
     const passwordMatches =
       await bcrypt.compare(
         password,
@@ -83,6 +225,11 @@ export async function POST(request) {
       );
 
     if (!passwordMatches) {
+      console.log(
+        "❌ PASSWORD DOES NOT MATCH:",
+        user.email
+      );
+
       return NextResponse.json(
         {
           success: false,
@@ -93,11 +240,16 @@ export async function POST(request) {
       );
     }
 
-    const token = createToken(user);
+    // ==========================================
+    // CREATE NORMAL LOGIN TOKEN
+    // ==========================================
+
+    const token =
+      createToken(user);
 
     setAuthCookie(
       token,
-      Boolean(remember)
+      remember !== false
     );
 
     console.log("====================================");
@@ -106,8 +258,14 @@ export async function POST(request) {
       "User:",
       `${user.firstName} ${user.lastName}`
     );
-    console.log("Email:", user.email);
-    console.log("Role:", user.role);
+    console.log(
+      "Email:",
+      user.email
+    );
+    console.log(
+      "Role:",
+      user.role
+    );
     console.log("====================================");
 
     return NextResponse.json(
@@ -116,10 +274,14 @@ export async function POST(request) {
         message: "Login successful.",
         user: {
           id: user._id.toString(),
-          firstName: user.firstName,
-          lastName: user.lastName,
-          email: user.email,
-          role: user.role,
+          firstName:
+            user.firstName,
+          lastName:
+            user.lastName,
+          email:
+            user.email,
+          role:
+            user.role,
         },
       },
       { status: 200 }
@@ -128,6 +290,7 @@ export async function POST(request) {
     console.error(
       "❌ LOGIN ERROR:"
     );
+
     console.error(error);
 
     return NextResponse.json(
