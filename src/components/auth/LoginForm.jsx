@@ -1,89 +1,148 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Eye,
   EyeOff,
-  LockKeyhole,
-  Mail,
-  LogIn,
+  Loader2,
 } from "lucide-react";
-import { useState } from "react";
+import { toast } from "sonner";
 
 export default function LoginForm() {
-  const [showPassword, setShowPassword] = useState(false);
+  const router = useRouter();
 
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-    remember: false,
-  });
+  const [formData, setFormData] =
+    useState({
+      email: "",
+      password: "",
+      remember: true,
+    });
 
-  const [errors, setErrors] = useState({});
-  const [message, setMessage] = useState("");
+  const [showPassword, setShowPassword] =
+    useState(false);
+
+  const [isLoading, setIsLoading] =
+    useState(false);
+
+  const [error, setError] =
+    useState("");
 
   const handleChange = (event) => {
-    const { name, value, type, checked } = event.target;
+    const {
+      name,
+      value,
+      type,
+      checked,
+    } = event.target;
 
     setFormData((current) => ({
       ...current,
-      [name]: type === "checkbox" ? checked : value,
+      [name]:
+        type === "checkbox"
+          ? checked
+          : value,
     }));
 
-    setErrors((current) => ({
-      ...current,
-      [name]: "",
-    }));
-
-    setMessage("");
+    if (error) {
+      setError("");
+    }
   };
 
-  const validateForm = () => {
-    const newErrors = {};
-
-    if (!formData.email.trim()) {
-      newErrors.email = "Email address is required.";
-    } else if (
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-        formData.email
-      )
-    ) {
-      newErrors.email =
-        "Please enter a valid email address.";
-    }
-
-    if (!formData.password) {
-      newErrors.password = "Password is required.";
-    } else if (formData.password.length < 6) {
-      newErrors.password =
-        "Password must be at least 6 characters.";
-    }
-
-    return newErrors;
-  };
-
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
-    setMessage("");
+    setError("");
 
-    const validationErrors = validateForm();
+    if (!formData.email.trim()) {
+      const message =
+        "Please enter your email address.";
 
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
+      setError(message);
+      toast.error(message);
+
       return;
     }
 
-    /*
-      Authentication API will be connected in the
-      backend/authentication phase.
+    if (!formData.password) {
+      const message =
+        "Please enter your password.";
 
-      For now, this only validates the form.
-    */
+      setError(message);
+      toast.error(message);
 
-    setMessage(
-      "Login form is valid. Authentication will be connected to the backend in the next authentication phase."
-    );
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+
+      const response = await fetch(
+        "/api/auth/login",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+
+          body: JSON.stringify(formData),
+        }
+      );
+
+      const data =
+        await response.json();
+
+      console.log(
+        "Login response:",
+        data
+      );
+
+      if (
+        !response.ok ||
+        !data.success
+      ) {
+        throw new Error(
+          data.message ||
+            "Unable to login."
+        );
+      }
+
+      toast.success(
+        "Login successful!"
+      );
+
+      if (
+        data.user?.role === "admin"
+      ) {
+        router.push("/admin");
+      } else if (
+        data.user?.role === "seller"
+      ) {
+        router.push("/seller");
+      } else {
+        router.push("/account");
+      }
+
+      router.refresh();
+    } catch (error) {
+      console.error(
+        "Login error:",
+        error
+      );
+
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Unable to login.";
+
+      setError(message);
+      toast.error(message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -91,148 +150,118 @@ export default function LoginForm() {
       onSubmit={handleSubmit}
       className="space-y-5"
     >
-      {/* Email */}
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
       <div>
         <label
           htmlFor="email"
-          className="mb-2 block text-sm font-semibold text-gray-700"
+          className="mb-2 block text-sm font-medium text-slate-700"
         >
           Email address
         </label>
 
-        <div className="relative">
-          <Mail
-            size={18}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-          />
-
-          <input
-            id="email"
-            name="email"
-            type="email"
-            autoComplete="email"
-            value={formData.email}
-            onChange={handleChange}
-            placeholder="Enter your email"
-            className={`w-full rounded-lg border bg-white py-3 pl-10 pr-4 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:ring-2 ${
-              errors.email
-                ? "border-red-400 focus:border-red-500 focus:ring-red-100"
-                : "border-gray-300 focus:border-blue-500 focus:ring-blue-100"
-            }`}
-          />
-        </div>
-
-        {errors.email && (
-          <p className="mt-1.5 text-xs font-medium text-red-600">
-            {errors.email}
-          </p>
-        )}
+        <input
+          id="email"
+          name="email"
+          type="email"
+          value={formData.email}
+          onChange={handleChange}
+          placeholder="you@example.com"
+          autoComplete="email"
+          disabled={isLoading}
+          className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+        />
       </div>
 
-      {/* Password */}
       <div>
         <div className="mb-2 flex items-center justify-between">
           <label
             htmlFor="password"
-            className="block text-sm font-semibold text-gray-700"
+            className="block text-sm font-medium text-slate-700"
           >
             Password
           </label>
 
           <Link
             href="#"
-            className="text-xs font-semibold text-blue-600 transition hover:text-blue-700"
+            className="text-sm font-medium text-blue-600 hover:text-blue-700"
           >
             Forgot password?
           </Link>
         </div>
 
         <div className="relative">
-          <LockKeyhole
-            size={18}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-          />
-
           <input
             id="password"
             name="password"
             type={
-              showPassword ? "text" : "password"
+              showPassword
+                ? "text"
+                : "password"
             }
-            autoComplete="current-password"
             value={formData.password}
             onChange={handleChange}
             placeholder="Enter your password"
-            className={`w-full rounded-lg border bg-white py-3 pl-10 pr-11 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:ring-2 ${
-              errors.password
-                ? "border-red-400 focus:border-red-500 focus:ring-red-100"
-                : "border-gray-300 focus:border-blue-500 focus:ring-blue-100"
-            }`}
+            autoComplete="current-password"
+            disabled={isLoading}
+            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 pr-12 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50"
           />
 
           <button
             type="button"
             onClick={() =>
-              setShowPassword((current) => !current)
+              setShowPassword(
+                (current) => !current
+              )
             }
-            aria-label={
-              showPassword
-                ? "Hide password"
-                : "Show password"
-            }
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition hover:text-gray-700"
+            disabled={isLoading}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700"
           >
             {showPassword ? (
-              <EyeOff size={18} />
+              <EyeOff size={19} />
             ) : (
-              <Eye size={18} />
+              <Eye size={19} />
             )}
           </button>
         </div>
-
-        {errors.password && (
-          <p className="mt-1.5 text-xs font-medium text-red-600">
-            {errors.password}
-          </p>
-        )}
       </div>
 
-      {/* Remember Me */}
-      <div className="flex items-center">
-        <label className="flex cursor-pointer items-center gap-2">
-          <input
-            type="checkbox"
-            name="remember"
-            checked={formData.remember}
-            onChange={handleChange}
-            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-          />
+      <label className="flex items-center gap-3 text-sm text-slate-600">
+        <input
+          name="remember"
+          type="checkbox"
+          checked={formData.remember}
+          onChange={handleChange}
+          disabled={isLoading}
+          className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+        />
 
-          <span className="text-sm text-gray-600">
-            Remember me
-          </span>
-        </label>
-      </div>
+        Remember me
+      </label>
 
-      {/* Message */}
-      {message && (
-        <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm leading-6 text-blue-700">
-          {message}
-        </div>
-      )}
-
-      {/* Submit */}
       <button
         type="submit"
-        className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-blue-700 active:scale-[0.99]"
+        disabled={isLoading}
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3.5 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        <LogIn size={18} />
-        Login
+        {isLoading && (
+          <Loader2
+            size={19}
+            className="animate-spin"
+          />
+        )}
+
+        {isLoading
+          ? "Signing in..."
+          : "Sign In"}
       </button>
 
-      {/* Register */}
-      <p className="text-center text-sm text-gray-500">
-        New to ComputerHub?{" "}
+      <p className="text-center text-sm text-slate-600">
+        Don't have an account?{" "}
         <Link
           href="/register"
           className="font-semibold text-blue-600 hover:text-blue-700"
