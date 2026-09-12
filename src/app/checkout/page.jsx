@@ -56,7 +56,7 @@ export default function CheckoutPage() {
   const delivery =
     subtotal >= 500 || subtotal === 0
       ? 0
-      : 25;
+      : 15;
 
   const total = subtotal + delivery;
 
@@ -128,6 +128,7 @@ export default function CheckoutPage() {
       ["phone", "Phone number"],
       ["country", "Country"],
       ["city", "City"],
+      ["state", "State"],
       ["postalCode", "Postal code"],
       ["address", "Street address"],
     ];
@@ -162,8 +163,7 @@ export default function CheckoutPage() {
   };
 
   // ==========================================
-  // STEP 6 + STEP 7
-  // REAL ORDER CREATION
+  // PLACE ORDER
   // ==========================================
   const handlePlaceOrder = async () => {
     setError("");
@@ -200,7 +200,7 @@ export default function CheckoutPage() {
       );
 
       // ======================================
-      // SEND REAL ORDER TO API
+      // SEND ORDER TO API
       // ======================================
       const response = await fetch(
         "/api/orders",
@@ -212,8 +212,45 @@ export default function CheckoutPage() {
               "application/json",
           },
 
+          credentials: "include",
+
           body: JSON.stringify({
-            customer: address,
+            customer: {
+              firstName:
+                address.firstName.trim(),
+
+              lastName:
+                address.lastName.trim(),
+
+              fullName:
+                `${address.firstName} ${address.lastName}`.trim(),
+
+              email:
+                address.email.trim(),
+
+              phone:
+                address.phone.trim(),
+
+              country:
+                address.country.trim(),
+
+              city:
+                address.city.trim(),
+
+              state:
+                address.state.trim(),
+
+              postalCode:
+                address.postalCode.trim(),
+
+              address:
+                address.address.trim(),
+
+              notes:
+                address.notes
+                  ? address.notes.trim()
+                  : "",
+            },
 
             items: cartItems,
 
@@ -231,8 +268,21 @@ export default function CheckoutPage() {
       // ======================================
       // READ API RESPONSE
       // ======================================
-      const data =
-        await response.json();
+      let data;
+
+      try {
+        data =
+          await response.json();
+      } catch (jsonError) {
+        console.error(
+          "Failed to read API response:",
+          jsonError
+        );
+
+        throw new Error(
+          "The server returned an invalid response."
+        );
+      }
 
       console.log(
         "📦 Order API response:",
@@ -253,20 +303,48 @@ export default function CheckoutPage() {
       }
 
       // ======================================
+      // CHECK ORDER NUMBER
+      // ======================================
+      if (!data.orderNumber) {
+        console.error(
+          "Invalid order response:",
+          data
+        );
+
+        throw new Error(
+          "Order was created, but the order number was not returned by the server."
+        );
+      }
+
+      // ======================================
       // REAL ORDER SUCCESS
       // ======================================
       console.log(
-        "✅ REAL COMPUTERHUB ORDER CREATED:"
+        "===================================="
       );
 
       console.log(
-        data.order
+        "✅ REAL COMPUTERHUB ORDER CREATED"
+      );
+
+      console.log(
+        "Order Number:",
+        data.orderNumber
+      );
+
+      console.log(
+        "Order ID:",
+        data.orderId
+      );
+
+      console.log(
+        "===================================="
       );
 
       const createdOrderNumber =
-        data.order.orderNumber;
+        data.orderNumber;
 
-      // Save order number for confirmation screen
+      // Save order number
       setOrderNumber(
         createdOrderNumber
       );
@@ -274,7 +352,8 @@ export default function CheckoutPage() {
       // Show confirmation
       setOrderPlaced(true);
 
-      // Clear cart after MongoDB order succeeds
+      // Clear cart only after
+      // MongoDB order succeeds
       clearCart();
 
       toast.success(
@@ -285,7 +364,6 @@ export default function CheckoutPage() {
         top: 0,
         behavior: "smooth",
       });
-
     } catch (error) {
       console.error(
         "❌ Order creation error:",
@@ -305,7 +383,6 @@ export default function CheckoutPage() {
         top: 0,
         behavior: "smooth",
       });
-
     } finally {
       setIsPlacingOrder(false);
     }
@@ -319,13 +396,11 @@ export default function CheckoutPage() {
       <main className="min-h-screen bg-gray-50">
         <div className="container-main flex min-h-[60vh] items-center justify-center">
           <div className="text-center">
-
             <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600" />
 
             <p className="mt-4 text-sm text-gray-500">
               Loading checkout...
             </p>
-
           </div>
         </div>
       </main>
@@ -339,9 +414,7 @@ export default function CheckoutPage() {
     return (
       <main className="min-h-screen bg-gray-50 py-12">
         <div className="container-main">
-
           <div className="mx-auto max-w-2xl rounded-3xl border border-gray-200 bg-white p-8 text-center shadow-sm md:p-12">
-
             <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-green-100">
               <CheckCircle2
                 className="text-green-600"
@@ -365,7 +438,6 @@ export default function CheckoutPage() {
             </p>
 
             <div className="mx-auto mt-7 max-w-md rounded-2xl bg-gray-50 p-5">
-
               <p className="text-sm text-gray-500">
                 Order Number
               </p>
@@ -383,18 +455,14 @@ export default function CheckoutPage() {
                   ? "Cash on Delivery"
                   : paymentMethod}
               </p>
-
             </div>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
-
               <Link
                 href="/products"
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white transition hover:bg-blue-700"
               >
-                <ShoppingBag
-                  size={18}
-                />
+                <ShoppingBag size={18} />
 
                 Continue Shopping
               </Link>
@@ -412,9 +480,7 @@ export default function CheckoutPage() {
               >
                 Back to Home
               </Link>
-
             </div>
-
           </div>
         </div>
       </main>
@@ -428,9 +494,7 @@ export default function CheckoutPage() {
     return (
       <main className="min-h-screen bg-gray-50 py-12">
         <div className="container-main">
-
           <div className="mx-auto max-w-2xl rounded-3xl border border-gray-200 bg-white p-8 text-center shadow-sm md:p-12">
-
             <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-blue-50">
               <ShoppingBag
                 className="text-blue-600"
@@ -452,15 +516,11 @@ export default function CheckoutPage() {
               href="/products"
               className="mt-7 inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white transition hover:bg-blue-700"
             >
-              <ShoppingBag
-                size={18}
-              />
+              <ShoppingBag size={18} />
 
               Browse Products
             </Link>
-
           </div>
-
         </div>
       </main>
     );
@@ -471,24 +531,18 @@ export default function CheckoutPage() {
   // ==========================================
   return (
     <main className="min-h-screen bg-gray-50 py-8 md:py-12">
-
       <div className="container-main">
-
         <div className="mb-8">
-
           <Link
             href="/cart"
             className="inline-flex items-center gap-2 text-sm font-semibold text-gray-600 transition hover:text-blue-600"
           >
-            <ArrowLeft
-              size={17}
-            />
+            <ArrowLeft size={17} />
 
             Back to Cart
           </Link>
 
           <div className="mt-5">
-
             <p className="text-sm font-semibold uppercase tracking-wider text-blue-600">
               Secure Checkout
             </p>
@@ -502,9 +556,7 @@ export default function CheckoutPage() {
               information and select your
               preferred payment method.
             </p>
-
           </div>
-
         </div>
 
         {/* Error */}
@@ -517,10 +569,8 @@ export default function CheckoutPage() {
         )}
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_400px]">
-
           {/* LEFT */}
           <div className="space-y-6">
-
             <AddressForm
               address={address}
               setAddress={setAddress}
@@ -534,12 +584,10 @@ export default function CheckoutPage() {
                 setPaymentMethod
               }
             />
-
           </div>
 
           {/* RIGHT */}
           <div>
-
             <OrderSummary
               cartItems={cartItems}
               subtotal={subtotal}
@@ -552,13 +600,9 @@ export default function CheckoutPage() {
                 isPlacingOrder
               }
             />
-
           </div>
-
         </div>
-
       </div>
-
     </main>
   );
 }
