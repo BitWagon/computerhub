@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -59,6 +60,9 @@ export default function CheckoutPage() {
 
   const total = subtotal + delivery;
 
+  // ==========================================
+  // LOAD SAVED CHECKOUT ADDRESS
+  // ==========================================
   useEffect(() => {
     if (!isLoaded) {
       return;
@@ -92,6 +96,9 @@ export default function CheckoutPage() {
     }
   }, [isLoaded]);
 
+  // ==========================================
+  // SAVE CHECKOUT ADDRESS
+  // ==========================================
   useEffect(() => {
     if (!isLoaded) {
       return;
@@ -110,6 +117,9 @@ export default function CheckoutPage() {
     }
   }, [address, isLoaded]);
 
+  // ==========================================
+  // VALIDATE CHECKOUT
+  // ==========================================
   const validateCheckout = () => {
     const requiredFields = [
       ["firstName", "First name"],
@@ -143,6 +153,7 @@ export default function CheckoutPage() {
       return "Please enter a valid email address.";
     }
 
+    // Card payment is not connected yet.
     if (paymentMethod === "card") {
       return "Card payments are not connected to a live payment gateway yet. Please select Cash on Delivery.";
     }
@@ -150,17 +161,21 @@ export default function CheckoutPage() {
     return "";
   };
 
+  // ==========================================
+  // STEP 6 + STEP 7
+  // REAL ORDER CREATION
+  // ==========================================
   const handlePlaceOrder = async () => {
     setError("");
 
+    // Check cart
     if (cartItems.length === 0) {
       toast.error("Your cart is empty.");
-
       router.push("/cart");
-
       return;
     }
 
+    // Validate customer information
     const validationError =
       validateCheckout();
 
@@ -180,6 +195,13 @@ export default function CheckoutPage() {
     try {
       setIsPlacingOrder(true);
 
+      console.log(
+        "📦 Sending order to MongoDB..."
+      );
+
+      // ======================================
+      // SEND REAL ORDER TO API
+      // ======================================
       const response = await fetch(
         "/api/orders",
         {
@@ -192,18 +214,34 @@ export default function CheckoutPage() {
 
           body: JSON.stringify({
             customer: address,
+
             items: cartItems,
+
             subtotal,
+
             delivery,
+
             total,
+
             paymentMethod,
           }),
         }
       );
 
+      // ======================================
+      // READ API RESPONSE
+      // ======================================
       const data =
         await response.json();
 
+      console.log(
+        "📦 Order API response:",
+        data
+      );
+
+      // ======================================
+      // CHECK API ERROR
+      // ======================================
       if (
         !response.ok ||
         !data.success
@@ -214,33 +252,43 @@ export default function CheckoutPage() {
         );
       }
 
+      // ======================================
+      // REAL ORDER SUCCESS
+      // ======================================
       console.log(
-        "ComputerHub order created:",
+        "✅ REAL COMPUTERHUB ORDER CREATED:"
+      );
+
+      console.log(
         data.order
       );
 
       const createdOrderNumber =
         data.order.orderNumber;
 
+      // Save order number for confirmation screen
       setOrderNumber(
         createdOrderNumber
       );
 
+      // Show confirmation
       setOrderPlaced(true);
 
+      // Clear cart after MongoDB order succeeds
       clearCart();
 
       toast.success(
-        "Order placed successfully!"
+        `Order ${createdOrderNumber} placed successfully!`
       );
 
       window.scrollTo({
         top: 0,
         behavior: "smooth",
       });
+
     } catch (error) {
       console.error(
-        "Order creation error:",
+        "❌ Order creation error:",
         error
       );
 
@@ -257,31 +305,41 @@ export default function CheckoutPage() {
         top: 0,
         behavior: "smooth",
       });
+
     } finally {
       setIsPlacingOrder(false);
     }
   };
 
+  // ==========================================
+  // LOADING
+  // ==========================================
   if (!isLoaded) {
     return (
       <main className="min-h-screen bg-gray-50">
         <div className="container-main flex min-h-[60vh] items-center justify-center">
           <div className="text-center">
+
             <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600" />
 
             <p className="mt-4 text-sm text-gray-500">
               Loading checkout...
             </p>
+
           </div>
         </div>
       </main>
     );
   }
 
+  // ==========================================
+  // ORDER CONFIRMATION
+  // ==========================================
   if (orderPlaced) {
     return (
       <main className="min-h-screen bg-gray-50 py-12">
         <div className="container-main">
+
           <div className="mx-auto max-w-2xl rounded-3xl border border-gray-200 bg-white p-8 text-center shadow-sm md:p-12">
 
             <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-green-100">
@@ -337,7 +395,15 @@ export default function CheckoutPage() {
                 <ShoppingBag
                   size={18}
                 />
+
                 Continue Shopping
+              </Link>
+
+              <Link
+                href="/orders"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 px-6 py-3 font-semibold text-gray-700 transition hover:bg-gray-50"
+              >
+                View My Orders
               </Link>
 
               <Link
@@ -355,6 +421,9 @@ export default function CheckoutPage() {
     );
   }
 
+  // ==========================================
+  // EMPTY CART
+  // ==========================================
   if (cartItems.length === 0) {
     return (
       <main className="min-h-screen bg-gray-50 py-12">
@@ -386,6 +455,7 @@ export default function CheckoutPage() {
               <ShoppingBag
                 size={18}
               />
+
               Browse Products
             </Link>
 
@@ -396,6 +466,9 @@ export default function CheckoutPage() {
     );
   }
 
+  // ==========================================
+  // CHECKOUT
+  // ==========================================
   return (
     <main className="min-h-screen bg-gray-50 py-8 md:py-12">
 
@@ -410,6 +483,7 @@ export default function CheckoutPage() {
             <ArrowLeft
               size={17}
             />
+
             Back to Cart
           </Link>
 
@@ -433,6 +507,7 @@ export default function CheckoutPage() {
 
         </div>
 
+        {/* Error */}
         {error && (
           <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4">
             <p className="text-sm font-semibold text-red-700">
@@ -443,6 +518,7 @@ export default function CheckoutPage() {
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_400px]">
 
+          {/* LEFT */}
           <div className="space-y-6">
 
             <AddressForm
@@ -461,6 +537,7 @@ export default function CheckoutPage() {
 
           </div>
 
+          {/* RIGHT */}
           <div>
 
             <OrderSummary
@@ -485,3 +562,4 @@ export default function CheckoutPage() {
     </main>
   );
 }
+

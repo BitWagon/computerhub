@@ -1,27 +1,28 @@
 import { NextResponse } from "next/server";
-
 import { connectDB } from "@/lib/mongodb";
 import Order from "@/models/Order";
 
 function createOrderNumber() {
-  const timestamp = Date.now()
-    .toString()
-    .slice(-8);
-
-  const random = Math.floor(
-    1000 + Math.random() * 9000
-  );
+  const timestamp = Date.now().toString().slice(-8);
+  const random = Math.floor(1000 + Math.random() * 9000);
 
   return `CH-${timestamp}-${random}`;
 }
 
+// ================================
+// CREATE ORDER
+// ================================
 export async function POST(request) {
   try {
-    // Connect MongoDB
     await connectDB();
 
-    // Read request body
     const body = await request.json();
+
+    console.log("");
+    console.log("====================================");
+    console.log("📦 CHECKOUT DATA RECEIVED");
+    console.log(JSON.stringify(body, null, 2));
+    console.log("====================================");
 
     const {
       customer,
@@ -29,285 +30,66 @@ export async function POST(request) {
       paymentMethod,
     } = body;
 
-    // ------------------------------------
-    // CUSTOMER VALIDATION
-    // ------------------------------------
-
-    if (
-      !customer ||
-      typeof customer !== "object"
-    ) {
+    if (!customer) {
       return NextResponse.json(
         {
           success: false,
-          message:
-            "Customer information is required.",
+          message: "Customer information is missing.",
         },
         { status: 400 }
       );
     }
 
-    // Checkout sends firstName + lastName
-    // Convert them into fullName.
-    const firstName = String(
-      customer.firstName || ""
-    ).trim();
-
-    const lastName = String(
-      customer.lastName || ""
-    ).trim();
+    if (!Array.isArray(items) || items.length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Your cart is empty.",
+        },
+        { status: 400 }
+      );
+    }
 
     const fullName =
-      String(
-        customer.fullName || ""
-      ).trim() ||
-      `${firstName} ${lastName}`.trim();
+      customer.fullName ||
+      `${customer.firstName || ""} ${
+        customer.lastName || ""
+      }`.trim();
 
-    // ------------------------------------
-    // CUSTOMER FIELDS
-    // ------------------------------------
-
-    const email = String(
-      customer.email || ""
-    )
-      .trim()
-      .toLowerCase();
-
-    const phone = String(
-      customer.phone || ""
-    ).trim();
-
-    const country = String(
-      customer.country || ""
-    ).trim();
-
-    const city = String(
-      customer.city || ""
-    ).trim();
-
-    const state = String(
-      customer.state || ""
-    ).trim();
-
-    const postalCode = String(
-      customer.postalCode || ""
-    ).trim();
-
-    const address = String(
-      customer.address || ""
-    ).trim();
-
-    const notes = String(
-      customer.notes || ""
-    ).trim();
-
-    // ------------------------------------
-    // REQUIRED CUSTOMER FIELDS
-    // ------------------------------------
+    const customerData = {
+      fullName,
+      email: customer.email?.trim() || "",
+      phone: customer.phone?.trim() || "",
+      country: customer.country?.trim() || "",
+      city: customer.city?.trim() || "",
+      state: customer.state?.trim() || "",
+      postalCode:
+        customer.postalCode?.trim() || "",
+      address: customer.address?.trim() || "",
+      notes: customer.notes?.trim() || "",
+    };
 
     const requiredFields = [
-      ["fullName", fullName],
-      ["email", email],
-      ["phone", phone],
-      ["country", country],
-      ["city", city],
-      ["state", state],
-      ["postalCode", postalCode],
-      ["address", address],
+      ["fullName", "Full name"],
+      ["email", "Email address"],
+      ["phone", "Phone number"],
+      ["country", "Country"],
+      ["city", "City"],
+      ["postalCode", "Postal code"],
+      ["address", "Street address"],
     ];
 
-    for (const [field, value] of requiredFields) {
-      if (!value) {
+    for (const [field, label] of requiredFields) {
+      if (!customerData[field]) {
         return NextResponse.json(
           {
             success: false,
-            message:
-              `${field} is required.`,
+            message: `${label} is required.`,
           },
           { status: 400 }
         );
       }
     }
-
-    // ------------------------------------
-    // EMAIL VALIDATION
-    // ------------------------------------
-
-    const emailPattern =
-      /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (!emailPattern.test(email)) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "Please provide a valid email address.",
-        },
-        { status: 400 }
-      );
-    }
-
-    // ------------------------------------
-    // ITEMS VALIDATION
-    // ------------------------------------
-
-    if (
-      !Array.isArray(items) ||
-      items.length === 0
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "Order must contain at least one product.",
-        },
-        { status: 400 }
-      );
-    }
-
-    // ------------------------------------
-    // FORMAT ITEMS
-    // ------------------------------------
-
-    const formattedItems = [];
-
-    for (const item of items) {
-      if (
-        !item ||
-        typeof item !== "object"
-      ) {
-        return NextResponse.json(
-          {
-            success: false,
-            message:
-              "Invalid product data.",
-          },
-          { status: 400 }
-        );
-      }
-
-      const productId = String(
-        item.id ||
-          item.productId ||
-          ""
-      ).trim();
-
-      const name = String(
-        item.name || ""
-      ).trim();
-
-      const price = Number(
-        item.price
-      );
-
-      const quantity = Number(
-        item.quantity
-      );
-
-      const image =
-        item.images?.[0] ||
-        item.image ||
-        "";
-
-      // Product ID
-      if (!productId) {
-        return NextResponse.json(
-          {
-            success: false,
-            message:
-              "A product is missing its product ID.",
-          },
-          { status: 400 }
-        );
-      }
-
-      // Product name
-      if (!name) {
-        return NextResponse.json(
-          {
-            success: false,
-            message:
-              "A product is missing its name.",
-          },
-          { status: 400 }
-        );
-      }
-
-      // Price
-      if (
-        !Number.isFinite(price) ||
-        price < 0
-      ) {
-        return NextResponse.json(
-          {
-            success: false,
-            message:
-              `Invalid price for "${name}".`,
-          },
-          { status: 400 }
-        );
-      }
-
-      // Quantity
-      if (
-        !Number.isFinite(quantity) ||
-        quantity < 1 ||
-        !Number.isInteger(quantity)
-      ) {
-        return NextResponse.json(
-          {
-            success: false,
-            message:
-              `Invalid quantity for "${name}".`,
-          },
-          { status: 400 }
-        );
-      }
-
-      const itemTotal =
-        price * quantity;
-
-      formattedItems.push({
-        productId,
-        name,
-        image: String(image || ""),
-        price,
-        quantity,
-        total: itemTotal,
-      });
-    }
-
-    // ------------------------------------
-    // CALCULATE SUBTOTAL
-    // ------------------------------------
-
-    const calculatedSubtotal =
-      formattedItems.reduce(
-        (sum, item) =>
-          sum + item.total,
-        0
-      );
-
-    // ------------------------------------
-    // CALCULATE DELIVERY
-    // ------------------------------------
-
-    const calculatedDelivery =
-      calculatedSubtotal >= 500
-        ? 0
-        : 25;
-
-    // ------------------------------------
-    // CALCULATE TOTAL
-    // ------------------------------------
-
-    const calculatedTotal =
-      calculatedSubtotal +
-      calculatedDelivery;
-
-    // ------------------------------------
-    // PAYMENT METHOD
-    // ------------------------------------
 
     if (
       !paymentMethod ||
@@ -319,120 +101,103 @@ export async function POST(request) {
         {
           success: false,
           message:
-            "Invalid payment method.",
+            "Please select a valid payment method.",
         },
         { status: 400 }
       );
     }
 
-    // ------------------------------------
-    // CREATE ORDER
-    // ------------------------------------
+    const formattedItems = items.map((item) => {
+      const price = Number(item.price || 0);
+      const quantity = Number(item.quantity || 1);
 
-    const order =
-      await Order.create({
-        orderNumber:
-          createOrderNumber(),
+      return {
+        productId: String(
+          item.id || item.productId || ""
+        ),
 
-        customer: {
-          fullName,
+        name: String(
+          item.name || "Product"
+        ),
 
-          email,
+        image:
+          item.images?.[0] ||
+          item.image ||
+          "",
 
-          phone,
+        price,
 
-          country,
+        quantity,
 
-          city,
+        total: price * quantity,
+      };
+    });
 
-          state,
+    const calculatedSubtotal =
+      formattedItems.reduce(
+        (sum, item) => sum + item.total,
+        0
+      );
 
-          postalCode,
+    const calculatedDelivery =
+      calculatedSubtotal >= 500
+        ? 0
+        : 15;
 
-          address,
+    const calculatedTotal =
+      calculatedSubtotal +
+      calculatedDelivery;
 
-          notes,
-        },
+    const order = await Order.create({
+      orderNumber: createOrderNumber(),
 
-        items: formattedItems,
+      customer: customerData,
 
-        subtotal:
-          calculatedSubtotal,
+      items: formattedItems,
 
-        delivery:
-          calculatedDelivery,
+      subtotal: calculatedSubtotal,
 
-        total:
-          calculatedTotal,
+      delivery: calculatedDelivery,
 
-        paymentMethod,
+      total: calculatedTotal,
 
-        paymentStatus:
-          "pending",
+      paymentMethod,
 
-        orderStatus:
-          "pending",
-      });
+      paymentStatus: "pending",
 
-    // ------------------------------------
-    // SUCCESS LOG
-    // ------------------------------------
+      orderStatus: "pending",
+    });
 
-    console.log(
-      "===================================="
-    );
-
-    console.log(
-      "🛒 NEW COMPUTERHUB ORDER"
-    );
-
+    console.log("");
+    console.log("====================================");
+    console.log("✅ NEW COMPUTERHUB ORDER");
+    console.log("====================================");
     console.log(
       "Order Number:",
       order.orderNumber
     );
-
     console.log(
       "Customer:",
       order.customer.fullName
     );
-
     console.log(
       "Email:",
       order.customer.email
     );
-
-    console.log(
-      "Subtotal:",
-      order.subtotal
-    );
-
-    console.log(
-      "Delivery:",
-      order.delivery
-    );
-
     console.log(
       "Total:",
       order.total
     );
-
     console.log(
       "Payment:",
       order.paymentMethod
     );
-
     console.log(
       "Status:",
       order.orderStatus
     );
-
-    console.log(
-      "===================================="
-    );
-
-    // ------------------------------------
-    // RETURN SUCCESS
-    // ------------------------------------
+    console.log("====================================");
+    console.log("");
 
     return NextResponse.json(
       {
@@ -443,101 +208,230 @@ export async function POST(request) {
 
         order: {
           id: order._id.toString(),
-
-          orderNumber:
-            order.orderNumber,
-
-          subtotal:
-            order.subtotal,
-
-          delivery:
-            order.delivery,
-
-          total:
-            order.total,
-
-          status:
-            order.orderStatus,
-
-          paymentMethod:
-            order.paymentMethod,
+          orderNumber: order.orderNumber,
+          total: order.total,
+          status: order.orderStatus,
         },
       },
-      {
-        status: 201,
-      }
+      { status: 201 }
     );
   } catch (error) {
+    console.error("");
     console.error(
-      "❌ Create order error:",
-      error
+      "❌ CREATE ORDER ERROR:"
     );
-
-    // ------------------------------------
-    // MONGOOSE VALIDATION ERROR
-    // ------------------------------------
-
-    if (
-      error?.name ===
-      "ValidationError"
-    ) {
-      const messages =
-        Object.values(
-          error.errors || {}
-        ).map(
-          (item) =>
-            item.message
-        );
-
-      return NextResponse.json(
-        {
-          success: false,
-
-          message:
-            messages.length > 0
-              ? messages.join(", ")
-              : "Order validation failed.",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
-    // ------------------------------------
-    // DUPLICATE ORDER NUMBER
-    // ------------------------------------
-
-    if (
-      error?.code === 11000
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "Order number already exists. Please try again.",
-        },
-        {
-          status: 409,
-        }
-      );
-    }
-
-    // ------------------------------------
-    // GENERAL ERROR
-    // ------------------------------------
+    console.error(error);
+    console.error("");
 
     return NextResponse.json(
       {
         success: false,
-
         message:
-          error?.message ||
-          "Unable to create order. Please try again.",
+          error.message ||
+          "Unable to create order.",
       },
+      { status: 500 }
+    );
+  }
+}
+
+
+// ================================
+// GET ALL ORDERS
+// ================================
+export async function GET() {
+  try {
+    await connectDB();
+
+    const orders = await Order.find({})
+      .sort({ createdAt: -1 })
+      .limit(100)
+      .lean();
+
+    return NextResponse.json(
       {
-        status: 500,
+        success: true,
+        orders,
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error(
+      "❌ GET ORDERS ERROR:",
+      error
+    );
+
+    return NextResponse.json(
+      {
+        success: false,
+        message:
+          "Unable to load orders.",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+
+// ================================
+// UPDATE ORDER STATUS
+// ================================
+export async function PATCH(request) {
+  try {
+    await connectDB();
+
+    const body = await request.json();
+
+    const {
+      orderId,
+      orderStatus,
+      paymentStatus,
+    } = body;
+
+    if (!orderId) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Order ID is required.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const validOrderStatuses = [
+      "pending",
+      "confirmed",
+      "processing",
+      "shipped",
+      "delivered",
+      "cancelled",
+    ];
+
+    const validPaymentStatuses = [
+      "pending",
+      "paid",
+      "failed",
+      "refunded",
+    ];
+
+    const updateData = {};
+
+    if (orderStatus) {
+      if (
+        !validOrderStatuses.includes(
+          orderStatus
+        )
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Invalid order status.",
+          },
+          { status: 400 }
+        );
       }
+
+      updateData.orderStatus =
+        orderStatus;
+    }
+
+    if (paymentStatus) {
+      if (
+        !validPaymentStatuses.includes(
+          paymentStatus
+        )
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Invalid payment status.",
+          },
+          { status: 400 }
+        );
+      }
+
+      updateData.paymentStatus =
+        paymentStatus;
+    }
+
+    if (
+      Object.keys(updateData).length === 0
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "No changes were provided.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const updatedOrder =
+      await Order.findByIdAndUpdate(
+        orderId,
+        updateData,
+        {
+          new: true,
+          runValidators: true,
+        }
+      ).lean();
+
+    if (!updatedOrder) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Order not found.",
+        },
+        { status: 404 }
+      );
+    }
+
+    console.log("");
+    console.log(
+      "✅ ORDER UPDATED:",
+      updatedOrder.orderNumber
+    );
+
+    console.log(
+      "Order Status:",
+      updatedOrder.orderStatus
+    );
+
+    console.log(
+      "Payment Status:",
+      updatedOrder.paymentStatus
+    );
+
+    console.log("");
+
+    return NextResponse.json(
+      {
+        success: true,
+        message:
+          "Order updated successfully.",
+        order: updatedOrder,
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error(
+      "❌ UPDATE ORDER ERROR:",
+      error
+    );
+
+    return NextResponse.json(
+      {
+        success: false,
+        message:
+          error.message ||
+          "Unable to update order.",
+      },
+      { status: 500 }
     );
   }
 }
