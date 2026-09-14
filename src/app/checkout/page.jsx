@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -53,16 +52,22 @@ export default function CheckoutPage() {
     notes: "",
   });
 
+  /*
+   * Delivery:
+   * $500 or more = FREE
+   * Under $500 = $15
+   */
   const delivery =
     subtotal >= 500 || subtotal === 0
       ? 0
       : 15;
 
-  const total = subtotal + delivery;
+  const total =
+    subtotal + delivery;
 
-  // ==========================================
-  // LOAD SAVED CHECKOUT ADDRESS
-  // ==========================================
+  /*
+   * Load saved checkout address.
+   */
   useEffect(() => {
     if (!isLoaded) {
       return;
@@ -96,9 +101,9 @@ export default function CheckoutPage() {
     }
   }, [isLoaded]);
 
-  // ==========================================
-  // SAVE CHECKOUT ADDRESS
-  // ==========================================
+  /*
+   * Save checkout address.
+   */
   useEffect(() => {
     if (!isLoaded) {
       return;
@@ -117,9 +122,9 @@ export default function CheckoutPage() {
     }
   }, [address, isLoaded]);
 
-  // ==========================================
-  // VALIDATE CHECKOUT
-  // ==========================================
+  /*
+   * Validate checkout information.
+   */
   const validateCheckout = () => {
     const requiredFields = [
       ["firstName", "First name"],
@@ -128,7 +133,7 @@ export default function CheckoutPage() {
       ["phone", "Phone number"],
       ["country", "Country"],
       ["city", "City"],
-      ["state", "State"],
+      ["state", "State / Province"],
       ["postalCode", "Postal code"],
       ["address", "Street address"],
     ];
@@ -154,7 +159,6 @@ export default function CheckoutPage() {
       return "Please enter a valid email address.";
     }
 
-    // Card payment is not connected yet.
     if (paymentMethod === "card") {
       return "Card payments are not connected to a live payment gateway yet. Please select Cash on Delivery.";
     }
@@ -162,26 +166,23 @@ export default function CheckoutPage() {
     return "";
   };
 
-  // ==========================================
-  // PLACE ORDER
-  // ==========================================
+  /*
+   * Place order.
+   */
   const handlePlaceOrder = async () => {
     setError("");
 
-    // Check cart
-    if (cartItems.length === 0) {
+    if (!Array.isArray(cartItems) || cartItems.length === 0) {
       toast.error("Your cart is empty.");
       router.push("/cart");
       return;
     }
 
-    // Validate customer information
     const validationError =
       validateCheckout();
 
     if (validationError) {
       setError(validationError);
-
       toast.error(validationError);
 
       window.scrollTo({
@@ -195,169 +196,169 @@ export default function CheckoutPage() {
     try {
       setIsPlacingOrder(true);
 
-      console.log(
-        "📦 Sending order to MongoDB..."
-      );
+      /*
+       * Send the COMPLETE customer information.
+       */
+      const customer = {
+        fullName:
+          `${address.firstName} ${address.lastName}`.trim(),
 
-      // ======================================
-      // SEND ORDER TO API
-      // ======================================
-      const response = await fetch(
-        "/api/orders",
-        {
-          method: "POST",
+        email:
+          address.email.trim().toLowerCase(),
 
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
+        phone:
+          address.phone.trim(),
 
-          credentials: "include",
+        country:
+          address.country.trim(),
 
-          body: JSON.stringify({
-            customer: {
-              firstName:
-                address.firstName.trim(),
+        city:
+          address.city.trim(),
 
-              lastName:
-                address.lastName.trim(),
+        state:
+          address.state.trim(),
 
-              fullName:
-                `${address.firstName} ${address.lastName}`.trim(),
+        postalCode:
+          address.postalCode.trim(),
 
-              email:
-                address.email.trim(),
+        address:
+          address.address.trim(),
 
-              phone:
-                address.phone.trim(),
+        notes:
+          address.notes.trim(),
+      };
 
-              country:
-                address.country.trim(),
+      /*
+       * Send complete order items.
+       *
+       * The API will use these values and
+       * calculate the final totals.
+       */
+      const items = cartItems.map((item) => {
+        const price =
+          Number(item?.price) || 0;
 
-              city:
-                address.city.trim(),
+        const quantity =
+          Math.max(
+            1,
+            Number(item?.quantity) || 1
+          );
 
-              state:
-                address.state.trim(),
+        return {
+          productId:
+            item?._id ||
+            item?.id,
 
-              postalCode:
-                address.postalCode.trim(),
+          name:
+            item?.name || "",
 
-              address:
-                address.address.trim(),
+          image:
+            item?.image ||
+            item?.images?.[0] ||
+            "",
 
-              notes:
-                address.notes
-                  ? address.notes.trim()
-                  : "",
-            },
+          price,
 
-            items: cartItems,
+          quantity,
 
-            subtotal,
+          total:
+            price * quantity,
+        };
+      });
 
-            delivery,
-
-            total,
-
-            paymentMethod,
-          }),
-        }
-      );
-
-      // ======================================
-      // READ API RESPONSE
-      // ======================================
-      let data;
-
-      try {
-        data =
-          await response.json();
-      } catch (jsonError) {
-        console.error(
-          "Failed to read API response:",
-          jsonError
+      /*
+       * Make sure every product has an ID.
+       */
+      const invalidItem =
+        items.find(
+          (item) => !item.productId
         );
 
+      if (invalidItem) {
         throw new Error(
-          "The server returned an invalid response."
+          "One or more products are missing a product ID."
         );
       }
 
-      console.log(
-        "📦 Order API response:",
-        data
-      );
+      const response =
+        await fetch(
+          "/api/orders",
+          {
+            method: "POST",
 
-      // ======================================
-      // CHECK API ERROR
-      // ======================================
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              customer,
+
+              items,
+
+              subtotal,
+
+              delivery,
+
+              total,
+
+              paymentMethod,
+            }),
+          }
+        );
+
+      const data =
+        await response.json();
+
       if (
         !response.ok ||
-        !data.success
+        !data?.success
       ) {
         throw new Error(
-          data.message ||
+          data?.message ||
             "Failed to create order."
         );
       }
 
-      // ======================================
-      // CHECK ORDER NUMBER
-      // ======================================
-      if (!data.orderNumber) {
-        console.error(
-          "Invalid order response:",
-          data
-        );
-
-        throw new Error(
-          "Order was created, but the order number was not returned by the server."
-        );
-      }
-
-      // ======================================
-      // REAL ORDER SUCCESS
-      // ======================================
       console.log(
         "===================================="
       );
 
       console.log(
-        "✅ REAL COMPUTERHUB ORDER CREATED"
+        "✅ ComputerHub order created"
       );
 
       console.log(
-        "Order Number:",
-        data.orderNumber
-      );
-
-      console.log(
-        "Order ID:",
-        data.orderId
+        "Order:",
+        data.order
       );
 
       console.log(
         "===================================="
       );
 
+      /*
+       * Support both response formats.
+       */
       const createdOrderNumber =
-        data.orderNumber;
+        data?.order?.orderNumber ||
+        data?.orderNumber ||
+        "";
 
-      // Save order number
       setOrderNumber(
         createdOrderNumber
       );
 
-      // Show confirmation
       setOrderPlaced(true);
 
-      // Clear cart only after
-      // MongoDB order succeeds
+      /*
+       * Clear cart only AFTER
+       * successful order creation.
+       */
       clearCart();
 
       toast.success(
-        `Order ${createdOrderNumber} placed successfully!`
+        "Order placed successfully!"
       );
 
       window.scrollTo({
@@ -366,7 +367,7 @@ export default function CheckoutPage() {
       });
     } catch (error) {
       console.error(
-        "❌ Order creation error:",
+        "Order creation error:",
         error
       );
 
@@ -377,7 +378,9 @@ export default function CheckoutPage() {
 
       setError(errorMessage);
 
-      toast.error(errorMessage);
+      toast.error(
+        errorMessage
+      );
 
       window.scrollTo({
         top: 0,
@@ -388,9 +391,9 @@ export default function CheckoutPage() {
     }
   };
 
-  // ==========================================
-  // LOADING
-  // ==========================================
+  /*
+   * Loading screen.
+   */
   if (!isLoaded) {
     return (
       <main className="min-h-screen bg-gray-50">
@@ -407,14 +410,15 @@ export default function CheckoutPage() {
     );
   }
 
-  // ==========================================
-  // ORDER CONFIRMATION
-  // ==========================================
+  /*
+   * SUCCESS SCREEN.
+   */
   if (orderPlaced) {
     return (
       <main className="min-h-screen bg-gray-50 py-12">
         <div className="container-main">
           <div className="mx-auto max-w-2xl rounded-3xl border border-gray-200 bg-white p-8 text-center shadow-sm md:p-12">
+
             <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-green-100">
               <CheckCircle2
                 className="text-green-600"
@@ -438,6 +442,7 @@ export default function CheckoutPage() {
             </p>
 
             <div className="mx-auto mt-7 max-w-md rounded-2xl bg-gray-50 p-5">
+
               <p className="text-sm text-gray-500">
                 Order Number
               </p>
@@ -455,23 +460,20 @@ export default function CheckoutPage() {
                   ? "Cash on Delivery"
                   : paymentMethod}
               </p>
+
             </div>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
+
               <Link
                 href="/products"
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white transition hover:bg-blue-700"
               >
-                <ShoppingBag size={18} />
+                <ShoppingBag
+                  size={18}
+                />
 
                 Continue Shopping
-              </Link>
-
-              <Link
-                href="/orders"
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 px-6 py-3 font-semibold text-gray-700 transition hover:bg-gray-50"
-              >
-                View My Orders
               </Link>
 
               <Link
@@ -480,21 +482,28 @@ export default function CheckoutPage() {
               >
                 Back to Home
               </Link>
+
             </div>
+
           </div>
         </div>
       </main>
     );
   }
 
-  // ==========================================
-  // EMPTY CART
-  // ==========================================
-  if (cartItems.length === 0) {
+  /*
+   * Empty cart.
+   */
+  if (
+    !Array.isArray(cartItems) ||
+    cartItems.length === 0
+  ) {
     return (
       <main className="min-h-screen bg-gray-50 py-12">
         <div className="container-main">
+
           <div className="mx-auto max-w-2xl rounded-3xl border border-gray-200 bg-white p-8 text-center shadow-sm md:p-12">
+
             <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-blue-50">
               <ShoppingBag
                 className="text-blue-600"
@@ -516,33 +525,43 @@ export default function CheckoutPage() {
               href="/products"
               className="mt-7 inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white transition hover:bg-blue-700"
             >
-              <ShoppingBag size={18} />
+              <ShoppingBag
+                size={18}
+              />
 
               Browse Products
             </Link>
+
           </div>
+
         </div>
       </main>
     );
   }
 
-  // ==========================================
-  // CHECKOUT
-  // ==========================================
+  /*
+   * CHECKOUT PAGE.
+   */
   return (
     <main className="min-h-screen bg-gray-50 py-8 md:py-12">
+
       <div className="container-main">
+
         <div className="mb-8">
+
           <Link
             href="/cart"
             className="inline-flex items-center gap-2 text-sm font-semibold text-gray-600 transition hover:text-blue-600"
           >
-            <ArrowLeft size={17} />
+            <ArrowLeft
+              size={17}
+            />
 
             Back to Cart
           </Link>
 
           <div className="mt-5">
+
             <p className="text-sm font-semibold uppercase tracking-wider text-blue-600">
               Secure Checkout
             </p>
@@ -556,10 +575,11 @@ export default function CheckoutPage() {
               information and select your
               preferred payment method.
             </p>
+
           </div>
+
         </div>
 
-        {/* Error */}
         {error && (
           <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4">
             <p className="text-sm font-semibold text-red-700">
@@ -569,8 +589,9 @@ export default function CheckoutPage() {
         )}
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_400px]">
-          {/* LEFT */}
+
           <div className="space-y-6">
+
             <AddressForm
               address={address}
               setAddress={setAddress}
@@ -584,26 +605,43 @@ export default function CheckoutPage() {
                 setPaymentMethod
               }
             />
+
           </div>
 
-          {/* RIGHT */}
           <div>
+
             <OrderSummary
-              cartItems={cartItems}
-              subtotal={subtotal}
-              delivery={delivery}
-              total={total}
+              cartItems={
+                cartItems
+              }
+
+              subtotal={
+                subtotal
+              }
+
+              delivery={
+                delivery
+              }
+
+              total={
+                total
+              }
+
               onPlaceOrder={
                 handlePlaceOrder
               }
+
               isPlacingOrder={
                 isPlacingOrder
               }
             />
+
           </div>
+
         </div>
+
       </div>
+
     </main>
   );
 }
-

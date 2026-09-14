@@ -37,7 +37,7 @@ const ProductSchema = new mongoose.Schema(
 
     oldPrice: {
       type: Number,
-      default: null,
+      default: 0,
       min: 0,
     },
 
@@ -58,8 +58,8 @@ const ProductSchema = new mongoose.Schema(
       default: "",
       trim: true,
       uppercase: true,
-      unique: true,
       sparse: true,
+      unique: true,
     },
 
     brand: {
@@ -68,20 +68,12 @@ const ProductSchema = new mongoose.Schema(
       trim: true,
     },
 
-    /*
-     * Keep the existing category field so old products
-     * and the existing frontend continue to work.
-     */
     category: {
       type: String,
       default: "",
       trim: true,
-      index: true,
     },
 
-    /*
-     * New connection to the Category collection.
-     */
     categoryId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",
@@ -148,8 +140,8 @@ const ProductSchema = new mongoose.Schema(
     sellerId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
       index: true,
+      default: null,
     },
 
     sellerName: {

@@ -44,7 +44,9 @@ export async function POST(request) {
       );
     }
 
-    // CUSTOMER INFORMATION
+    /*
+     * CUSTOMER INFORMATION
+     */
 
     const firstName = customer.firstName || "";
 
@@ -60,24 +62,37 @@ export async function POST(request) {
       tokenData.email ||
       "";
 
-    const phone = customer.phone || "";
+    const phone =
+      customer.phone ||
+      "";
 
-    const country = customer.country || "";
+    const country =
+      customer.country ||
+      "";
 
-    const city = customer.city || "";
+    const city =
+      customer.city ||
+      "";
 
-    const state = customer.state || "";
+    const state =
+      customer.state ||
+      "";
 
     const postalCode =
-      customer.postalCode || "";
+      customer.postalCode ||
+      "";
 
     const address =
-      customer.address || "";
+      customer.address ||
+      "";
 
     const notes =
-      customer.notes || "";
+      customer.notes ||
+      "";
 
-    // VALIDATE CUSTOMER INFORMATION
+    /*
+     * VALIDATE CUSTOMER INFORMATION
+     */
 
     if (!fullName.trim()) {
       return NextResponse.json(
@@ -159,22 +174,28 @@ export async function POST(request) {
       );
     }
 
-    // FORMAT ORDER ITEMS
+    /*
+     * FORMAT ORDER ITEMS
+     */
 
     const formattedItems = items.map((item) => {
-      const price = Number(item.price) || 0;
+      const productId =
+        item.productId ||
+        item._id ||
+        item.id ||
+        "";
+
+      const price =
+        Number(item.price) || 0;
 
       const quantity =
         Number(item.quantity) || 1;
 
-      const total = price * quantity;
+      const total =
+        price * quantity;
 
       return {
-        productId: String(
-          item.productId ||
-          item.id ||
-          ""
-        ),
+        productId: String(productId),
 
         name:
           item.name ||
@@ -182,6 +203,7 @@ export async function POST(request) {
 
         image:
           item.image ||
+          item.images?.[0] ||
           "",
 
         price,
@@ -192,7 +214,9 @@ export async function POST(request) {
       };
     });
 
-    // CHECK PRODUCT IDs
+    /*
+     * MAKE SURE PRODUCTS HAVE IDs
+     */
 
     const invalidItem =
       formattedItems.find(
@@ -210,7 +234,9 @@ export async function POST(request) {
       );
     }
 
-    // CALCULATE TOTALS
+    /*
+     * CALCULATE TOTALS
+     */
 
     const subtotal =
       formattedItems.reduce(
@@ -227,7 +253,9 @@ export async function POST(request) {
     const total =
       subtotal + delivery;
 
-    // PAYMENT METHOD
+    /*
+     * PAYMENT METHOD
+     */
 
     const paymentMethod =
       body.paymentMethod ||
@@ -254,7 +282,9 @@ export async function POST(request) {
       );
     }
 
-    // CREATE ORDER NUMBER
+    /*
+     * CREATE ORDER NUMBER
+     */
 
     const orderNumber =
       `CH-${Date.now()}-${Math.floor(
@@ -262,11 +292,14 @@ export async function POST(request) {
           Math.random() * 9000
       )}`;
 
-    // CREATE ORDER
+    /*
+     * CREATE ORDER
+     */
 
     const order =
       await Order.create({
-        userId: tokenData.userId,
+        userId:
+          tokenData.userId,
 
         orderNumber,
 
@@ -275,7 +308,9 @@ export async function POST(request) {
             fullName.trim(),
 
           email:
-            email.trim().toLowerCase(),
+            email
+              .trim()
+              .toLowerCase(),
 
           phone:
             phone.trim(),
@@ -317,61 +352,108 @@ export async function POST(request) {
           "pending",
       });
 
+    /*
+     * TERMINAL LOG
+     */
+
     console.log("====================================");
-    console.log("✅ ORDER CREATED SUCCESSFULLY");
+    console.log(
+      "✅ ORDER CREATED SUCCESSFULLY"
+    );
+
     console.log(
       "Order ID:",
       order._id.toString()
     );
+
     console.log(
       "Order Number:",
       order.orderNumber
     );
+
     console.log(
       "User ID:",
       tokenData.userId
     );
+
     console.log(
       "Customer:",
       order.customer.email
     );
+
     console.log(
       "Subtotal:",
       order.subtotal
     );
+
     console.log(
       "Delivery:",
       order.delivery
     );
+
     console.log(
       "Total:",
       order.total
     );
+
     console.log("====================================");
 
     return NextResponse.json(
       {
         success: true,
+
         message:
           "Order created successfully.",
 
-        orderNumber:
-          order.orderNumber,
+        order: {
+          _id:
+            order._id.toString(),
 
-        orderId:
-          order._id.toString(),
+          orderNumber:
+            order.orderNumber,
+
+          userId:
+            order.userId.toString(),
+
+          customer:
+            order.customer,
+
+          items:
+            order.items,
+
+          subtotal:
+            order.subtotal,
+
+          delivery:
+            order.delivery,
+
+          total:
+            order.total,
+
+          paymentMethod:
+            order.paymentMethod,
+
+          paymentStatus:
+            order.paymentStatus,
+
+          orderStatus:
+            order.orderStatus,
+        },
       },
       { status: 201 }
     );
   } catch (error) {
     console.error("====================================");
-    console.error("❌ CREATE ORDER ERROR");
+    console.error(
+      "❌ CREATE ORDER ERROR"
+    );
     console.error(error);
     console.error("====================================");
 
     return NextResponse.json(
       {
         success: false,
+
         message:
           error.message ||
           "Unable to create order.",
@@ -380,6 +462,17 @@ export async function POST(request) {
     );
   }
 }
+
+
+/*
+ * GET ORDERS
+ *
+ * Customer:
+ * - sees their own orders
+ *
+ * Admin:
+ * - sees all orders
+ */
 
 export async function GET() {
   try {
@@ -414,8 +507,6 @@ export async function GET() {
 
     let orders;
 
-    // ADMIN - GET ALL ORDERS
-
     if (
       tokenData.role === "admin"
     ) {
@@ -426,11 +517,7 @@ export async function GET() {
           })
           .limit(100)
           .lean();
-    }
-
-    // CUSTOMER - GET OWN ORDERS
-
-    else {
+    } else {
       orders =
         await Order.find({
           userId:
@@ -451,10 +538,10 @@ export async function GET() {
       { status: 200 }
     );
   } catch (error) {
-    console.error("====================================");
-    console.error("❌ GET ORDERS ERROR");
-    console.error(error);
-    console.error("====================================");
+    console.error(
+      "❌ GET ORDERS ERROR:",
+      error
+    );
 
     return NextResponse.json(
       {
@@ -468,6 +555,13 @@ export async function GET() {
     );
   }
 }
+
+
+/*
+ * PATCH ORDER
+ *
+ * Admin only.
+ */
 
 export async function PATCH(request) {
   try {
@@ -486,8 +580,6 @@ export async function PATCH(request) {
         { status: 401 }
       );
     }
-
-    // ONLY ADMIN CAN UPDATE ORDERS
 
     if (
       tokenData.role !== "admin"
@@ -541,8 +633,7 @@ export async function PATCH(request) {
     const updateData = {};
 
     if (
-      orderStatus !==
-      undefined
+      orderStatus !== undefined
     ) {
       if (
         !allowedOrderStatuses.includes(
@@ -564,8 +655,7 @@ export async function PATCH(request) {
     }
 
     if (
-      paymentStatus !==
-      undefined
+      paymentStatus !== undefined
     ) {
       if (
         !allowedPaymentStatuses.includes(
@@ -594,7 +684,7 @@ export async function PATCH(request) {
         {
           success: false,
           message:
-            "No update fields were provided.",
+            "Nothing to update.",
         },
         { status: 400 }
       );
@@ -622,10 +712,20 @@ export async function PATCH(request) {
     }
 
     console.log("====================================");
-    console.log("✅ ORDER UPDATED");
     console.log(
-      "Order:",
-      order.orderNumber
+      "✅ ORDER UPDATED"
+    );
+    console.log(
+      "Order ID:",
+      order._id.toString()
+    );
+    console.log(
+      "Order Status:",
+      order.orderStatus
+    );
+    console.log(
+      "Payment Status:",
+      order.paymentStatus
     );
     console.log("====================================");
 
@@ -639,10 +739,10 @@ export async function PATCH(request) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("====================================");
-    console.error("❌ UPDATE ORDER ERROR");
-    console.error(error);
-    console.error("====================================");
+    console.error(
+      "❌ UPDATE ORDER ERROR:",
+      error
+    );
 
     return NextResponse.json(
       {

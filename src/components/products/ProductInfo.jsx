@@ -1,292 +1,301 @@
 "use client";
 
+import { useState } from "react";
+import Link from "next/link";
 import {
+  ShoppingCart,
+  Zap,
   Heart,
+  Truck,
+  ShieldCheck,
   Minus,
   Plus,
-  ShoppingCart,
-  Star,
-  Truck,
-  Zap,
+  Check,
 } from "lucide-react";
-import Link from "next/link";
-import { useState } from "react";
 import { useCart } from "@/context/CartContext";
 
 export default function ProductInfo({ product }) {
-  const [quantity, setQuantity] = useState(1);
-  const [favorite, setFavorite] = useState(false);
-  const [addedMessage, setAddedMessage] =
-    useState("");
-
   const { addToCart } = useCart();
 
-  if (!product) {
-    return null;
-  }
+  const stock = Number(product?.stock || 0);
+  const [quantity, setQuantity] = useState(1);
+  const [added, setAdded] = useState(false);
 
-  const {
-    name,
-    price,
-    oldPrice,
-    discount,
-    rating,
-    reviews,
-    seller,
-    stock,
-    freeDelivery,
-    description,
-  } = product;
+  const price = Number(product?.price || 0);
+  const oldPrice = Number(product?.oldPrice || 0);
+  const discount = Number(product?.discount || 0);
 
   const increaseQuantity = () => {
-    if (stock && quantity < stock) {
-      setQuantity((current) => current + 1);
-    }
+    setQuantity((current) => {
+      if (stock > 0 && current >= stock) {
+        return current;
+      }
+
+      return current + 1;
+    });
   };
 
   const decreaseQuantity = () => {
-    if (quantity > 1) {
-      setQuantity((current) => current - 1);
-    }
+    setQuantity((current) => {
+      if (current <= 1) {
+        return 1;
+      }
+
+      return current - 1;
+    });
   };
 
   const handleAddToCart = () => {
-    if (!stock || stock <= 0) {
+    if (!product || stock <= 0) {
       return;
     }
 
-    addToCart(product, quantity);
+    const cartProduct = {
+      ...product,
+      id: product._id?.toString() || product.id?.toString(),
+      _id: product._id?.toString() || product.id?.toString(),
+      quantity,
+      image:
+        product.image ||
+        product.images?.[0] ||
+        "/placeholder-product.png",
+      images: product.images || [],
+      price,
+      oldPrice,
+      discount,
+    };
 
-    setAddedMessage(
-      `${quantity} ${
-        quantity === 1 ? "item" : "items"
-      } added to your cart.`
-    );
+    addToCart(cartProduct, quantity);
+
+    setAdded(true);
 
     setTimeout(() => {
-      setAddedMessage("");
-    }, 3000);
+      setAdded(false);
+    }, 2000);
   };
 
-  const savings =
-    Number(oldPrice || 0) -
-    Number(price || 0);
+  const productId =
+    product?._id?.toString() ||
+    product?.id?.toString();
 
   return (
-    <div className="flex h-full flex-col">
-      {/* Product Name */}
-      <h1 className="text-2xl font-bold leading-9 text-gray-900 md:text-3xl">
-        {name}
-      </h1>
+    <div className="space-y-6">
+      {/* PRODUCT NAME */}
+      <div>
+        {product?.brand && (
+          <p className="mb-2 text-sm font-medium text-blue-600">
+            {product.brand}
+          </p>
+        )}
 
-      {/* Rating */}
-      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <h1 className="text-2xl font-bold leading-tight text-slate-900 sm:text-3xl">
+          {product?.name}
+        </h1>
+
+        {product?.shortDescription && (
+          <p className="mt-3 text-base leading-7 text-slate-600">
+            {product.shortDescription}
+          </p>
+        )}
+      </div>
+
+      {/* RATING */}
+      <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-1">
-          <Star
-            size={18}
-            className="fill-yellow-400 text-yellow-400"
-          />
-
-          <span className="font-semibold text-gray-800">
-            {rating || "0.0"}
+          <span className="text-lg text-yellow-500">★</span>
+          <span className="font-semibold text-slate-900">
+            {Number(product?.rating || 0).toFixed(1)}
           </span>
         </div>
 
-        <span className="text-sm text-gray-500">
-          {reviews || 0} reviews
+        <span className="text-slate-300">|</span>
+
+        <span className="text-sm text-slate-500">
+          {Number(product?.reviews || 0)} reviews
         </span>
 
-        <span className="text-gray-300">
-          •
-        </span>
-
-        <span className="text-sm text-gray-500">
-          Verified product
-        </span>
+        {product?.sku && (
+          <>
+            <span className="text-slate-300">|</span>
+            <span className="text-sm text-slate-500">
+              SKU: {product.sku}
+            </span>
+          </>
+        )}
       </div>
 
-      {/* Seller */}
-      {seller && (
-        <p className="mt-3 text-sm text-gray-500">
-          Sold by{" "}
-          <span className="font-semibold text-gray-700">
-            {seller}
-          </span>
-        </p>
-      )}
-
-      <div className="my-5 border-t border-gray-200" />
-
-      {/* Price */}
-      <div>
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="text-3xl font-bold text-gray-900">
-            ${Number(price || 0).toLocaleString()}
+      {/* PRICE */}
+      <div className="border-y border-slate-200 py-5">
+        <div className="flex flex-wrap items-end gap-3">
+          <span className="text-3xl font-bold text-slate-900">
+            ${price.toLocaleString()}
           </span>
 
-          {oldPrice && (
-            <span className="text-lg text-gray-400 line-through">
-              ${Number(oldPrice).toLocaleString()}
+          {oldPrice > price && (
+            <span className="pb-1 text-lg text-slate-400 line-through">
+              ${oldPrice.toLocaleString()}
             </span>
           )}
 
-          {discount && (
-            <span className="rounded-md bg-red-100 px-2 py-1 text-sm font-bold text-red-600">
+          {discount > 0 && (
+            <span className="mb-1 rounded-md bg-red-100 px-2.5 py-1 text-sm font-semibold text-red-600">
               {discount}% OFF
             </span>
           )}
         </div>
 
-        {savings > 0 && (
-          <p className="mt-1 text-sm font-medium text-green-600">
-            You save $
-            {savings.toLocaleString()}
-          </p>
-        )}
+        <p className="mt-2 text-sm text-slate-500">
+          Price includes standard product listing information.
+        </p>
       </div>
 
-      {/* Delivery */}
-      <div className="mt-5 rounded-lg bg-green-50 p-4">
-        <div className="flex items-start gap-3">
-          <Truck
-            size={21}
-            className="mt-0.5 flex-shrink-0 text-green-600"
-          />
-
-          <div>
-            <p className="font-semibold text-green-700">
-              {freeDelivery
-                ? "Free delivery"
-                : "Delivery available"}
-            </p>
-
-            <p className="mt-1 text-sm leading-5 text-green-600">
-              Fast and secure delivery available
-              for this product.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Stock */}
-      <div className="mt-4">
+      {/* STOCK */}
+      <div>
         {stock > 0 ? (
-          <p className="text-sm font-semibold text-green-600">
-            In stock — {stock} available
-          </p>
+          <div className="flex items-center gap-2 text-sm font-medium text-green-600">
+            <span className="h-2.5 w-2.5 rounded-full bg-green-500" />
+            In Stock
+            <span className="font-normal text-slate-500">
+              ({stock} available)
+            </span>
+          </div>
         ) : (
-          <p className="text-sm font-semibold text-red-600">
-            Out of stock
-          </p>
+          <div className="flex items-center gap-2 text-sm font-semibold text-red-600">
+            <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
+            Out of Stock
+          </div>
         )}
       </div>
 
-      {/* Quantity */}
+      {/* QUANTITY */}
       {stock > 0 && (
-        <div className="mt-5">
-          <p className="mb-2 text-sm font-semibold text-gray-800">
+        <div>
+          <p className="mb-3 text-sm font-semibold text-slate-900">
             Quantity
           </p>
 
-          <div className="flex w-fit items-center overflow-hidden rounded-lg border border-gray-300">
+          <div className="flex w-fit items-center overflow-hidden rounded-lg border border-slate-300">
             <button
               type="button"
               onClick={decreaseQuantity}
               disabled={quantity <= 1}
-              className="flex h-10 w-10 items-center justify-center text-gray-600 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex h-11 w-11 items-center justify-center text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label="Decrease quantity"
             >
-              <Minus size={16} />
+              <Minus size={18} />
             </button>
 
-            <span className="flex h-10 w-12 items-center justify-center border-x border-gray-300 text-sm font-semibold">
+            <div className="flex h-11 min-w-14 items-center justify-center border-x border-slate-300 px-4 font-semibold text-slate-900">
               {quantity}
-            </span>
+            </div>
 
             <button
               type="button"
               onClick={increaseQuantity}
-              disabled={
-                quantity >= stock
-              }
-              className="flex h-10 w-10 items-center justify-center text-gray-600 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+              disabled={quantity >= stock}
+              className="flex h-11 w-11 items-center justify-center text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label="Increase quantity"
             >
-              <Plus size={16} />
+              <Plus size={18} />
             </button>
           </div>
         </div>
       )}
 
-      {/* Added Message */}
-      {addedMessage && (
-        <div className="mt-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
-          {addedMessage}
-          <div className="mt-1">
-            <Link
-              href="/cart"
-              className="font-bold underline"
-            >
-              View Cart
-            </Link>
-          </div>
-        </div>
-      )}
-
-      {/* Action Buttons */}
-      <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+      {/* ACTION BUTTONS */}
+      <div className="flex flex-col gap-3 sm:flex-row">
         <button
           type="button"
           onClick={handleAddToCart}
-          disabled={!stock}
-          className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-3.5 font-semibold text-white transition hover:bg-blue-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-gray-300"
+          disabled={stock <= 0}
+          className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3.5 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
         >
-          <ShoppingCart size={19} />
-          Add to Cart
+          {added ? (
+            <>
+              <Check size={20} />
+              Added to Cart
+            </>
+          ) : (
+            <>
+              <ShoppingCart size={20} />
+              Add to Cart
+            </>
+          )}
         </button>
 
-        <Link
-          href={stock ? "/checkout" : "#"}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-100 px-5 py-3.5 font-semibold text-blue-700 transition hover:bg-blue-200 ${
-            !stock
-              ? "pointer-events-none opacity-50"
-              : ""
-          }`}
+        {productId && (
+          <Link
+            href={`/checkout?product=${productId}&quantity=${quantity}`}
+            className={`flex flex-1 items-center justify-center gap-2 rounded-xl border border-blue-600 px-6 py-3.5 font-semibold text-blue-600 transition hover:bg-blue-50 ${
+              stock <= 0
+                ? "pointer-events-none border-slate-300 text-slate-400"
+                : ""
+            }`}
+          >
+            <Zap size={20} />
+            Buy Now
+          </Link>
+        )}
+
+        <button
+          type="button"
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-slate-300 text-slate-600 transition hover:border-red-300 hover:bg-red-50 hover:text-red-500"
+          aria-label="Add to wishlist"
         >
-          <Zap size={19} />
-          Buy Now
-        </Link>
+          <Heart size={20} />
+        </button>
       </div>
 
-      {/* Wishlist */}
-      <button
-        type="button"
-        onClick={() =>
-          setFavorite(!favorite)
-        }
-        className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 px-5 py-3 font-semibold text-gray-700 transition hover:bg-gray-50"
-      >
-        <Heart
-          size={19}
-          className={
-            favorite
-              ? "fill-red-500 text-red-500"
-              : ""
-          }
-        />
+      {/* ADDED MESSAGE */}
+      {added && (
+        <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
+          ✓ {quantity} {quantity === 1 ? "item" : "items"} added to your
+          cart successfully.
+        </div>
+      )}
 
-        {favorite
-          ? "Added to Wishlist"
-          : "Add to Wishlist"}
-      </button>
+      {/* DELIVERY / FEATURES */}
+      <div className="grid gap-3 border-t border-slate-200 pt-5 sm:grid-cols-2">
+        <div className="flex items-start gap-3">
+          <Truck className="mt-0.5 text-blue-600" size={21} />
 
-      {/* Description */}
-      {description && (
-        <div className="mt-7 border-t border-gray-200 pt-6">
-          <h2 className="text-lg font-bold text-gray-900">
-            Product Description
-          </h2>
+          <div>
+            <p className="text-sm font-semibold text-slate-900">
+              Delivery
+            </p>
 
-          <p className="mt-3 text-sm leading-7 text-gray-600">
-            {description}
+            <p className="text-xs leading-5 text-slate-500">
+              {product?.freeDelivery
+                ? "Free delivery available"
+                : "Delivery options available at checkout"}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-start gap-3">
+          <ShieldCheck className="mt-0.5 text-blue-600" size={21} />
+
+          <div>
+            <p className="text-sm font-semibold text-slate-900">
+              Secure Shopping
+            </p>
+
+            <p className="text-xs leading-5 text-slate-500">
+              Safe and secure checkout experience
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* SELLER */}
+      {product?.sellerName && (
+        <div className="rounded-xl bg-slate-50 p-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+            Sold by
+          </p>
+
+          <p className="mt-1 font-semibold text-slate-900">
+            {product.sellerName}
           </p>
         </div>
       )}

@@ -23,15 +23,21 @@ async function createUniqueSlug(name, excludeId = null) {
   let counter = 2;
 
   while (true) {
-    const query = { slug };
+    const query = {
+      slug,
+    };
 
-    if (excludeId) {
+    if (
+      excludeId &&
+      mongoose.Types.ObjectId.isValid(excludeId)
+    ) {
       query._id = {
         $ne: excludeId,
       };
     }
 
-    const existingProduct = await Product.findOne(query).lean();
+    const existingProduct =
+      await Product.findOne(query).lean();
 
     if (!existingProduct) {
       return slug;
@@ -42,181 +48,245 @@ async function createUniqueSlug(name, excludeId = null) {
   }
 }
 
-function getUser() {
-  return getCurrentUserToken();
+function calculateDiscount(price, oldPrice) {
+  const currentPrice = Number(price) || 0;
+  const previousPrice = Number(oldPrice) || 0;
+
+  if (
+    previousPrice <= 0 ||
+    currentPrice <= 0 ||
+    previousPrice <= currentPrice
+  ) {
+    return 0;
+  }
+
+  return Math.round(
+    ((previousPrice - currentPrice) /
+      previousPrice) *
+      100
+  );
 }
 
-async function validateCategory(categoryId) {
-  if (!categoryId) {
-    return null;
+function normalizeImages(images) {
+  if (Array.isArray(images)) {
+    return images
+      .map((image) => String(image || "").trim())
+      .filter(Boolean);
   }
 
-  if (!mongoose.Types.ObjectId.isValid(categoryId)) {
-    throw new Error("Invalid category ID.");
+  if (typeof images === "string") {
+    return images
+      .split(",")
+      .map((image) => image.trim())
+      .filter(Boolean);
   }
 
-  const category = await Category.findOne({
-    _id: categoryId,
-    isActive: true,
-  }).lean();
-
-  if (!category) {
-    throw new Error("Selected category does not exist or is inactive.");
-  }
-
-  return category;
+  return [];
 }
 
 /*
 |--------------------------------------------------------------------------
-| GET PRODUCTS
+| GET /api/products
 |--------------------------------------------------------------------------
+|
+| Public:
+|   /api/products
+|
+| Admin:
+|   /api/products?includeInactive=true
+|
+| Optional:
+|   ?categoryId=...
+|   ?category=...
+|   ?featured=true
+|
 */
 
 export async function GET(request) {
   try {
     await connectDB();
 
-    const user = getUser();
-
-    const { searchParams } = new URL(request.url);
+    const { searchParams } =
+      new URL(request.url);
 
     const includeInactive =
-      searchParams.get("includeInactive") === "true";
-
-    const featured =
-      searchParams.get("featured") === "true";
+      searchParams.get("includeInactive") ===
+      "true";
 
     const categoryId =
       searchParams.get("categoryId");
 
-    const sellerId =
-      searchParams.get("sellerId");
+    const category =
+      searchParams.get("category");
 
-    const id =
-      searchParams.get("id");
+    const featured =
+      searchParams.get("featured");
+
+    const user =
+      getCurrentUserToken();
+
+    /*
+    |--------------------------------------------------------------------------
+    | Admin check for inactive products
+    |--------------------------------------------------------------------------
+    */
+
+    if (includeInactive) {
+      if (!user || user.role !== "admin") {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Admin access required.",
+          },
+          {
+            status: 403,
+          }
+        );
+      }
+    }
 
     const query = {};
 
     /*
-     * Single product
-     */
-    if (id) {
-      if (!mongoose.Types.ObjectId.isValid(id)) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: "Invalid product ID.",
-          },
-          {
-            status: 400,
-          }
-        );
-      }
+    |--------------------------------------------------------------------------
+    | Active / inactive
+    |--------------------------------------------------------------------------
+    */
 
-      const product = await Product.findById(id)
-        .populate("categoryId")
-        .lean();
-
-      if (!product) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: "Product not found.",
-          },
-          {
-            status: 404,
-          }
-        );
-      }
-
-      return NextResponse.json({
-        success: true,
-        product,
-      });
-    }
-
-    /*
-     * Public users only see active products.
-     */
-    if (!user || user.role !== "admin") {
-      query.isActive = true;
-    } else if (!includeInactive) {
+    if (!includeInactive) {
       query.isActive = true;
     }
 
     /*
-     * Category filter
-     */
-    if (categoryId) {
-      if (!mongoose.Types.ObjectId.isValid(categoryId)) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: "Invalid category ID.",
-          },
-          {
-            status: 400,
-          }
-        );
-      }
+    |--------------------------------------------------------------------------
+    | Category ID
+    |--------------------------------------------------------------------------
+    */
 
+    if (
+      categoryId &&
+      mongoose.Types.ObjectId.isValid(
+        categoryId
+      )
+    ) {
       query.categoryId = categoryId;
     }
 
     /*
-     * Featured products
-     */
-    if (featured) {
+    |--------------------------------------------------------------------------
+    | Legacy category name support
+    |--------------------------------------------------------------------------
+    */
+
+    if (category && !categoryId) {
+      query.category = category;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Featured products
+    |--------------------------------------------------------------------------
+    */
+
+    if (featured === "true") {
       query.featured = true;
     }
 
-    /*
-     * Seller filtering
-     */
-    if (sellerId) {
-      if (!mongoose.Types.ObjectId.isValid(sellerId)) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: "Invalid seller ID.",
-          },
-          {
-            status: 400,
-          }
+    const products =
+      await Product.find(query)
+        .populate(
+          "categoryId",
+          "name slug description image isActive"
+        )
+        .sort({
+          featured: -1,
+          createdAt: -1,
+        })
+        .lean();
+
+    const formattedProducts =
+      products.map((product) => {
+        const images = normalizeImages(
+          product.images
         );
+
+        return {
+          ...product,
+
+          id: product._id.toString(),
+
+          _id: product._id.toString(),
+
+          image:
+            images[0] || "",
+
+          images,
+
+          price:
+            Number(product.price) || 0,
+
+          oldPrice:
+            Number(product.oldPrice) || 0,
+
+          discount:
+            Number(product.discount) ||
+            calculateDiscount(
+              product.price,
+              product.oldPrice
+            ),
+
+          stock:
+            Number(product.stock) || 0,
+
+          categoryId:
+            product.categoryId
+              ? {
+                  _id:
+                    product.categoryId._id?.toString(),
+                  name:
+                    product.categoryId.name,
+                  slug:
+                    product.categoryId.slug,
+                  description:
+                    product.categoryId
+                      .description || "",
+                  image:
+                    product.categoryId.image ||
+                    "",
+                  isActive:
+                    product.categoryId.isActive,
+                }
+              : null,
+        };
+      });
+
+    return NextResponse.json(
+      {
+        success: true,
+        products: formattedProducts,
+        count: formattedProducts.length,
+      },
+      {
+        status: 200,
       }
-
-      query.sellerId = sellerId;
-    }
-
-    /*
-     * Seller dashboard:
-     * seller only sees their own products.
-     */
-    if (user?.role === "seller") {
-      query.sellerId = user.userId;
-    }
-
-    const products = await Product.find(query)
-      .populate("categoryId")
-      .sort({
-        createdAt: -1,
-      })
-      .lean();
-
-    return NextResponse.json({
-      success: true,
-      products,
-      count: products.length,
-    });
+    );
   } catch (error) {
-    console.error("GET /api/products error:", error);
+    console.error(
+      "GET /api/products error:",
+      error
+    );
 
     return NextResponse.json(
       {
         success: false,
-        message: error.message || "Failed to fetch products.",
+        message:
+          "Failed to load products.",
+        error:
+          process.env.NODE_ENV ===
+          "development"
+            ? error.message
+            : undefined,
       },
       {
         status: 500,
@@ -227,21 +297,26 @@ export async function GET(request) {
 
 /*
 |--------------------------------------------------------------------------
-| POST PRODUCT
+| POST /api/products
 |--------------------------------------------------------------------------
+|
+| Seller or Admin can create products.
+|
 */
 
 export async function POST(request) {
   try {
     await connectDB();
 
-    const user = getUser();
+    const user =
+      getCurrentUserToken();
 
     if (!user) {
       return NextResponse.json(
         {
           success: false,
-          message: "Authentication required.",
+          message:
+            "You must be logged in.",
         },
         {
           status: 401,
@@ -256,7 +331,8 @@ export async function POST(request) {
       return NextResponse.json(
         {
           success: false,
-          message: "You are not allowed to create products.",
+          message:
+            "Only sellers and admins can create products.",
         },
         {
           status: 403,
@@ -264,17 +340,15 @@ export async function POST(request) {
       );
     }
 
-    const body = await request.json();
+    const body =
+      await request.json();
 
     const {
       name,
-      slug,
       shortDescription,
       description,
       price,
       oldPrice,
-      originalPrice,
-      discount,
       stock,
       sku,
       brand,
@@ -291,15 +365,14 @@ export async function POST(request) {
       featured,
       freeDelivery,
       isActive,
-      sellerId,
-      sellerName,
     } = body;
 
     if (!name || !String(name).trim()) {
       return NextResponse.json(
         {
           success: false,
-          message: "Product name is required.",
+          message:
+            "Product name is required.",
         },
         {
           status: 400,
@@ -310,12 +383,13 @@ export async function POST(request) {
     if (
       price === undefined ||
       price === null ||
-      price === ""
+      Number.isNaN(Number(price))
     ) {
       return NextResponse.json(
         {
           success: false,
-          message: "Product price is required.",
+          message:
+            "Valid product price is required.",
         },
         {
           status: 400,
@@ -324,234 +398,292 @@ export async function POST(request) {
     }
 
     /*
-     * Validate category when supplied.
-     */
-    let selectedCategory = null;
+    |--------------------------------------------------------------------------
+    | Category
+    |--------------------------------------------------------------------------
+    */
 
-    if (categoryId) {
-      try {
-        selectedCategory =
-          await validateCategory(categoryId);
-      } catch (error) {
+    let finalCategoryId =
+      categoryId || null;
+
+    let finalCategory =
+      category || "";
+
+    if (
+      finalCategoryId &&
+      mongoose.Types.ObjectId.isValid(
+        finalCategoryId
+      )
+    ) {
+      const foundCategory =
+        await Category.findById(
+          finalCategoryId
+        ).lean();
+
+      if (!foundCategory) {
         return NextResponse.json(
           {
             success: false,
-            message: error.message,
+            message:
+              "Selected category was not found.",
           },
           {
             status: 400,
           }
         );
       }
+
+      finalCategory =
+        foundCategory.name;
+
+      finalCategoryId =
+        foundCategory._id;
+    } else {
+      finalCategoryId = null;
     }
 
     /*
-     * Seller ID must come from JWT for sellers.
-     */
-    let finalSellerId = user.userId;
-    let finalSellerName = sellerName || "";
+    |--------------------------------------------------------------------------
+    | Images
+    |--------------------------------------------------------------------------
+    */
+
+    let finalImages =
+      normalizeImages(images);
+
+    if (
+      finalImages.length === 0 &&
+      image
+    ) {
+      finalImages =
+        normalizeImages(image);
+    }
 
     /*
-     * Admin can create a product for a seller.
-     */
-    if (user.role === "admin" && sellerId) {
-      if (!mongoose.Types.ObjectId.isValid(sellerId)) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: "Invalid seller ID.",
-          },
-          {
-            status: 400,
-          }
-        );
-      }
+    |--------------------------------------------------------------------------
+    | Seller
+    |--------------------------------------------------------------------------
+    */
 
-      const seller = await User.findById(sellerId).lean();
+    let sellerId = null;
+    let sellerName = "";
 
-      if (!seller) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: "Seller not found.",
-          },
-          {
-            status: 404,
-          }
-        );
-      }
+    if (user.role === "seller") {
+      sellerId = user.userId;
 
-      finalSellerId = seller._id;
-      finalSellerName =
-        `${seller.firstName || ""} ${seller.lastName || ""}`.trim();
-    } else {
-      const seller = await User.findById(user.userId).lean();
+      const seller =
+        await User.findById(
+          user.userId
+        ).lean();
 
       if (seller) {
-        finalSellerName =
-          `${seller.firstName || ""} ${seller.lastName || ""}`.trim();
+        sellerName =
+          `${seller.firstName || ""} ${
+            seller.lastName || ""
+          }`.trim();
       }
     }
 
     /*
-     * Handle image field from the existing seller form.
-     */
-    let finalImages = [];
+    |--------------------------------------------------------------------------
+    | Admin may optionally create for another seller
+    |--------------------------------------------------------------------------
+    */
 
-    if (Array.isArray(images)) {
-      finalImages = images.filter(Boolean);
-    } else if (image) {
-      finalImages = [image];
+    if (
+      user.role === "admin" &&
+      body.sellerId &&
+      mongoose.Types.ObjectId.isValid(
+        body.sellerId
+      )
+    ) {
+      const seller =
+        await User.findById(
+          body.sellerId
+        ).lean();
+
+      if (
+        seller &&
+        seller.role === "seller"
+      ) {
+        sellerId = seller._id;
+        sellerName =
+          `${seller.firstName || ""} ${
+            seller.lastName || ""
+          }`.trim();
+      }
     }
 
-    const finalSlug = await createUniqueSlug(
-      slug || name
-    );
+    /*
+    |--------------------------------------------------------------------------
+    | SKU
+    |--------------------------------------------------------------------------
+    */
+
+    let finalSku =
+      sku
+        ? String(sku)
+            .trim()
+            .toUpperCase()
+        : "";
+
+    if (finalSku) {
+      const existingSku =
+        await Product.findOne({
+          sku: finalSku,
+        }).lean();
+
+      if (existingSku) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "SKU already exists.",
+          },
+          {
+            status: 400,
+          }
+        );
+      }
+    }
 
     /*
-     * Support both oldPrice and originalPrice.
-     */
-    const finalOldPrice =
-      oldPrice !== undefined &&
-      oldPrice !== null &&
-      oldPrice !== ""
-        ? Number(oldPrice)
-        : originalPrice !== undefined &&
-            originalPrice !== null &&
-            originalPrice !== ""
-          ? Number(originalPrice)
-          : null;
+    |--------------------------------------------------------------------------
+    | Slug
+    |--------------------------------------------------------------------------
+    */
+
+    const slug =
+      await createUniqueSlug(
+        name
+      );
+
+    const numericPrice =
+      Number(price) || 0;
+
+    const numericOldPrice =
+      Number(oldPrice) || 0;
+
+    const discount =
+      calculateDiscount(
+        numericPrice,
+        numericOldPrice
+      );
 
     /*
-     * If categoryId exists, store the category name
-     * in the old category field as well.
-     */
-    const finalCategory =
-      selectedCategory?.name ||
-      category ||
-      "";
-
-    const productData = {
-      name: String(name).trim(),
-
-      slug: finalSlug,
-
-      shortDescription:
-        shortDescription || "",
-
-      description:
-        description || "",
-
-      price: Number(price),
-
-      oldPrice:
-        finalOldPrice !== null &&
-        !Number.isNaN(finalOldPrice)
-          ? finalOldPrice
-          : null,
-
-      discount:
-        discount !== undefined &&
-        discount !== null &&
-        discount !== ""
-          ? Number(discount)
-          : 0,
-
-      stock:
-        stock !== undefined &&
-        stock !== null &&
-        stock !== ""
-          ? Number(stock)
-          : 0,
-
-      sku:
-        sku
-          ? String(sku).trim().toUpperCase()
-          : undefined,
-
-      brand:
-        brand || "",
-
-      category:
-        finalCategory,
-
-      categoryId:
-        selectedCategory?._id || null,
-
-      subcategory:
-        subcategory || "",
-
-      processor:
-        processor || "",
-
-      ram:
-        ram || "",
-
-      storage:
-        storage || "",
-
-      graphics:
-        graphics || "",
-
-      screenSize:
-        screenSize || "",
-
-      images:
-        finalImages,
-
-      featured:
-        Boolean(featured),
-
-      freeDelivery:
-        Boolean(freeDelivery),
-
-      isActive:
-        isActive === undefined
-          ? true
-          : Boolean(isActive),
-
-      sellerId:
-        finalSellerId,
-
-      sellerName:
-        finalSellerName,
-    };
+    |--------------------------------------------------------------------------
+    | Create product
+    |--------------------------------------------------------------------------
+    */
 
     const product =
-      await Product.create(productData);
+      await Product.create({
+        name: String(name).trim(),
 
-    const populatedProduct =
-      await Product.findById(product._id)
-        .populate("categoryId")
-        .lean();
+        slug,
 
-    console.log(
-      "✅ Product created:",
-      populatedProduct._id.toString()
-    );
+        shortDescription:
+          shortDescription || "",
+
+        description:
+          description || "",
+
+        price: numericPrice,
+
+        oldPrice:
+          numericOldPrice,
+
+        discount,
+
+        stock:
+          Number(stock) || 0,
+
+        sku:
+          finalSku || undefined,
+
+        brand:
+          brand || "",
+
+        category:
+          finalCategory,
+
+        categoryId:
+          finalCategoryId,
+
+        subcategory:
+          subcategory || "",
+
+        processor:
+          processor || "",
+
+        ram:
+          ram || "",
+
+        storage:
+          storage || "",
+
+        graphics:
+          graphics || "",
+
+        screenSize:
+          screenSize || "",
+
+        images:
+          finalImages,
+
+        featured:
+          Boolean(featured),
+
+        freeDelivery:
+          Boolean(freeDelivery),
+
+        isActive:
+          isActive === undefined
+            ? true
+            : Boolean(isActive),
+
+        sellerId,
+
+        sellerName,
+      });
 
     return NextResponse.json(
       {
         success: true,
-        message: "Product created successfully.",
-        product: populatedProduct,
+        message:
+          "Product created successfully.",
+        product: {
+          ...product.toObject(),
+          id: product._id.toString(),
+          _id:
+            product._id.toString(),
+        },
       },
       {
         status: 201,
       }
     );
   } catch (error) {
-    console.error("POST /api/products error:", error);
+    console.error(
+      "POST /api/products error:",
+      error
+    );
+
+    /*
+    |--------------------------------------------------------------------------
+    | Duplicate key
+    |--------------------------------------------------------------------------
+    */
 
     if (error.code === 11000) {
       return NextResponse.json(
         {
           success: false,
           message:
-            "A product with the same slug or SKU already exists.",
+            "A product with the same unique value already exists.",
         },
         {
-          status: 409,
+          status: 400,
         }
       );
     }
@@ -560,8 +692,12 @@ export async function POST(request) {
       {
         success: false,
         message:
-          error.message ||
           "Failed to create product.",
+        error:
+          process.env.NODE_ENV ===
+          "development"
+            ? error.message
+            : undefined,
       },
       {
         status: 500,
@@ -572,21 +708,30 @@ export async function POST(request) {
 
 /*
 |--------------------------------------------------------------------------
-| PATCH PRODUCT
+| PATCH /api/products
 |--------------------------------------------------------------------------
+|
+| Seller:
+|   Can update own products.
+|
+| Admin:
+|   Can update any product.
+|
 */
 
 export async function PATCH(request) {
   try {
     await connectDB();
 
-    const user = getUser();
+    const user =
+      getCurrentUserToken();
 
     if (!user) {
       return NextResponse.json(
         {
           success: false,
-          message: "Authentication required.",
+          message:
+            "You must be logged in.",
         },
         {
           status: 401,
@@ -594,18 +739,25 @@ export async function PATCH(request) {
       );
     }
 
-    const body = await request.json();
+    const body =
+      await request.json();
 
     const productId =
       body.id ||
       body.productId ||
       body._id;
 
-    if (!productId) {
+    if (
+      !productId ||
+      !mongoose.Types.ObjectId.isValid(
+        productId
+      )
+    ) {
       return NextResponse.json(
         {
           success: false,
-          message: "Product ID is required.",
+          message:
+            "Valid product ID is required.",
         },
         {
           status: 400,
@@ -613,26 +765,17 @@ export async function PATCH(request) {
       );
     }
 
-    if (!mongoose.Types.ObjectId.isValid(productId)) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Invalid product ID.",
-        },
-        {
-          status: 400,
-        }
+    const product =
+      await Product.findById(
+        productId
       );
-    }
 
-    const existingProduct =
-      await Product.findById(productId);
-
-    if (!existingProduct) {
+    if (!product) {
       return NextResponse.json(
         {
           success: false,
-          message: "Product not found.",
+          message:
+            "Product not found.",
         },
         {
           status: 404,
@@ -641,186 +784,120 @@ export async function PATCH(request) {
     }
 
     /*
-     * Sellers can only edit their own products.
-     */
-    if (
-      user.role === "seller" &&
-      String(existingProduct.sellerId) !==
-        String(user.userId)
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "You are not allowed to edit this product.",
-        },
-        {
-          status: 403,
-        }
-      );
-    }
+    |--------------------------------------------------------------------------
+    | Seller ownership
+    |--------------------------------------------------------------------------
+    */
 
-    if (
-      user.role !== "seller" &&
-      user.role !== "admin"
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "You are not allowed to edit products.",
-        },
-        {
-          status: 403,
-        }
-      );
-    }
-
-    /*
-     * Category update.
-     */
-    if (body.categoryId !== undefined) {
-      if (body.categoryId === "" || body.categoryId === null) {
-        existingProduct.categoryId = null;
-        existingProduct.category =
-          body.category || "";
-      } else {
-        try {
-          const selectedCategory =
-            await validateCategory(
-              body.categoryId
-            );
-
-          existingProduct.categoryId =
-            selectedCategory._id;
-
-          existingProduct.category =
-            selectedCategory.name;
-        } catch (error) {
-          return NextResponse.json(
-            {
-              success: false,
-              message: error.message,
-            },
-            {
-              status: 400,
-            }
-          );
-        }
+    if (user.role === "seller") {
+      if (
+        !product.sellerId ||
+        String(product.sellerId) !==
+          String(user.userId)
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "You can only edit your own products.",
+          },
+          {
+            status: 403,
+          }
+        );
       }
-    } else if (body.category !== undefined) {
-      existingProduct.category =
-        body.category || "";
+    } else if (user.role !== "admin") {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "You are not allowed to update products.",
+        },
+        {
+          status: 403,
+        }
+      );
     }
 
     /*
-     * Update normal fields only when supplied.
-     */
-    const fields = [
+    |--------------------------------------------------------------------------
+    | Product fields
+    |--------------------------------------------------------------------------
+    */
+
+    const allowedFields = [
       "name",
       "shortDescription",
       "description",
+      "price",
+      "oldPrice",
+      "stock",
+      "sku",
       "brand",
+      "category",
+      "categoryId",
       "subcategory",
       "processor",
       "ram",
       "storage",
       "graphics",
       "screenSize",
+      "images",
+      "featured",
+      "freeDelivery",
+      "isActive",
+      "sellerId",
       "sellerName",
     ];
 
-    for (const field of fields) {
-      if (body[field] !== undefined) {
-        existingProduct[field] =
+    for (const field of allowedFields) {
+      if (
+        Object.prototype.hasOwnProperty.call(
+          body,
+          field
+        )
+      ) {
+        /*
+        |--------------------------------------------------------------------------
+        | Do not allow seller to change ownership
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+          user.role === "seller" &&
+          field === "sellerId"
+        ) {
+          continue;
+        }
+
+        product[field] =
           body[field];
       }
     }
 
-    if (body.price !== undefined) {
-      existingProduct.price =
-        Number(body.price);
-    }
-
-    if (body.oldPrice !== undefined) {
-      existingProduct.oldPrice =
-        body.oldPrice === "" ||
-        body.oldPrice === null
-          ? null
-          : Number(body.oldPrice);
-    } else if (
-      body.originalPrice !== undefined
-    ) {
-      existingProduct.oldPrice =
-        body.originalPrice === "" ||
-        body.originalPrice === null
-          ? null
-          : Number(body.originalPrice);
-    }
-
-    if (body.discount !== undefined) {
-      existingProduct.discount =
-        Number(body.discount);
-    }
-
-    if (body.stock !== undefined) {
-      existingProduct.stock =
-        Number(body.stock);
-    }
-
-    if (body.sku !== undefined) {
-      existingProduct.sku =
-        body.sku
-          ? String(body.sku)
-              .trim()
-              .toUpperCase()
-          : undefined;
-    }
-
-    if (Array.isArray(body.images)) {
-      existingProduct.images =
-        body.images.filter(Boolean);
-    } else if (
-      body.image !== undefined
-    ) {
-      existingProduct.images =
-        body.image
-          ? [body.image]
-          : [];
-    }
-
-    if (body.featured !== undefined) {
-      existingProduct.featured =
-        Boolean(body.featured);
-    }
-
-    if (body.freeDelivery !== undefined) {
-      existingProduct.freeDelivery =
-        Boolean(body.freeDelivery);
-    }
-
-    if (body.isActive !== undefined) {
-      existingProduct.isActive =
-        Boolean(body.isActive);
-    }
-
     /*
-     * Allow admin to repair missing sellerId.
-     * Existing sellerId is ALWAYS preserved otherwise.
-     */
+    |--------------------------------------------------------------------------
+    | Category handling
+    |--------------------------------------------------------------------------
+    */
+
     if (
-      user.role === "admin" &&
-      body.sellerId
+      body.categoryId &&
+      mongoose.Types.ObjectId.isValid(
+        body.categoryId
+      )
     ) {
-      if (
-        !mongoose.Types.ObjectId.isValid(
-          body.sellerId
-        )
-      ) {
+      const foundCategory =
+        await Category.findById(
+          body.categoryId
+        ).lean();
+
+      if (!foundCategory) {
         return NextResponse.json(
           {
             success: false,
-            message: "Invalid seller ID.",
+            message:
+              "Selected category was not found.",
           },
           {
             status: 400,
@@ -828,75 +905,188 @@ export async function PATCH(request) {
         );
       }
 
+      product.categoryId =
+        foundCategory._id;
+
+      product.category =
+        foundCategory.name;
+    } else if (
+      body.categoryId === null ||
+      body.categoryId === ""
+    ) {
+      product.categoryId =
+        null;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Images
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+      Object.prototype.hasOwnProperty.call(
+        body,
+        "images"
+      )
+    ) {
+      product.images =
+        normalizeImages(
+          body.images
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | SKU
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+      Object.prototype.hasOwnProperty.call(
+        body,
+        "sku"
+      )
+    ) {
+      const newSku =
+        String(
+          body.sku || ""
+        )
+          .trim()
+          .toUpperCase();
+
+      if (newSku) {
+        const duplicateSku =
+          await Product.findOne({
+            sku: newSku,
+            _id: {
+              $ne: product._id,
+            },
+          }).lean();
+
+        if (duplicateSku) {
+          return NextResponse.json(
+            {
+              success: false,
+              message:
+                "SKU already exists.",
+            },
+            {
+              status: 400,
+            }
+          );
+        }
+
+        product.sku =
+          newSku;
+      } else {
+        product.sku =
+          undefined;
+      }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Slug
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+      Object.prototype.hasOwnProperty.call(
+        body,
+        "name"
+      ) &&
+      body.name
+    ) {
+      product.slug =
+        await createUniqueSlug(
+          body.name,
+          product._id.toString()
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Discount
+    |--------------------------------------------------------------------------
+    */
+
+    product.discount =
+      calculateDiscount(
+        product.price,
+        product.oldPrice
+      );
+
+    /*
+    |--------------------------------------------------------------------------
+    | Seller repair
+    |--------------------------------------------------------------------------
+    |
+    | Admin can repair old products that
+    | do not have sellerId.
+    |
+    */
+
+    if (
+      user.role === "admin" &&
+      !product.sellerId &&
+      body.sellerId &&
+      mongoose.Types.ObjectId.isValid(
+        body.sellerId
+      )
+    ) {
       const seller =
         await User.findById(
           body.sellerId
         ).lean();
 
-      if (!seller) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: "Seller not found.",
-          },
-          {
-            status: 404,
-          }
-        );
+      if (
+        seller &&
+        seller.role === "seller"
+      ) {
+        product.sellerId =
+          seller._id;
+
+        product.sellerName =
+          `${seller.firstName || ""} ${
+            seller.lastName || ""
+          }`.trim();
       }
-
-      existingProduct.sellerId =
-        seller._id;
-
-      existingProduct.sellerName =
-        `${seller.firstName || ""} ${seller.lastName || ""}`.trim();
     }
 
-    /*
-     * Update slug only when name or slug changes.
-     */
-    if (
-      body.slug !== undefined ||
-      body.name !== undefined
-    ) {
-      existingProduct.slug =
-        await createUniqueSlug(
-          body.slug || existingProduct.name,
-          existingProduct._id
-        );
-    }
+    await product.save();
 
-    await existingProduct.save();
-
-    const populatedProduct =
-      await Product.findById(
-        existingProduct._id
-      )
-        .populate("categoryId")
-        .lean();
-
-    console.log(
-      "✅ Product updated:",
-      existingProduct._id.toString()
+    return NextResponse.json(
+      {
+        success: true,
+        message:
+          "Product updated successfully.",
+        product: {
+          ...product.toObject(),
+          id: product._id.toString(),
+          _id:
+            product._id.toString(),
+        },
+      },
+      {
+        status: 200,
+      }
     );
-
-    return NextResponse.json({
-      success: true,
-      message: "Product updated successfully.",
-      product: populatedProduct,
-    });
   } catch (error) {
-    console.error("PATCH /api/products error:", error);
+    console.error(
+      "PATCH /api/products error:",
+      error
+    );
 
     if (error.code === 11000) {
       return NextResponse.json(
         {
           success: false,
           message:
-            "A product with the same slug or SKU already exists.",
+            "A product with the same unique value already exists.",
         },
         {
-          status: 409,
+          status: 400,
         }
       );
     }
@@ -905,8 +1095,12 @@ export async function PATCH(request) {
       {
         success: false,
         message:
-          error.message ||
           "Failed to update product.",
+        error:
+          process.env.NODE_ENV ===
+          "development"
+            ? error.message
+            : undefined,
       },
       {
         status: 500,
@@ -917,21 +1111,27 @@ export async function PATCH(request) {
 
 /*
 |--------------------------------------------------------------------------
-| DELETE PRODUCT
+| DELETE /api/products
 |--------------------------------------------------------------------------
+|
+| We use soft delete:
+| isActive = false
+|
 */
 
 export async function DELETE(request) {
   try {
     await connectDB();
 
-    const user = getUser();
+    const user =
+      getCurrentUserToken();
 
     if (!user) {
       return NextResponse.json(
         {
           success: false,
-          message: "Authentication required.",
+          message:
+            "You must be logged in.",
         },
         {
           status: 401,
@@ -939,10 +1139,73 @@ export async function DELETE(request) {
       );
     }
 
+    const { searchParams } =
+      new URL(request.url);
+
+    const productId =
+      searchParams.get("id") ||
+      searchParams.get("productId");
+
     if (
-      user.role !== "seller" &&
-      user.role !== "admin"
+      !productId ||
+      !mongoose.Types.ObjectId.isValid(
+        productId
+      )
     ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Valid product ID is required.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    const product =
+      await Product.findById(
+        productId
+      );
+
+    if (!product) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Product not found.",
+        },
+        {
+          status: 404,
+        }
+      );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Seller ownership
+    |--------------------------------------------------------------------------
+    */
+
+    if (user.role === "seller") {
+      if (
+        !product.sellerId ||
+        String(product.sellerId) !==
+          String(user.userId)
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "You can only delete your own products.",
+          },
+          {
+            status: 403,
+          }
+        );
+      }
+    } else if (user.role !== "admin") {
       return NextResponse.json(
         {
           success: false,
@@ -955,89 +1218,26 @@ export async function DELETE(request) {
       );
     }
 
-    const { searchParams } =
-      new URL(request.url);
-
-    const productId =
-      searchParams.get("id") ||
-      searchParams.get("productId");
-
-    if (!productId) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Product ID is required.",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
-    if (
-      !mongoose.Types.ObjectId.isValid(
-        productId
-      )
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Invalid product ID.",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
-    const product =
-      await Product.findById(productId);
-
-    if (!product) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Product not found.",
-        },
-        {
-          status: 404,
-        }
-      );
-    }
-
-    if (
-      user.role === "seller" &&
-      String(product.sellerId) !==
-        String(user.userId)
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "You are not allowed to delete this product.",
-        },
-        {
-          status: 403,
-        }
-      );
-    }
-
     /*
-     * Soft delete.
-     */
+    |--------------------------------------------------------------------------
+    | Soft delete
+    |--------------------------------------------------------------------------
+    */
+
     product.isActive = false;
 
     await product.save();
 
-    console.log(
-      "✅ Product deactivated:",
-      product._id.toString()
+    return NextResponse.json(
+      {
+        success: true,
+        message:
+          "Product deactivated successfully.",
+      },
+      {
+        status: 200,
+      }
     );
-
-    return NextResponse.json({
-      success: true,
-      message: "Product deactivated successfully.",
-    });
   } catch (error) {
     console.error(
       "DELETE /api/products error:",
@@ -1048,8 +1248,12 @@ export async function DELETE(request) {
       {
         success: false,
         message:
-          error.message ||
           "Failed to delete product.",
+        error:
+          process.env.NODE_ENV ===
+          "development"
+            ? error.message
+            : undefined,
       },
       {
         status: 500,
