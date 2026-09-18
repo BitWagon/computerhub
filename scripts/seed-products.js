@@ -4,8 +4,7 @@ require("dotenv").config({
 
 const mongoose = require("mongoose");
 
-const MONGODB_URI =
-  process.env.MONGODB_URI;
+const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
   console.error(
@@ -15,55 +14,80 @@ if (!MONGODB_URI) {
   process.exit(1);
 }
 
-const ProductSchema =
-  new mongoose.Schema(
-    {
-      name: String,
-      slug: String,
-      shortDescription: String,
-      description: String,
+const ProductSchema = new mongoose.Schema(
+  {
+    name: String,
 
-      price: Number,
-      oldPrice: Number,
-      discount: Number,
-      stock: Number,
-
-      sku: String,
-
-      brand: String,
-      category: String,
-      subcategory: String,
-
-      processor: String,
-      ram: String,
-      storage: String,
-      graphics: String,
-      screenSize: String,
-
-      images: [String],
-
-      featured: Boolean,
-      freeDelivery: Boolean,
-      isActive: Boolean,
-
-      sellerId: {
-        type: mongoose.Schema.Types.ObjectId,
-        default: null,
-      },
-
-      sellerName: String,
+    slug: {
+      type: String,
+      unique: true,
+      index: true,
     },
-    {
-      timestamps: true,
-    }
-  );
+
+    shortDescription: String,
+    description: String,
+
+    price: Number,
+    oldPrice: Number,
+    discount: Number,
+    stock: Number,
+
+    sku: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+
+    brand: String,
+    category: String,
+
+    categoryId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
+      default: null,
+    },
+
+    subcategory: String,
+
+    processor: String,
+    ram: String,
+    storage: String,
+    graphics: String,
+    screenSize: String,
+
+    images: [String],
+
+    featured: {
+      type: Boolean,
+      default: false,
+    },
+
+    freeDelivery: {
+      type: Boolean,
+      default: false,
+    },
+
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+
+    sellerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+
+    sellerName: String,
+  },
+  {
+    timestamps: true,
+  }
+);
 
 const Product =
   mongoose.models.Product ||
-  mongoose.model(
-    "Product",
-    ProductSchema
-  );
+  mongoose.model("Product", ProductSchema);
 
 const products = [
   {
@@ -309,42 +333,33 @@ const products = [
 
 async function seedProducts() {
   try {
-    console.log(
-      "🔄 Connecting to MongoDB..."
-    );
+    console.log("");
+    console.log("========================================");
+    console.log("🚀 ComputerHub Product Seeder");
+    console.log("========================================");
+    console.log("");
 
-    await mongoose.connect(
-      MONGODB_URI
-    );
+    console.log("🔄 Connecting to MongoDB...");
 
-    console.log(
-      "✅ MongoDB connected"
-    );
+    await mongoose.connect(MONGODB_URI);
+
+    console.log("✅ MongoDB connected successfully");
+    console.log("");
 
     let added = 0;
     let skipped = 0;
 
     for (const productData of products) {
-      /*
-       * Check BOTH:
-       * 1. SKU
-       * 2. Slug
-       *
-       * Your Product model has unique indexes
-       * on both fields.
-       */
-
-      const existingProduct =
-        await Product.findOne({
-          $or: [
-            {
-              sku: productData.sku,
-            },
-            {
-              slug: productData.slug,
-            },
-          ],
-        });
+      const existingProduct = await Product.findOne({
+        $or: [
+          {
+            sku: productData.sku,
+          },
+          {
+            slug: productData.slug,
+          },
+        ],
+      });
 
       if (existingProduct) {
         console.log(
@@ -357,9 +372,7 @@ async function seedProducts() {
       }
 
       try {
-        await Product.create(
-          productData
-        );
+        await Product.create(productData);
 
         console.log(
           `✅ Added: ${productData.name}`
@@ -367,9 +380,7 @@ async function seedProducts() {
 
         added++;
       } catch (error) {
-        if (
-          error.code === 11000
-        ) {
+        if (error.code === 11000) {
           console.log(
             `⚠️ Duplicate skipped: ${productData.name}`
           );
@@ -383,33 +394,41 @@ async function seedProducts() {
       }
     }
 
-    const total =
+    const totalProducts =
+      await Product.countDocuments();
+
+    const activeProducts =
       await Product.countDocuments({
         isActive: true,
       });
 
     console.log("");
-    console.log(
-      "========================================"
-    );
+    console.log("========================================");
+    console.log("📦 ComputerHub Product Summary");
+    console.log("========================================");
     console.log(
       `✅ New products added: ${added}`
     );
     console.log(
-      `⚠️ Existing/duplicate products skipped: ${skipped}`
+      `⚠️ Existing products skipped: ${skipped}`
     );
     console.log(
-      `📦 Total active products: ${total}`
+      `📦 Total products: ${totalProducts}`
     );
     console.log(
-      "========================================"
+      `🟢 Active products: ${activeProducts}`
     );
+    console.log("========================================");
+    console.log("");
   } catch (error) {
     console.error("");
     console.error(
       "❌ Product seeding failed:"
     );
     console.error(error);
+    console.error("");
+
+    process.exitCode = 1;
   } finally {
     await mongoose.disconnect();
 
