@@ -468,12 +468,12 @@ export default function AddSellerProductPage() {
                         </p>
 
                         <p className="text-xs text-green-700">
-                          Original price £
+                          Original price $
                           {Number(
                             formData.originalPrice
                           ).toFixed(2)}
                           {" → "}
-                          Selling price £
+                          Selling price $
                           {Number(
                             formData.price
                           ).toFixed(2)}
