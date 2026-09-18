@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { connectDB } from "@/lib/mongodb";
 import Order from "@/models/Order";
+import Product from "@/models/Product";
 import { getCurrentUserToken } from "@/lib/auth";
 
 
@@ -67,24 +68,12 @@ export async function POST(request) {
       customer.name ||
       `${firstName} ${lastName}`.trim();
 
-    /*
-     * If checkout sends only fullName, split it into
-     * firstName and lastName because Order.js requires
-     * both fields.
-     */
-
     if (!firstName && fullName) {
       const nameParts = fullName.trim().split(/\s+/);
 
       firstName = nameParts.shift() || "";
-
       lastName = nameParts.join(" ") || "";
     }
-
-    /*
-     * If firstName exists but lastName does not,
-     * use a safe fallback so Mongoose validation passes.
-     */
 
     if (!lastName) {
       lastName = "Customer";
@@ -197,9 +186,6 @@ export async function POST(request) {
           Number(item.quantity) || 1
         );
 
-      // IMPORTANT:
-      // Order.js requires "subtotal", not "total".
-
       const itemSubtotal =
         price * quantity;
 
@@ -297,12 +283,6 @@ export async function POST(request) {
     // ========================================================
     // PAYMENT METHOD
     // ========================================================
-
-    /*
-     * Your Order.js currently supports ONLY:
-     *
-     * "cod"
-     */
 
     const paymentMethod =
       body.paymentMethod || "cod";
@@ -509,8 +489,15 @@ export async function POST(request) {
 
 // ============================================================
 // GET /api/orders
-// Customer: own orders
-// Admin: all orders
+//
+// Customer:
+//   - Own orders
+//
+// Admin:
+//   - All orders
+//
+// Seller:
+//   - Orders containing the seller's products
 // ============================================================
 
 export async function GET() {
@@ -546,6 +533,11 @@ export async function GET() {
 
     let orders;
 
+
+    // ========================================================
+    // ADMIN
+    // ========================================================
+
     if (
       tokenData.role === "admin"
     ) {
@@ -556,7 +548,146 @@ export async function GET() {
           })
           .limit(100)
           .lean();
-    } else {
+    }
+
+
+    // ========================================================
+    // SELLER
+    // ========================================================
+
+    else if (
+      tokenData.role === "seller"
+    ) {
+      /*
+       * Find all products belonging to
+       * the currently logged-in seller.
+       */
+
+      const sellerProducts =
+        await Product.find({
+          sellerId:
+            tokenData.userId,
+        })
+          .select("_id")
+          .lean();
+
+      const sellerProductIds =
+        sellerProducts.map(
+          (product) =>
+            product._id
+        );
+
+
+      /*
+       * No products means no seller orders.
+       */
+
+      if (
+        sellerProductIds.length === 0
+      ) {
+        return NextResponse.json(
+          {
+            success: true,
+            orders: [],
+          },
+          { status: 200 }
+        );
+      }
+
+
+      /*
+       * Find orders containing at least
+       * one product owned by this seller.
+       */
+
+      orders =
+        await Order.find({
+          "items.productId": {
+            $in:
+              sellerProductIds,
+          },
+        })
+          .sort({
+            createdAt: -1,
+          })
+          .limit(100)
+          .lean();
+
+
+      /*
+       * Only return the seller's own
+       * products inside each order.
+       *
+       * This is important if an order contains
+       * products from more than one seller.
+       */
+
+      const sellerProductIdSet =
+        new Set(
+          sellerProductIds.map(
+            (id) =>
+              id.toString()
+          )
+        );
+
+
+      orders =
+        orders.map((order) => {
+          const sellerItems =
+            Array.isArray(order.items)
+              ? order.items.filter(
+                  (item) =>
+                    sellerProductIdSet.has(
+                      String(
+                        item.productId
+                      )
+                    )
+                )
+              : [];
+
+
+          const sellerSubtotal =
+            sellerItems.reduce(
+              (sum, item) =>
+                sum +
+                Number(
+                  item.subtotal || 0
+                ),
+              0
+            );
+
+
+          return {
+            ...order,
+
+            items:
+              sellerItems,
+
+            sellerSubtotal,
+
+            /*
+             * Keep the original order total
+             * available for reference.
+             *
+             * sellerSubtotal is the amount
+             * belonging to this seller.
+             */
+
+            originalOrderSubtotal:
+              order.subtotal,
+
+            originalOrderTotal:
+              order.total,
+          };
+        });
+    }
+
+
+    // ========================================================
+    // CUSTOMER
+    // ========================================================
+
+    else {
       orders =
         await Order.find({
           userId:
@@ -568,6 +699,11 @@ export async function GET() {
           .limit(100)
           .lean();
     }
+
+
+    // ========================================================
+    // RESPONSE
+    // ========================================================
 
     return NextResponse.json(
       {
@@ -599,7 +735,12 @@ export async function GET() {
 
 // ============================================================
 // PATCH /api/orders
-// Admin only
+//
+// Admin:
+//   - Can update any order
+//
+// Seller:
+//   - Can update an order containing their product
 // ============================================================
 
 export async function PATCH(request) {
@@ -620,18 +761,6 @@ export async function PATCH(request) {
       );
     }
 
-    if (
-      tokenData.role !== "admin"
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "Admin access required.",
-        },
-        { status: 403 }
-      );
-    }
 
     const body =
       await request.json();
@@ -641,6 +770,7 @@ export async function PATCH(request) {
       orderStatus,
       paymentStatus,
     } = body;
+
 
     if (!orderId) {
       return NextResponse.json(
@@ -654,9 +784,9 @@ export async function PATCH(request) {
     }
 
 
-    // --------------------------------------------------------
-    // Allowed order statuses
-    // --------------------------------------------------------
+    // ========================================================
+    // ALLOWED STATUSES
+    // ========================================================
 
     const allowedOrderStatuses = [
       "pending",
@@ -667,11 +797,6 @@ export async function PATCH(request) {
       "cancelled",
     ];
 
-
-    // --------------------------------------------------------
-    // Allowed payment statuses
-    // --------------------------------------------------------
-
     const allowedPaymentStatuses = [
       "pending",
       "paid",
@@ -679,70 +804,51 @@ export async function PATCH(request) {
     ];
 
 
-    const updateData = {};
-
-
-    // --------------------------------------------------------
-    // Order status
-    // --------------------------------------------------------
+    // ========================================================
+    // VALIDATE STATUS VALUES
+    // ========================================================
 
     if (
-      orderStatus !== undefined
+      orderStatus !== undefined &&
+      !allowedOrderStatuses.includes(
+        orderStatus
+      )
     ) {
-      if (
-        !allowedOrderStatuses.includes(
-          orderStatus
-        )
-      ) {
-        return NextResponse.json(
-          {
-            success: false,
-            message:
-              "Invalid order status.",
-          },
-          { status: 400 }
-        );
-      }
-
-      updateData.orderStatus =
-        orderStatus;
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Invalid order status.",
+        },
+        { status: 400 }
+      );
     }
 
 
-    // --------------------------------------------------------
-    // Payment status
-    // --------------------------------------------------------
-
     if (
-      paymentStatus !== undefined
+      paymentStatus !== undefined &&
+      !allowedPaymentStatuses.includes(
+        paymentStatus
+      )
     ) {
-      if (
-        !allowedPaymentStatuses.includes(
-          paymentStatus
-        )
-      ) {
-        return NextResponse.json(
-          {
-            success: false,
-            message:
-              "Invalid payment status.",
-          },
-          { status: 400 }
-        );
-      }
-
-      updateData.paymentStatus =
-        paymentStatus;
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Invalid payment status.",
+        },
+        { status: 400 }
+      );
     }
 
 
-    // --------------------------------------------------------
-    // Nothing to update
-    // --------------------------------------------------------
+    // ========================================================
+    // NOTHING TO UPDATE
+    // ========================================================
 
     if (
-      Object.keys(updateData)
-        .length === 0
+      orderStatus === undefined &&
+      paymentStatus === undefined
     ) {
       return NextResponse.json(
         {
@@ -755,70 +861,244 @@ export async function PATCH(request) {
     }
 
 
-    // --------------------------------------------------------
-    // Update order
-    // --------------------------------------------------------
+    // ========================================================
+    // ADMIN
+    // ========================================================
 
-    const order =
-      await Order.findByIdAndUpdate(
-        orderId,
-        updateData,
-        {
-          new: true,
-          runValidators: true,
-        }
+    if (
+      tokenData.role === "admin"
+    ) {
+      const updateData = {};
+
+
+      if (
+        orderStatus !== undefined
+      ) {
+        updateData.orderStatus =
+          orderStatus;
+      }
+
+
+      if (
+        paymentStatus !== undefined
+      ) {
+        updateData.paymentStatus =
+          paymentStatus;
+      }
+
+
+      const order =
+        await Order.findByIdAndUpdate(
+          orderId,
+          updateData,
+          {
+            new: true,
+            runValidators: true,
+          }
+        );
+
+
+      if (!order) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Order not found.",
+          },
+          { status: 404 }
+        );
+      }
+
+
+      console.log("====================================");
+      console.log(
+        "✅ ADMIN UPDATED ORDER"
       );
+      console.log(
+        "Order ID:",
+        order._id.toString()
+      );
+      console.log(
+        "Order Status:",
+        order.orderStatus
+      );
+      console.log(
+        "Payment Status:",
+        order.paymentStatus
+      );
+      console.log("====================================");
 
 
-    if (!order) {
       return NextResponse.json(
         {
-          success: false,
+          success: true,
+
           message:
-            "Order not found.",
+            "Order updated successfully.",
+
+          order,
         },
-        { status: 404 }
+        { status: 200 }
       );
     }
 
 
-    // --------------------------------------------------------
-    // Terminal log
-    // --------------------------------------------------------
+    // ========================================================
+    // SELLER
+    // ========================================================
 
-    console.log("====================================");
-    console.log(
-      "✅ ORDER UPDATED"
-    );
+    if (
+      tokenData.role === "seller"
+    ) {
+      /*
+       * Find products owned by this seller.
+       */
 
-    console.log(
-      "Order ID:",
-      order._id.toString()
-    );
+      const sellerProducts =
+        await Product.find({
+          sellerId:
+            tokenData.userId,
+        })
+          .select("_id")
+          .lean();
 
-    console.log(
-      "Order Status:",
-      order.orderStatus
-    );
 
-    console.log(
-      "Payment Status:",
-      order.paymentStatus
-    );
+      const sellerProductIds =
+        sellerProducts.map(
+          (product) =>
+            product._id
+        );
 
-    console.log("====================================");
 
+      if (
+        sellerProductIds.length === 0
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "You do not have any products.",
+          },
+          { status: 403 }
+        );
+      }
+
+
+      /*
+       * Make sure this order contains
+       * at least one of the seller's products.
+       */
+
+      const sellerOrder =
+        await Order.findOne({
+          _id: orderId,
+
+          "items.productId": {
+            $in:
+              sellerProductIds,
+          },
+        });
+
+
+      if (!sellerOrder) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "You are not authorized to update this order.",
+          },
+          { status: 403 }
+        );
+      }
+
+
+      /*
+       * Seller can update the order status.
+       *
+       * Payment status is intentionally
+       * restricted to admin because payment
+       * records should not be changed by sellers.
+       */
+
+      if (
+        paymentStatus !== undefined
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Only administrators can update payment status.",
+          },
+          { status: 403 }
+        );
+      }
+
+
+      if (
+        orderStatus === undefined
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Order status is required.",
+          },
+          { status: 400 }
+        );
+      }
+
+
+      sellerOrder.orderStatus =
+        orderStatus;
+
+      await sellerOrder.save();
+
+
+      console.log("====================================");
+      console.log(
+        "✅ SELLER UPDATED ORDER"
+      );
+      console.log(
+        "Seller ID:",
+        tokenData.userId
+      );
+      console.log(
+        "Order ID:",
+        sellerOrder._id.toString()
+      );
+      console.log(
+        "Order Status:",
+        sellerOrder.orderStatus
+      );
+      console.log("====================================");
+
+
+      return NextResponse.json(
+        {
+          success: true,
+
+          message:
+            "Order status updated successfully.",
+
+          order:
+            sellerOrder,
+        },
+        { status: 200 }
+      );
+    }
+
+
+    // ========================================================
+    // OTHER USERS
+    // ========================================================
 
     return NextResponse.json(
       {
-        success: true,
-
+        success: false,
         message:
-          "Order updated successfully.",
-
-        order,
+          "You are not authorized to update orders.",
       },
-      { status: 200 }
+      { status: 403 }
     );
 
   } catch (error) {

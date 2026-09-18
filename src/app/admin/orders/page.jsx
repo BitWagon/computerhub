@@ -5,42 +5,45 @@ import Link from "next/link";
 import {
   ArrowRight,
   CalendarDays,
-  CheckCircle2,
   Eye,
   Package,
   RefreshCw,
   ShieldCheck,
   ShoppingBag,
-  Truck,
-  XCircle,
 } from "lucide-react";
+
+const ORDER_STATUSES = [
+  "pending",
+  "confirmed",
+  "processing",
+  "shipped",
+  "delivered",
+  "cancelled",
+];
+
+const PAYMENT_STATUSES = [
+  "pending",
+  "paid",
+  "failed",
+];
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState([]);
-
   const [loading, setLoading] = useState(true);
-
   const [error, setError] = useState("");
-
-  const [updatingId, setUpdatingId] =
-    useState(null);
-
-  const [statusFilter, setStatusFilter] =
-    useState("all");
+  const [updatingId, setUpdatingId] = useState(null);
+  const [statusFilter, setStatusFilter] = useState("all");
 
   async function loadOrders() {
     try {
       setLoading(true);
       setError("");
 
-      const response = await fetch(
-        "/api/orders",
-        {
-          method: "GET",
-          credentials: "include",
-          cache: "no-store",
-        }
-      );
+      const response = await fetch("/api/orders", {
+        method: "GET",
+        credentials: "include",
+        cache: "no-store",
+      });
 
       const data = await response.json();
 
@@ -48,7 +51,6 @@ export default function AdminOrdersPage() {
         if (response.status === 401) {
           window.location.href =
             "/login?redirect=/admin/orders";
-
           return;
         }
 
@@ -56,13 +58,11 @@ export default function AdminOrdersPage() {
           setError(
             "Admin access is required to view orders."
           );
-
           return;
         }
 
         throw new Error(
-          data?.message ||
-            "Failed to load orders."
+          data?.message || "Failed to load orders."
         );
       }
 
@@ -97,7 +97,7 @@ export default function AdminOrdersPage() {
 
     try {
       return new Date(date).toLocaleDateString(
-        "en-US",
+        "en-PK",
         {
           year: "numeric",
           month: "short",
@@ -111,11 +111,22 @@ export default function AdminOrdersPage() {
 
   function formatMoney(value) {
     return Number(value || 0).toLocaleString(
-      "en-US",
+      "en-PK",
       {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       }
+    );
+  }
+
+  function formatStatus(status) {
+    if (!status) {
+      return "Pending";
+    }
+
+    return (
+      status.charAt(0).toUpperCase() +
+      status.slice(1)
     );
   }
 
@@ -149,9 +160,6 @@ export default function AdminOrdersPage() {
       case "failed":
         return "bg-red-100 text-red-700";
 
-      case "refunded":
-        return "bg-purple-100 text-purple-700";
-
       default:
         return "bg-yellow-100 text-yellow-700";
     }
@@ -178,21 +186,14 @@ export default function AdminOrdersPage() {
         body.paymentStatus = paymentStatus;
       }
 
-      const response = await fetch(
-        "/api/orders",
-        {
-          method: "PATCH",
-
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-
-          credentials: "include",
-
-          body: JSON.stringify(body),
-        }
-      );
+      const response = await fetch("/api/orders", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(body),
+      });
 
       const data = await response.json();
 
@@ -205,11 +206,16 @@ export default function AdminOrdersPage() {
 
       setOrders((currentOrders) =>
         currentOrders.map((order) =>
-          String(order._id) ===
-          String(orderId)
+          String(order._id) === String(orderId)
             ? {
                 ...order,
-                ...(data.order || {}),
+                ...(data?.order || {}),
+                ...(orderStatus !== undefined
+                  ? { orderStatus }
+                  : {}),
+                ...(paymentStatus !== undefined
+                  ? { paymentStatus }
+                  : {}),
               }
             : order
         )
@@ -234,39 +240,29 @@ export default function AdminOrdersPage() {
       ? orders
       : orders.filter(
           (order) =>
-            order.orderStatus ===
-            statusFilter
+            order.orderStatus === statusFilter
         );
 
-  const pendingCount =
-    orders.filter(
-      (order) =>
-        order.orderStatus ===
-        "pending"
-    ).length;
+  const pendingCount = orders.filter(
+    (order) =>
+      order.orderStatus === "pending"
+  ).length;
 
-  const processingCount =
-    orders.filter(
-      (order) =>
-        order.orderStatus ===
-          "processing" ||
-        order.orderStatus ===
-          "confirmed"
-    ).length;
+  const processingCount = orders.filter(
+    (order) =>
+      order.orderStatus === "processing" ||
+      order.orderStatus === "confirmed"
+  ).length;
 
-  const shippedCount =
-    orders.filter(
-      (order) =>
-        order.orderStatus ===
-        "shipped"
-    ).length;
+  const shippedCount = orders.filter(
+    (order) =>
+      order.orderStatus === "shipped"
+  ).length;
 
-  const deliveredCount =
-    orders.filter(
-      (order) =>
-        order.orderStatus ===
-        "delivered"
-    ).length;
+  const deliveredCount = orders.filter(
+    (order) =>
+      order.orderStatus === "delivered"
+  ).length;
 
   if (loading) {
     return (
@@ -293,7 +289,6 @@ export default function AdminOrdersPage() {
         {/* HEADER */}
 
         <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-
           <div>
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-100">
@@ -327,10 +322,8 @@ export default function AdminOrdersPage() {
             className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-5 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
           >
             <RefreshCw size={17} />
-
             Refresh Orders
           </button>
-
         </div>
 
         {/* ERROR */}
@@ -402,7 +395,6 @@ export default function AdminOrdersPage() {
         {/* FILTER */}
 
         <div className="mb-6 flex flex-wrap gap-2">
-
           {[
             "all",
             "pending",
@@ -426,17 +418,15 @@ export default function AdminOrdersPage() {
             >
               {status === "all"
                 ? "All Orders"
-                : status}
+                : formatStatus(status)}
             </button>
           ))}
-
         </div>
 
         {/* EMPTY */}
 
         {filteredOrders.length === 0 && (
           <div className="rounded-3xl border border-gray-200 bg-white px-6 py-16 text-center shadow-sm">
-
             <Package
               size={48}
               className="mx-auto text-gray-300"
@@ -450,7 +440,6 @@ export default function AdminOrdersPage() {
               There are no orders matching
               this filter.
             </p>
-
           </div>
         )}
 
@@ -459,206 +448,200 @@ export default function AdminOrdersPage() {
         {filteredOrders.length > 0 && (
           <div className="space-y-5">
 
-            {filteredOrders.map(
-              (order) => {
-                const customer =
-                  order.customer ||
-                  {};
+            {filteredOrders.map((order) => {
+              const customer =
+                order.customer || {};
 
-                const itemCount =
-                  Array.isArray(
-                    order.items
-                  )
-                    ? order.items.reduce(
-                        (
-                          total,
-                          item
-                        ) =>
-                          total +
-                          Number(
-                            item?.quantity ||
-                              1
-                          ),
-                        0
-                      )
-                    : 0;
+              const firstName =
+                customer.firstName || "";
 
-                const isUpdating =
-                  String(
-                    updatingId
-                  ) ===
-                  String(order._id);
+              const lastName =
+                customer.lastName || "";
 
-                return (
-                  <div
-                    key={order._id}
-                    className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
-                  >
+              const customerName =
+                `${firstName} ${lastName}`.trim() ||
+                "Customer";
 
-                    {/* ORDER TOP */}
+              const itemCount =
+                Array.isArray(order.items)
+                  ? order.items.reduce(
+                      (total, item) =>
+                        total +
+                        Number(
+                          item?.quantity || 0
+                        ),
+                      0
+                    )
+                  : 0;
 
-                    <div className="border-b border-gray-200 bg-gray-50 px-5 py-5 md:px-6">
+              const isUpdating =
+                String(updatingId) ===
+                String(order._id);
 
-                      <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+              return (
+                <div
+                  key={order._id}
+                  className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
+                >
 
-                        <div>
+                  {/* ORDER TOP */}
 
-                          <div className="flex flex-wrap items-center gap-3">
+                  <div className="border-b border-gray-200 bg-gray-50 px-5 py-5 md:px-6">
+                    <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
 
-                            <h2 className="text-lg font-bold text-gray-900">
-                              {order.orderNumber ||
-                                "Order"}
-                            </h2>
+                      <div>
+                        <div className="flex flex-wrap items-center gap-3">
 
-                            <span
-                              className={`rounded-full px-3 py-1 text-xs font-bold capitalize ${getOrderStatusClasses(
-                                order.orderStatus
-                              )}`}
-                            >
-                              {order.orderStatus ||
-                                "pending"}
-                            </span>
+                          <h2 className="text-lg font-bold text-gray-900">
+                            {order.orderNumber ||
+                              "Order"}
+                          </h2>
 
-                          </div>
-
-                          <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-gray-500">
-
-                            <span className="inline-flex items-center gap-1.5">
-                              <CalendarDays
-                                size={
-                                  15
-                                }
-                              />
-
-                              {formatDate(
-                                order.createdAt
-                              )}
-                            </span>
-
-                            <span>
-                              {itemCount}{" "}
-                              {itemCount ===
-                              1
-                                ? "item"
-                                : "items"}
-                            </span>
-
-                          </div>
-
-                        </div>
-
-                        <div className="text-left xl:text-right">
-
-                          <p className="text-xs uppercase tracking-wide text-gray-400">
-                            Total
-                          </p>
-
-                          <p className="text-2xl font-bold text-blue-600">
-                            $
-                            {formatMoney(
-                              order.total
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-bold capitalize ${getOrderStatusClasses(
+                              order.orderStatus
+                            )}`}
+                          >
+                            {formatStatus(
+                              order.orderStatus
                             )}
-                          </p>
+                          </span>
 
                         </div>
+
+                        <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-gray-500">
+
+                          <span className="inline-flex items-center gap-1.5">
+                            <CalendarDays
+                              size={15}
+                            />
+
+                            {formatDate(
+                              order.createdAt
+                            )}
+                          </span>
+
+                          <span>
+                            {itemCount}{" "}
+                            {itemCount === 1
+                              ? "item"
+                              : "items"}
+                          </span>
+
+                        </div>
+                      </div>
+
+                      <div className="text-left xl:text-right">
+
+                        <p className="text-xs uppercase tracking-wide text-gray-400">
+                          Total
+                        </p>
+
+                        <p className="text-2xl font-bold text-blue-600">
+                          Rs.{" "}
+                          {formatMoney(
+                            order.total
+                          )}
+                        </p>
 
                       </div>
 
                     </div>
+                  </div>
 
-                    {/* CUSTOMER + PRODUCTS */}
+                  {/* CUSTOMER + PRODUCTS */}
 
-                    <div className="grid gap-6 p-5 md:p-6 lg:grid-cols-2">
+                  <div className="grid gap-6 p-5 md:p-6 lg:grid-cols-2">
 
-                      {/* CUSTOMER */}
+                    {/* CUSTOMER */}
 
-                      <div>
+                    <div>
+                      <div className="mb-4 flex items-center gap-2">
 
-                        <div className="mb-4 flex items-center gap-2">
+                        <ShieldCheck
+                          size={19}
+                          className="text-blue-600"
+                        />
 
-                          <ShieldCheck
-                            size={19}
-                            className="text-blue-600"
-                          />
-
-                          <h3 className="font-bold text-gray-900">
-                            Customer
-                          </h3>
-
-                        </div>
-
-                        <div className="rounded-xl bg-gray-50 p-4">
-
-                          <p className="font-semibold text-gray-900">
-                            {customer.fullName ||
-                              "—"}
-                          </p>
-
-                          <p className="mt-1 break-all text-sm text-gray-600">
-                            {customer.email ||
-                              "—"}
-                          </p>
-
-                          <p className="mt-1 text-sm text-gray-600">
-                            {customer.phone ||
-                              "—"}
-                          </p>
-
-                          <p className="mt-3 text-sm leading-6 text-gray-600">
-                            {customer.address ||
-                              "—"}
-                            <br />
-
-                            {customer.city ||
-                              ""}
-                            {customer.state
-                              ? `, ${customer.state}`
-                              : ""}
-                            <br />
-
-                            {customer.postalCode ||
-                              ""}
-                            {customer.country
-                              ? `, ${customer.country}`
-                              : ""}
-                          </p>
-
-                        </div>
+                        <h3 className="font-bold text-gray-900">
+                          Customer
+                        </h3>
 
                       </div>
 
-                      {/* PRODUCTS */}
+                      <div className="rounded-xl bg-gray-50 p-4">
 
-                      <div>
+                        <p className="font-semibold text-gray-900">
+                          {customerName}
+                        </p>
 
-                        <div className="mb-4 flex items-center gap-2">
+                        <p className="mt-1 break-all text-sm text-gray-600">
+                          {customer.email ||
+                            "—"}
+                        </p>
 
-                          <Package
-                            size={19}
-                            className="text-blue-600"
-                          />
+                        <p className="mt-1 text-sm text-gray-600">
+                          {customer.phone ||
+                            "—"}
+                        </p>
 
-                          <h3 className="font-bold text-gray-900">
-                            Products
-                          </h3>
+                        <p className="mt-3 text-sm leading-6 text-gray-600">
+                          {customer.address ||
+                            "—"}
+                          <br />
 
-                        </div>
+                          {customer.city ||
+                            ""}
+                          {customer.postalCode
+                            ? `, ${customer.postalCode}`
+                            : ""}
+                        </p>
 
-                        <div className="space-y-3">
+                      </div>
+                    </div>
 
-                          {Array.isArray(
-                            order.items
-                          ) &&
-                            order.items
-                              .slice(
-                                0,
-                                4
-                              )
-                              .map(
-                                (
-                                  item,
-                                  index
-                                ) => (
+                    {/* PRODUCTS */}
+
+                    <div>
+                      <div className="mb-4 flex items-center gap-2">
+
+                        <Package
+                          size={19}
+                          className="text-blue-600"
+                        />
+
+                        <h3 className="font-bold text-gray-900">
+                          Products
+                        </h3>
+
+                      </div>
+
+                      <div className="space-y-3">
+
+                        {Array.isArray(
+                          order.items
+                        ) &&
+                          order.items
+                            .slice(0, 4)
+                            .map(
+                              (
+                                item,
+                                index
+                              ) => {
+                                const itemSubtotal =
+                                  Number(
+                                    item?.subtotal ??
+                                      Number(
+                                        item?.price ||
+                                          0
+                                      ) *
+                                        Number(
+                                          item?.quantity ||
+                                            0
+                                        )
+                                  );
+
+                                return (
                                   <div
                                     key={
                                       item.productId ||
@@ -707,186 +690,179 @@ export default function AdminOrdersPage() {
                                     </div>
 
                                     <p className="font-semibold text-gray-900">
-                                      $
+                                      Rs.{" "}
                                       {formatMoney(
-                                        item.total
+                                        itemSubtotal
                                       )}
                                     </p>
 
                                   </div>
-                                )
-                              )}
+                                );
+                              }
+                            )}
 
-                          {itemCount > 4 && (
+                        {Array.isArray(
+                          order.items
+                        ) &&
+                          order.items.length >
+                            4 && (
                             <p className="text-sm text-gray-500">
                               +{" "}
-                              {itemCount -
+                              {order.items
+                                .length -
                                 4}{" "}
-                              more items
+                              more products
                             </p>
                           )}
 
-                        </div>
-
                       </div>
-
-                    </div>
-
-                    {/* ADMIN CONTROLS */}
-
-                    <div className="border-t border-gray-200 bg-white px-5 py-5 md:px-6">
-
-                      <div className="grid gap-4 lg:grid-cols-3">
-
-                        {/* ORDER STATUS */}
-
-                        <div>
-
-                          <label
-                            htmlFor={`order-status-${order._id}`}
-                            className="mb-2 block text-sm font-semibold text-gray-700"
-                          >
-                            Order Status
-                          </label>
-
-                          <select
-                            id={`order-status-${order._id}`}
-                            value={
-                              order.orderStatus ||
-                              "pending"
-                            }
-                            disabled={
-                              isUpdating
-                            }
-                            onChange={(event) =>
-                              updateOrder(
-                                order._id,
-                                event.target
-                                  .value,
-                                undefined
-                              )
-                            }
-                            className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-gray-100"
-                          >
-                            <option value="pending">
-                              Pending
-                            </option>
-
-                            <option value="confirmed">
-                              Confirmed
-                            </option>
-
-                            <option value="processing">
-                              Processing
-                            </option>
-
-                            <option value="shipped">
-                              Shipped
-                            </option>
-
-                            <option value="delivered">
-                              Delivered
-                            </option>
-
-                            <option value="cancelled">
-                              Cancelled
-                            </option>
-                          </select>
-
-                        </div>
-
-                        {/* PAYMENT STATUS */}
-
-                        <div>
-
-                          <label
-                            htmlFor={`payment-status-${order._id}`}
-                            className="mb-2 block text-sm font-semibold text-gray-700"
-                          >
-                            Payment Status
-                          </label>
-
-                          <select
-                            id={`payment-status-${order._id}`}
-                            value={
-                              order.paymentStatus ||
-                              "pending"
-                            }
-                            disabled={
-                              isUpdating
-                            }
-                            onChange={(event) =>
-                              updateOrder(
-                                order._id,
-                                undefined,
-                                event.target
-                                  .value
-                              )
-                            }
-                            className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-gray-100"
-                          >
-                            <option value="pending">
-                              Pending
-                            </option>
-
-                            <option value="paid">
-                              Paid
-                            </option>
-
-                            <option value="failed">
-                              Failed
-                            </option>
-
-                            <option value="refunded">
-                              Refunded
-                            </option>
-                          </select>
-
-                        </div>
-
-                        {/* VIEW */}
-
-                        <div className="flex items-end">
-
-                          <Link
-                            href={`/orders/${order._id}`}
-                            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-700"
-                          >
-                            <Eye
-                              size={18}
-                            />
-
-                            View Full Order
-
-                            <ArrowRight
-                              size={17}
-                            />
-
-                          </Link>
-
-                        </div>
-
-                      </div>
-
-                      {isUpdating && (
-                        <div className="mt-4 flex items-center gap-2 text-sm font-medium text-blue-600">
-
-                          <RefreshCw
-                            size={16}
-                            className="animate-spin"
-                          />
-
-                          Updating order...
-
-                        </div>
-                      )}
-
                     </div>
 
                   </div>
-                );
-              }
-            )}
+
+                  {/* ADMIN CONTROLS */}
+
+                  <div className="border-t border-gray-200 bg-white px-5 py-5 md:px-6">
+
+                    <div className="grid gap-4 lg:grid-cols-3">
+
+                      {/* ORDER STATUS */}
+
+                      <div>
+                        <label
+                          htmlFor={`order-status-${order._id}`}
+                          className="mb-2 block text-sm font-semibold text-gray-700"
+                        >
+                          Order Status
+                        </label>
+
+                        <select
+                          id={`order-status-${order._id}`}
+                          value={
+                            order.orderStatus ||
+                            "pending"
+                          }
+                          disabled={
+                            isUpdating
+                          }
+                          onChange={(event) =>
+                            updateOrder(
+                              order._id,
+                              event.target
+                                .value,
+                              undefined
+                            )
+                          }
+                          className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-gray-100"
+                        >
+                          {ORDER_STATUSES.map(
+                            (status) => (
+                              <option
+                                key={status}
+                                value={status}
+                              >
+                                {formatStatus(
+                                  status
+                                )}
+                              </option>
+                            )
+                          )}
+                        </select>
+                      </div>
+
+                      {/* PAYMENT STATUS */}
+
+                      <div>
+                        <label
+                          htmlFor={`payment-status-${order._id}`}
+                          className="mb-2 block text-sm font-semibold text-gray-700"
+                        >
+                          Payment Status
+                        </label>
+
+                        <select
+                          id={`payment-status-${order._id}`}
+                          value={
+                            order.paymentStatus ||
+                            "pending"
+                          }
+                          disabled={
+                            isUpdating
+                          }
+                          onChange={(event) =>
+                            updateOrder(
+                              order._id,
+                              undefined,
+                              event.target
+                                .value
+                            )
+                          }
+                          className={`w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-gray-100`}
+                        >
+                          {PAYMENT_STATUSES.map(
+                            (status) => (
+                              <option
+                                key={status}
+                                value={status}
+                              >
+                                {formatStatus(
+                                  status
+                                )}
+                              </option>
+                            )
+                          )}
+                        </select>
+
+                        <span
+                          className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getPaymentStatusClasses(
+                            order.paymentStatus
+                          )}`}
+                        >
+                          {formatStatus(
+                            order.paymentStatus
+                          )}
+                        </span>
+                      </div>
+
+                      {/* VIEW */}
+
+                      <div className="flex items-end">
+
+                        <Link
+                          href={`/orders/${order._id}`}
+                          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-700"
+                        >
+                          <Eye size={18} />
+
+                          View Full Order
+
+                          <ArrowRight
+                            size={17}
+                          />
+                        </Link>
+
+                      </div>
+
+                    </div>
+
+                    {isUpdating && (
+                      <div className="mt-4 flex items-center gap-2 text-sm font-medium text-blue-600">
+
+                        <RefreshCw
+                          size={16}
+                          className="animate-spin"
+                        />
+
+                        Updating order...
+
+                      </div>
+                    )}
+
+                  </div>
+
+                </div>
+              );
+            })}
 
           </div>
         )}
