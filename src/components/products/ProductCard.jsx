@@ -1,36 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
+import { useState } from "react";
 import {
   Heart,
   ShoppingCart,
   Star,
   Truck,
 } from "lucide-react";
-import { useState } from "react";
+import { toast } from "sonner";
 
-export default function ProductCard({
-  product,
-}) {
-  const [isFavorite, setIsFavorite] =
-    useState(false);
+import { useCart } from "@/context/CartContext";
+import { useWishlist } from "@/context/WishlistContext";
 
-  if (!product) {
-    return null;
-  }
-
-  const productId =
-    product._id?.toString() ||
-    product.id?.toString();
-
-  const image =
-    product.image ||
-    product.images?.[0] ||
-    "";
-
+export default function ProductCard({ product }) {
   const {
+    id,
+    _id,
     name,
+    image,
+    images,
     price,
     oldPrice,
     discount,
@@ -39,153 +28,423 @@ export default function ProductCard({
     seller,
     sellerName,
     freeDelivery,
+    stock,
   } = product;
 
-  if (!productId) {
-    return null;
+  const { addToCart } = useCart();
+
+  const {
+    isInWishlist,
+    toggleWishlist,
+  } = useWishlist();
+
+  const [addingToCart, setAddingToCart] =
+    useState(false);
+
+  /*
+   * SUPPORT BOTH id AND _id
+   */
+  const productId =
+    id || _id?.toString();
+
+  /*
+   * PRODUCT IMAGE
+   */
+  const productImage =
+    image ||
+    (Array.isArray(images) &&
+      images.length > 0
+      ? images[0]
+      : "");
+
+  /*
+   * PRICE VALUES
+   */
+  const currentPrice =
+    Number(price) || 0;
+
+  const originalPrice =
+    Number(oldPrice) || 0;
+
+  /*
+   * USE DATABASE DISCOUNT WHEN AVAILABLE.
+   *
+   * If discount is missing but oldPrice exists,
+   * calculate it automatically.
+   */
+  let discountPercentage =
+    Number(discount) || 0;
+
+  if (
+    discountPercentage <= 0 &&
+    originalPrice > currentPrice &&
+    originalPrice > 0
+  ) {
+    discountPercentage = Math.round(
+      ((originalPrice - currentPrice) /
+        originalPrice) *
+        100
+    );
   }
 
-  const productUrl =
-    `/products/${productId}`;
+  /*
+   * SAVINGS
+   */
+  const savings =
+    originalPrice > currentPrice
+      ? originalPrice - currentPrice
+      : 0;
+
+  /*
+   * RATING
+   */
+  const productRating =
+    Number(rating) || 0;
+
+  const reviewCount =
+    Number(reviews) || 0;
+
+  /*
+   * STOCK
+   */
+  const productStock =
+    Number(stock) || 0;
+
+  const isOutOfStock =
+    productStock <= 0;
+
+  /*
+   * SELLER
+   *
+   * Use the product seller when available.
+   * Otherwise show ComputerHub Official.
+   */
+  const productSeller =
+    sellerName ||
+    seller ||
+    "ComputerHub Official";
+
+  /*
+   * WISHLIST
+   */
+  const wished =
+    productId
+      ? isInWishlist(productId)
+      : false;
+
+  /*
+   * ADD TO CART
+   */
+  async function handleAddToCart(event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (isOutOfStock) {
+      toast.error(
+        "This product is out of stock."
+      );
+      return;
+    }
+
+    try {
+      setAddingToCart(true);
+
+      addToCart({
+        ...product,
+        id: productId,
+        _id: productId,
+        image: productImage,
+        price: currentPrice,
+        oldPrice: originalPrice,
+        discount:
+          discountPercentage,
+        quantity: 1,
+      });
+
+      toast.success(
+        "Product added to cart."
+      );
+    } catch (error) {
+      console.error(
+        "Add to cart error:",
+        error
+      );
+
+      toast.error(
+        "Unable to add product to cart."
+      );
+    } finally {
+      setAddingToCart(false);
+    }
+  }
+
+  /*
+   * WISHLIST
+   */
+  function handleWishlist(event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!productId) {
+      toast.error(
+        "Product ID is missing."
+      );
+      return;
+    }
+
+    try {
+      toggleWishlist({
+        ...product,
+        id: productId,
+        _id: productId,
+        image: productImage,
+        price: currentPrice,
+        oldPrice: originalPrice,
+        discount:
+          discountPercentage,
+      });
+
+      if (wished) {
+        toast.success(
+          "Removed from wishlist."
+        );
+      } else {
+        toast.success(
+          "Added to wishlist."
+        );
+      }
+    } catch (error) {
+      console.error(
+        "Wishlist error:",
+        error
+      );
+
+      toast.error(
+        "Unable to update wishlist."
+      );
+    }
+  }
 
   return (
-    <div className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-gray-200 bg-white transition-all duration-300 hover:-translate-y-1 hover:border-gray-300 hover:shadow-xl">
-      {/* WISHLIST */}
-      <button
-        type="button"
-        onClick={() =>
-          setIsFavorite(
-            (current) => !current
-          )
-        }
-        className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-md transition hover:scale-105"
-        aria-label="Add to wishlist"
-      >
-        <Heart
-          size={19}
-          className={
-            isFavorite
-              ? "fill-red-500 text-red-500"
-              : "text-gray-500"
-          }
-        />
-      </button>
+    <Link
+      href={`/products/${productId}`}
+      className="group block h-full"
+    >
+      <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white transition duration-300 hover:-translate-y-1 hover:shadow-xl">
 
-      {/* PRODUCT IMAGE */}
-      <Link
-        href={productUrl}
-        className="block"
-      >
-        <div className="relative flex h-56 items-center justify-center bg-gray-50 p-5">
-          {image ? (
-            <Image
-              src={image}
+        {/* IMAGE */}
+
+        <div className="relative aspect-square overflow-hidden bg-gray-50">
+
+          {productImage ? (
+            <img
+              src={productImage}
               alt={name || "Product"}
-              width={260}
-              height={220}
-              className="h-full w-full object-contain transition duration-500 group-hover:scale-105"
+              className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-sm text-gray-400">
-              No Image
+              No image
             </div>
           )}
 
-          {discount > 0 && (
-            <span className="absolute left-3 top-3 rounded-md bg-red-500 px-2.5 py-1 text-xs font-bold text-white">
-              -{discount}%
-            </span>
+          {/* DISCOUNT BADGE */}
+
+          {discountPercentage > 0 && (
+            <div className="absolute left-3 top-3 rounded-lg bg-red-600 px-2.5 py-1 text-xs font-bold text-white shadow-sm">
+              -{discountPercentage}%
+            </div>
           )}
-        </div>
-      </Link>
 
-      {/* PRODUCT CONTENT */}
-      <div className="flex flex-1 flex-col p-4">
-        <Link href={productUrl}>
-          <h3 className="line-clamp-2 min-h-[48px] text-sm font-semibold leading-6 text-gray-800 transition hover:text-blue-600">
-            {name}
-          </h3>
-        </Link>
+          {/* WISHLIST */}
 
-        {/* RATING */}
-        <div className="mt-2 flex items-center gap-1">
-          <div className="flex items-center gap-0.5">
-            <Star
-              size={15}
-              className="fill-yellow-400 text-yellow-400"
+          <button
+            type="button"
+            onClick={handleWishlist}
+            aria-label={
+              wished
+                ? "Remove from wishlist"
+                : "Add to wishlist"
+            }
+            className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-gray-600 shadow-sm backdrop-blur transition hover:bg-white hover:text-red-500"
+          >
+            <Heart
+              size={19}
+              className={
+                wished
+                  ? "fill-red-500 text-red-500"
+                  : ""
+              }
             />
+          </button>
 
-            <span className="text-sm font-medium text-gray-700">
-              {Number(rating || 0).toFixed(1)}
-            </span>
-          </div>
-
-          <span className="text-xs text-gray-400">
-            ({reviews || 0})
-          </span>
         </div>
 
-        {/* PRICE */}
-        <div className="mt-3">
-          <div className="flex items-center gap-2">
-            <span className="text-xl font-bold text-gray-900">
-              £
-              {Number(
-                price || 0
-              ).toLocaleString()}
-            </span>
+        {/* CONTENT */}
 
-            {Number(oldPrice || 0) >
-              Number(price || 0) && (
-              <span className="text-sm text-gray-400 line-through">
-                £
-                {Number(
-                  oldPrice
-                ).toLocaleString()}
-              </span>
-            )}
-          </div>
+        <div className="flex flex-1 flex-col p-4">
 
-          {Number(oldPrice || 0) >
-            Number(price || 0) && (
-            <p className="mt-1 text-xs font-medium text-green-600">
-              Save £
-              {(
-                Number(oldPrice) -
-                Number(price)
-              ).toLocaleString()}
+          {/* BRAND */}
+
+          {product.brand && (
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              {product.brand}
             </p>
           )}
-        </div>
 
-        {/* DELIVERY */}
-        {freeDelivery && (
-          <div className="mt-3 flex items-center gap-1.5 text-xs font-medium text-green-600">
-            <Truck size={14} />
-            Free delivery
+          {/* NAME */}
+
+          <h2 className="mt-1 line-clamp-2 min-h-[48px] text-base font-bold text-gray-900 transition group-hover:text-blue-600">
+            {name}
+          </h2>
+
+          {/* RATING */}
+
+          <div className="mt-2 flex items-center gap-1.5">
+
+            <div className="flex items-center gap-0.5">
+              {[1, 2, 3, 4, 5].map(
+                (star) => (
+                  <Star
+                    key={star}
+                    size={14}
+                    className={
+                      star <=
+                      Math.round(
+                        productRating
+                      )
+                        ? "fill-yellow-400 text-yellow-400"
+                        : "text-gray-300"
+                    }
+                  />
+                )
+              )}
+            </div>
+
+            <span className="text-xs text-gray-500">
+              {productRating > 0
+                ? productRating.toFixed(1)
+                : "No rating"}
+            </span>
+
+            {reviewCount > 0 && (
+              <span className="text-xs text-gray-400">
+                ({reviewCount})
+              </span>
+            )}
+
           </div>
-        )}
 
-        {/* SELLER */}
-        {(seller || sellerName) && (
+          {/* PRICE */}
+
+          <div className="mt-4">
+
+            <div className="flex flex-wrap items-end gap-2">
+
+              <span className="text-2xl font-extrabold text-gray-900">
+                £{currentPrice.toFixed(2)}
+              </span>
+
+              {originalPrice >
+                currentPrice && (
+                <span className="pb-0.5 text-sm text-gray-400 line-through">
+                  £{originalPrice.toFixed(2)}
+                </span>
+              )}
+
+            </div>
+
+            {savings > 0 && (
+              <p className="mt-1 text-xs font-semibold text-green-600">
+                Save £{savings.toFixed(2)}
+              </p>
+            )}
+
+          </div>
+
+          {/* DELIVERY */}
+
+          <div className="mt-4">
+
+            {freeDelivery ? (
+              <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-600">
+                <Truck
+                  size={15}
+                  className="shrink-0"
+                />
+
+                <span>
+                  Free delivery
+                </span>
+              </div>
+            ) : (
+              <div className="inline-flex items-center gap-1.5 text-xs text-gray-500">
+                <Truck
+                  size={15}
+                  className="shrink-0"
+                />
+
+                <span>
+                  Delivery available
+                </span>
+              </div>
+            )}
+
+          </div>
+
+          {/* SELLER */}
+
           <p className="mt-2 text-xs text-gray-500">
             Sold by{" "}
-            <span className="font-medium text-gray-700">
-              {seller ||
-                sellerName}
+            <span className="font-semibold text-gray-700">
+              {productSeller}
             </span>
           </p>
-        )}
 
-        {/* ADD TO CART */}
-        <button
-          type="button"
-          className="mt-auto flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 active:scale-[0.98]"
-        >
-          <ShoppingCart size={17} />
-          Add to Cart
-        </button>
-      </div>
-    </div>
+          {/* STOCK */}
+
+          <div className="mt-3">
+
+            {isOutOfStock ? (
+              <span className="text-xs font-semibold text-red-600">
+                Out of stock
+              </span>
+            ) : productStock <= 5 ? (
+              <span className="text-xs font-semibold text-orange-600">
+                Only {productStock} left
+              </span>
+            ) : (
+              <span className="text-xs font-semibold text-green-600">
+                In stock
+              </span>
+            )}
+
+          </div>
+
+          {/* ADD TO CART */}
+
+          <button
+            type="button"
+            onClick={handleAddToCart}
+            disabled={
+              addingToCart ||
+              isOutOfStock
+            }
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+          >
+            <ShoppingCart size={17} />
+
+            {addingToCart
+              ? "Adding..."
+              : isOutOfStock
+              ? "Out of Stock"
+              : "Add to Cart"}
+
+          </button>
+
+        </div>
+
+      </article>
+    </Link>
   );
 }

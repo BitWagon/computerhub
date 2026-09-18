@@ -1,190 +1,285 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import {
   ArrowLeft,
-  Image as ImageIcon,
-  Plus,
   Save,
-  X,
+  PackagePlus,
+  Loader2,
+  Image as ImageIcon,
 } from "lucide-react";
+import { toast } from "sonner";
 
-export default function AddProductPage() {
+export default function AddSellerProductPage() {
   const router = useRouter();
 
-  const [categories, setCategories] = useState([]);
-
-  const [loadingCategories, setLoadingCategories] =
+  const [loading, setLoading] = useState(false);
+  const [categoriesLoading, setCategoriesLoading] =
     useState(true);
 
-  const [saving, setSaving] = useState(false);
-
-  const [error, setError] = useState("");
+  const [categories, setCategories] = useState([]);
 
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     price: "",
     originalPrice: "",
-    categoryId: "",
+    category: "",
     brand: "",
     stock: "",
     image: "",
   });
 
-  const [imagePreview, setImagePreview] =
-    useState("");
-
   /*
-   * Load active categories.
+   * LOAD CATEGORIES
    */
   useEffect(() => {
     async function loadCategories() {
       try {
-        setLoadingCategories(true);
+        setCategoriesLoading(true);
 
         const response = await fetch(
           "/api/categories",
           {
-            cache: "no-store",
+            method: "GET",
             credentials: "include",
+            cache: "no-store",
           }
         );
 
-        const data =
-          await response.json();
+        const data = await response.json();
 
         if (!response.ok) {
           throw new Error(
-            data.message ||
+            data?.message ||
               "Failed to load categories."
           );
         }
 
-        setCategories(
-          Array.isArray(data.categories)
+        const loadedCategories =
+          Array.isArray(data)
+            ? data
+            : Array.isArray(data?.categories)
             ? data.categories
-            : []
+            : Array.isArray(data?.data)
+            ? data.data
+            : [];
+
+        setCategories(
+          loadedCategories.filter(
+            (category) =>
+              category?.isActive !== false
+          )
         );
-      } catch (err) {
+      } catch (error) {
         console.error(
           "Category loading error:",
-          err
+          error
         );
 
-        setError(
-          err.message ||
+        toast.error(
+          error?.message ||
             "Failed to load categories."
         );
+
+        setCategories([]);
       } finally {
-        setLoadingCategories(false);
+        setCategoriesLoading(false);
       }
     }
 
     loadCategories();
   }, []);
 
+  /*
+   * HANDLE INPUT
+   */
   function handleChange(event) {
-    const {
-      name,
-      value,
-    } = event.target;
+    const { name, value } = event.target;
 
     setFormData((previous) => ({
       ...previous,
       [name]: value,
     }));
-
-    setError("");
-
-    if (name === "image") {
-      setImagePreview(value);
-    }
   }
 
+  /*
+   * CALCULATE DISCOUNT
+   *
+   * Example:
+   * Selling Price = 79
+   * Original Price = 100
+   *
+   * Discount = 21%
+   */
+  const calculatedDiscount = useMemo(() => {
+    const price = Number(formData.price);
+    const originalPrice = Number(
+      formData.originalPrice
+    );
+
+    if (
+      !price ||
+      !originalPrice ||
+      originalPrice <= price
+    ) {
+      return 0;
+    }
+
+    return Math.round(
+      ((originalPrice - price) /
+        originalPrice) *
+        100
+    );
+  }, [
+    formData.price,
+    formData.originalPrice,
+  ]);
+
+  /*
+   * SUBMIT PRODUCT
+   */
   async function handleSubmit(event) {
     event.preventDefault();
 
-    setError("");
-
     if (!formData.name.trim()) {
-      setError(
-        "Product name is required."
+      toast.error(
+        "Please enter a product name."
       );
       return;
     }
 
-    if (!formData.price) {
-      setError(
-        "Product price is required."
+    if (!formData.description.trim()) {
+      toast.error(
+        "Please enter a product description."
       );
       return;
     }
 
-    if (!formData.categoryId) {
-      setError(
+    const price = Number(formData.price);
+
+    if (
+      formData.price === "" ||
+      !Number.isFinite(price) ||
+      price < 0
+    ) {
+      toast.error(
+        "Please enter a valid selling price."
+      );
+      return;
+    }
+
+    const originalPrice =
+      formData.originalPrice === ""
+        ? price
+        : Number(formData.originalPrice);
+
+    if (
+      !Number.isFinite(originalPrice) ||
+      originalPrice < 0
+    ) {
+      toast.error(
+        "Please enter a valid original price."
+      );
+      return;
+    }
+
+    if (originalPrice < price) {
+      toast.error(
+        "Original price cannot be lower than selling price."
+      );
+      return;
+    }
+
+    if (!formData.category.trim()) {
+      toast.error(
         "Please select a category."
       );
       return;
     }
 
-    try {
-      setSaving(true);
+    const stock =
+      formData.stock === ""
+        ? 0
+        : Number(formData.stock);
 
+    if (
+      !Number.isFinite(stock) ||
+      stock < 0
+    ) {
+      toast.error(
+        "Please enter a valid stock quantity."
+      );
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      /*
+       * IMPORTANT:
+       *
+       * Send `oldPrice`, not `originalPrice`.
+       *
+       * Your Product model uses oldPrice.
+       */
       const response = await fetch(
         "/api/products",
         {
           method: "POST",
+
           headers: {
             "Content-Type":
               "application/json",
           },
+
           credentials: "include",
+
           body: JSON.stringify({
-            name: formData.name,
+            name: formData.name.trim(),
+
             description:
-              formData.description,
-            price: Number(
-              formData.price
-            ),
-            originalPrice:
-              formData.originalPrice
-                ? Number(
-                    formData.originalPrice
-                  )
-                : null,
-            categoryId:
-              formData.categoryId,
+              formData.description.trim(),
+
+            price,
+
+            oldPrice: originalPrice,
+
+            /*
+             * Keep originalPrice as well for
+             * compatibility with older code.
+             */
+            originalPrice,
+
+            category:
+              formData.category.trim(),
+
             brand:
-              formData.brand,
-            stock:
-              formData.stock
-                ? Number(formData.stock)
-                : 0,
+              formData.brand.trim(),
+
+            stock,
+
             image:
-              formData.image,
-            images:
-              formData.image
-                ? [formData.image]
-                : [],
+              formData.image.trim(),
           }),
         }
       );
 
-      const data =
-        await response.json();
+      const data = await response.json();
 
-      if (!response.ok) {
+      if (
+        !response.ok ||
+        data?.success === false
+      ) {
         throw new Error(
-          data.message ||
-            "Failed to create product."
+          data?.message ||
+            "Failed to add product."
         );
       }
 
-      alert(
-        "Product added successfully!"
+      toast.success(
+        "Product added successfully."
       );
 
       router.push(
@@ -192,272 +287,401 @@ export default function AddProductPage() {
       );
 
       router.refresh();
-    } catch (err) {
+    } catch (error) {
       console.error(
         "Add product error:",
-        err
+        error
       );
 
-      setError(
-        err.message ||
-          "Failed to create product."
+      toast.error(
+        error?.message ||
+          "Failed to add product."
       );
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
   }
 
   return (
-    <main className="min-h-screen bg-slate-50">
-      <section className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <Link
-            href="/seller/products"
-            className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-blue-600"
+    <main className="min-h-screen bg-gray-50 py-10">
+      <div className="container-main">
+        <div className="mx-auto max-w-4xl">
+
+          {/* BACK BUTTON */}
+
+          <button
+            type="button"
+            onClick={() =>
+              router.push(
+                "/seller/products"
+              )
+            }
+            className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-gray-600 transition hover:text-blue-600"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to Products
-          </Link>
 
-          <h1 className="text-3xl font-bold text-slate-900">
-            Add Product
-          </h1>
+            Back to My Products
+          </button>
 
-          <p className="mt-2 text-slate-600">
-            Add a new product to your
-            store.
-          </p>
-        </div>
+          {/* CARD */}
 
-        {error && (
-          <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-            {error}
-          </div>
-        )}
+          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
 
-        <form
-          onSubmit={handleSubmit}
-          className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
-        >
-          <div className="grid gap-6 md:grid-cols-2">
-            {/* Product Name */}
-            <div className="md:col-span-2">
-              <label className="mb-2 block text-sm font-semibold text-slate-700">
-                Product Name
-              </label>
+            {/* HEADER */}
 
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                placeholder="Enter product name"
-                className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-              />
-            </div>
+            <div className="border-b border-gray-200 p-6 sm:p-8">
 
-            {/* Description */}
-            <div className="md:col-span-2">
-              <label className="mb-2 block text-sm font-semibold text-slate-700">
-                Description
-              </label>
+              <div className="flex items-start gap-4">
 
-              <textarea
-                name="description"
-                value={
-                  formData.description
-                }
-                onChange={handleChange}
-                placeholder="Enter product description"
-                rows={5}
-                className="w-full resize-none rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-              />
-            </div>
-
-            {/* Price */}
-            <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-700">
-                Price
-              </label>
-
-              <input
-                type="number"
-                name="price"
-                value={formData.price}
-                onChange={handleChange}
-                min="0"
-                step="0.01"
-                placeholder="0.00"
-                className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-              />
-            </div>
-
-            {/* Original Price */}
-            <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-700">
-                Original Price
-              </label>
-
-              <input
-                type="number"
-                name="originalPrice"
-                value={
-                  formData.originalPrice
-                }
-                onChange={handleChange}
-                min="0"
-                step="0.01"
-                placeholder="Optional"
-                className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-              />
-            </div>
-
-            {/* Category */}
-            <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-700">
-                Category
-              </label>
-
-              <select
-                name="categoryId"
-                value={
-                  formData.categoryId
-                }
-                onChange={handleChange}
-                disabled={
-                  loadingCategories
-                }
-                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100"
-              >
-                <option value="">
-                  {loadingCategories
-                    ? "Loading categories..."
-                    : "Select a category"}
-                </option>
-
-                {categories.map(
-                  (category) => (
-                    <option
-                      key={
-                        category._id
-                      }
-                      value={
-                        category._id
-                      }
-                    >
-                      {category.name}
-                    </option>
-                  )
-                )}
-              </select>
-            </div>
-
-            {/* Brand */}
-            <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-700">
-                Brand
-              </label>
-
-              <input
-                type="text"
-                name="brand"
-                value={formData.brand}
-                onChange={handleChange}
-                placeholder="e.g. Dell, HP, Lenovo"
-                className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-              />
-            </div>
-
-            {/* Stock */}
-            <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-700">
-                Stock
-              </label>
-
-              <input
-                type="number"
-                name="stock"
-                value={formData.stock}
-                onChange={handleChange}
-                min="0"
-                placeholder="0"
-                className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-              />
-            </div>
-
-            {/* Image */}
-            <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-700">
-                Image URL
-              </label>
-
-              <input
-                type="text"
-                name="image"
-                value={formData.image}
-                onChange={handleChange}
-                placeholder="https://..."
-                className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-              />
-            </div>
-
-            {/* Image Preview */}
-            <div className="md:col-span-2">
-              <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6">
-                <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700">
-                  <ImageIcon className="h-5 w-5" />
-                  Image Preview
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-50">
+                  <PackagePlus className="h-6 w-6 text-blue-600" />
                 </div>
 
-                {imagePreview ? (
-                  <img
-                    src={imagePreview}
-                    alt="Product preview"
-                    className="h-64 w-full rounded-xl object-cover"
-                    onError={() =>
-                      setImagePreview("")
-                    }
+                <div>
+
+                  <p className="text-sm font-semibold uppercase tracking-wide text-blue-600">
+                    Seller Dashboard
+                  </p>
+
+                  <h1 className="mt-1 text-3xl font-bold text-gray-900">
+                    Add New Product
+                  </h1>
+
+                  <p className="mt-2 text-sm leading-6 text-gray-500">
+                    Add your product information and publish it to ComputerHub.
+                  </p>
+
+                </div>
+
+              </div>
+
+            </div>
+
+            {/* FORM */}
+
+            <form
+              onSubmit={handleSubmit}
+              className="p-6 sm:p-8"
+            >
+
+              <div className="grid gap-6">
+
+                {/* PRODUCT NAME */}
+
+                <div>
+
+                  <label className="mb-2 block text-sm font-semibold text-gray-900">
+                    Product Name
+                  </label>
+
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    placeholder="Example: Apple MacBook Air M3"
+                    className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                   />
-                ) : (
-                  <div className="flex h-64 items-center justify-center rounded-xl bg-slate-100 text-sm text-slate-500">
-                    Enter an image URL to
-                    see the preview.
+
+                </div>
+
+                {/* DESCRIPTION */}
+
+                <div>
+
+                  <label className="mb-2 block text-sm font-semibold text-gray-900">
+                    Product Description
+                  </label>
+
+                  <textarea
+                    name="description"
+                    value={formData.description}
+                    onChange={handleChange}
+                    rows={6}
+                    placeholder="Write a detailed description of your product..."
+                    className="w-full resize-none rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                  />
+
+                </div>
+
+                {/* PRICE */}
+
+                <div className="grid gap-6 sm:grid-cols-2">
+
+                  {/* SELLING PRICE */}
+
+                  <div>
+
+                    <label className="mb-2 block text-sm font-semibold text-gray-900">
+                      Selling Price
+                    </label>
+
+                    <input
+                      type="number"
+                      name="price"
+                      min="0"
+                      step="0.01"
+                      value={formData.price}
+                      onChange={handleChange}
+                      placeholder="79"
+                      className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                    />
+
+                  </div>
+
+                  {/* ORIGINAL PRICE */}
+
+                  <div>
+
+                    <label className="mb-2 block text-sm font-semibold text-gray-900">
+                      Original Price
+                    </label>
+
+                    <input
+                      type="number"
+                      name="originalPrice"
+                      min="0"
+                      step="0.01"
+                      value={
+                        formData.originalPrice
+                      }
+                      onChange={handleChange}
+                      placeholder="100"
+                      className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                    />
+
+                  </div>
+
+                </div>
+
+                {/* DISCOUNT PREVIEW */}
+
+                {calculatedDiscount > 0 && (
+                  <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3">
+
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+
+                      <div>
+
+                        <p className="text-sm font-semibold text-green-800">
+                          Discount
+                        </p>
+
+                        <p className="text-xs text-green-700">
+                          Original price £
+                          {Number(
+                            formData.originalPrice
+                          ).toFixed(2)}
+                          {" → "}
+                          Selling price £
+                          {Number(
+                            formData.price
+                          ).toFixed(2)}
+                        </p>
+
+                      </div>
+
+                      <span className="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-bold text-white">
+                        {calculatedDiscount}% OFF
+                      </span>
+
+                    </div>
+
                   </div>
                 )}
+
+                {/* CATEGORY + BRAND */}
+
+                <div className="grid gap-6 sm:grid-cols-2">
+
+                  {/* CATEGORY */}
+
+                  <div>
+
+                    <label className="mb-2 block text-sm font-semibold text-gray-900">
+                      Category
+                    </label>
+
+                    <select
+                      name="category"
+                      value={
+                        formData.category
+                      }
+                      onChange={handleChange}
+                      disabled={
+                        categoriesLoading
+                      }
+                      className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-gray-100"
+                    >
+
+                      <option value="">
+                        {categoriesLoading
+                          ? "Loading categories..."
+                          : "Select a category"}
+                      </option>
+
+                      {categories.map(
+                        (category) => (
+                          <option
+                            key={
+                              category._id ||
+                              category.id ||
+                              category.slug
+                            }
+                            value={
+                              category.name ||
+                              category.slug
+                            }
+                          >
+                            {category.name}
+                          </option>
+                        )
+                      )}
+
+                    </select>
+
+                  </div>
+
+                  {/* BRAND */}
+
+                  <div>
+
+                    <label className="mb-2 block text-sm font-semibold text-gray-900">
+                      Brand
+                    </label>
+
+                    <input
+                      type="text"
+                      name="brand"
+                      value={formData.brand}
+                      onChange={handleChange}
+                      placeholder="Example: ASUS"
+                      className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                    />
+
+                  </div>
+
+                </div>
+
+                {/* STOCK */}
+
+                <div>
+
+                  <label className="mb-2 block text-sm font-semibold text-gray-900">
+                    Stock Quantity
+                  </label>
+
+                  <input
+                    type="number"
+                    name="stock"
+                    min="0"
+                    value={formData.stock}
+                    onChange={handleChange}
+                    placeholder="Example: 10"
+                    className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                  />
+
+                </div>
+
+                {/* IMAGE */}
+
+                <div>
+
+                  <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-900">
+
+                    <ImageIcon className="h-4 w-4" />
+
+                    Product Image URL
+
+                  </label>
+
+                  <input
+                    type="url"
+                    name="image"
+                    value={formData.image}
+                    onChange={handleChange}
+                    placeholder="https://example.com/product-image.jpg"
+                    className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                  />
+
+                  <p className="mt-2 text-xs text-gray-500">
+                    Paste a direct product image URL.
+                  </p>
+
+                </div>
+
+                {/* IMAGE PREVIEW */}
+
+                {formData.image && (
+                  <div className="overflow-hidden rounded-xl border border-gray-200 bg-gray-50 p-4">
+
+                    <p className="mb-3 text-sm font-semibold text-gray-700">
+                      Image Preview
+                    </p>
+
+                    <img
+                      src={formData.image}
+                      alt="Product preview"
+                      className="h-64 w-full rounded-lg object-contain"
+                      onError={(event) => {
+                        event.currentTarget.style.display =
+                          "none";
+                      }}
+                    />
+
+                  </div>
+                )}
+
               </div>
-            </div>
+
+              {/* BUTTONS */}
+
+              <div className="mt-8 flex flex-col-reverse gap-3 border-t border-gray-200 pt-6 sm:flex-row sm:justify-end">
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    router.push(
+                      "/seller/products"
+                    )
+                  }
+                  disabled={loading}
+                  className="rounded-xl border border-gray-300 px-5 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={
+                    loading ||
+                    categoriesLoading
+                  }
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      Adding Product...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-5 w-5" />
+                      Add Product
+                    </>
+                  )}
+
+                </button>
+
+              </div>
+
+            </form>
+
           </div>
 
-          {/* Buttons */}
-          <div className="mt-8 flex flex-col gap-3 border-t border-slate-200 pt-6 sm:flex-row sm:justify-end">
-            <Link
-              href="/seller/products"
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-            >
-              <X className="h-5 w-5" />
-              Cancel
-            </Link>
-
-            <button
-              type="submit"
-              disabled={saving}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {saving ? (
-                <>
-                  <Save className="h-5 w-5 animate-pulse" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Plus className="h-5 w-5" />
-                  Add Product
-                </>
-              )}
-            </button>
-          </div>
-        </form>
-      </section>
+        </div>
+      </div>
     </main>
   );
 }

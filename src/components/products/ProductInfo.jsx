@@ -22,8 +22,27 @@ export default function ProductInfo({ product }) {
   const [added, setAdded] = useState(false);
 
   const price = Number(product?.price || 0);
-  const oldPrice = Number(product?.oldPrice || 0);
-  const discount = Number(product?.discount || 0);
+  const oldPrice = Number(
+    product?.oldPrice || product?.originalPrice || 0
+  );
+
+  const calculatedDiscount =
+    oldPrice > price && price > 0
+      ? Math.round(((oldPrice - price) / oldPrice) * 100)
+      : 0;
+
+  const discount =
+    Number(product?.discount || 0) > 0
+      ? Number(product.discount)
+      : calculatedDiscount;
+
+  const fallbackImage =
+    "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&w=1000&q=80";
+
+  const productImage =
+    product?.image ||
+    product?.images?.[0] ||
+    fallbackImage;
 
   const increaseQuantity = () => {
     setQuantity((current) => {
@@ -50,19 +69,38 @@ export default function ProductInfo({ product }) {
       return;
     }
 
+    const productId =
+      product?._id?.toString() ||
+      product?.id?.toString();
+
     const cartProduct = {
       ...product,
-      id: product._id?.toString() || product.id?.toString(),
-      _id: product._id?.toString() || product.id?.toString(),
+
+      id: productId,
+      _id: productId,
+
       quantity,
-      image:
-        product.image ||
-        product.images?.[0] ||
-        "/placeholder-product.png",
-      images: product.images || [],
+
+      image: productImage,
+
+      images:
+        Array.isArray(product?.images) &&
+        product.images.length > 0
+          ? product.images
+          : [productImage],
+
       price,
       oldPrice,
+      originalPrice: oldPrice,
       discount,
+
+      sellerName:
+        product?.sellerName ||
+        product?.seller ||
+        "ComputerHub Official",
+
+      freeDelivery:
+        product?.freeDelivery !== false,
     };
 
     addToCart(cartProduct, quantity);
@@ -77,6 +115,14 @@ export default function ProductInfo({ product }) {
   const productId =
     product?._id?.toString() ||
     product?.id?.toString();
+
+  const sellerName =
+    product?.sellerName ||
+    product?.seller ||
+    "ComputerHub Official";
+
+  const freeDelivery =
+    product?.freeDelivery !== false;
 
   return (
     <div className="space-y-6">
@@ -102,7 +148,10 @@ export default function ProductInfo({ product }) {
       {/* RATING */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-1">
-          <span className="text-lg text-yellow-500">★</span>
+          <span className="text-lg text-yellow-500">
+            ★
+          </span>
+
           <span className="font-semibold text-slate-900">
             {Number(product?.rating || 0).toFixed(1)}
           </span>
@@ -117,6 +166,7 @@ export default function ProductInfo({ product }) {
         {product?.sku && (
           <>
             <span className="text-slate-300">|</span>
+
             <span className="text-sm text-slate-500">
               SKU: {product.sku}
             </span>
@@ -144,7 +194,14 @@ export default function ProductInfo({ product }) {
           )}
         </div>
 
-        <p className="mt-2 text-sm text-slate-500">
+        {oldPrice > price && (
+          <p className="mt-2 text-sm font-medium text-green-600">
+            You save $
+            {(oldPrice - price).toLocaleString()}
+          </p>
+        )}
+
+        <p className="mt-1 text-sm text-slate-500">
           Price includes standard product listing information.
         </p>
       </div>
@@ -154,7 +211,9 @@ export default function ProductInfo({ product }) {
         {stock > 0 ? (
           <div className="flex items-center gap-2 text-sm font-medium text-green-600">
             <span className="h-2.5 w-2.5 rounded-full bg-green-500" />
+
             In Stock
+
             <span className="font-normal text-slate-500">
               ({stock} available)
             </span>
@@ -162,6 +221,7 @@ export default function ProductInfo({ product }) {
         ) : (
           <div className="flex items-center gap-2 text-sm font-semibold text-red-600">
             <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
+
             Out of Stock
           </div>
         )}
@@ -249,7 +309,8 @@ export default function ProductInfo({ product }) {
       {/* ADDED MESSAGE */}
       {added && (
         <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
-          ✓ {quantity} {quantity === 1 ? "item" : "items"} added to your
+          ✓ {quantity}{" "}
+          {quantity === 1 ? "item" : "items"} added to your
           cart successfully.
         </div>
       )}
@@ -257,7 +318,10 @@ export default function ProductInfo({ product }) {
       {/* DELIVERY / FEATURES */}
       <div className="grid gap-3 border-t border-slate-200 pt-5 sm:grid-cols-2">
         <div className="flex items-start gap-3">
-          <Truck className="mt-0.5 text-blue-600" size={21} />
+          <Truck
+            className="mt-0.5 text-blue-600"
+            size={21}
+          />
 
           <div>
             <p className="text-sm font-semibold text-slate-900">
@@ -265,7 +329,7 @@ export default function ProductInfo({ product }) {
             </p>
 
             <p className="text-xs leading-5 text-slate-500">
-              {product?.freeDelivery
+              {freeDelivery
                 ? "Free delivery available"
                 : "Delivery options available at checkout"}
             </p>
@@ -273,7 +337,10 @@ export default function ProductInfo({ product }) {
         </div>
 
         <div className="flex items-start gap-3">
-          <ShieldCheck className="mt-0.5 text-blue-600" size={21} />
+          <ShieldCheck
+            className="mt-0.5 text-blue-600"
+            size={21}
+          />
 
           <div>
             <p className="text-sm font-semibold text-slate-900">
@@ -288,17 +355,15 @@ export default function ProductInfo({ product }) {
       </div>
 
       {/* SELLER */}
-      {product?.sellerName && (
-        <div className="rounded-xl bg-slate-50 p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-            Sold by
-          </p>
+      <div className="rounded-xl bg-slate-50 p-4">
+        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+          Sold by
+        </p>
 
-          <p className="mt-1 font-semibold text-slate-900">
-            {product.sellerName}
-          </p>
-        </div>
-      )}
+        <p className="mt-1 font-semibold text-slate-900">
+          {sellerName}
+        </p>
+      </div>
     </div>
   );
 }

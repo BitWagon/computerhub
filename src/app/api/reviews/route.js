@@ -8,6 +8,50 @@ import Review from "@/models/Review";
 import Product from "@/models/Product";
 import User from "@/models/User";
 
+async function resolveProductId(productId) {
+  if (!productId) {
+    return null;
+  }
+
+  // Real MongoDB ObjectId
+  if (
+    mongoose.Types.ObjectId.isValid(productId)
+  ) {
+    const product = await Product.findById(
+      productId
+    )
+      .select("_id")
+      .lean();
+
+    return product?._id || null;
+  }
+
+  // Support frontend numeric IDs such as /products/1
+  if (/^\d+$/.test(String(productId))) {
+    const numericId = Number(productId);
+
+    if (numericId < 1) {
+      return null;
+    }
+
+    const products = await Product.find({
+      isActive: true,
+    })
+      .sort({
+        createdAt: -1,
+      })
+      .select("_id")
+      .lean();
+
+    const product =
+      products[numericId - 1];
+
+    return product?._id || null;
+  }
+
+  return null;
+}
+
 /* -------------------------
    GET REVIEWS
 ------------------------- */
@@ -16,28 +60,30 @@ export async function GET(request) {
   try {
     await connectDB();
 
-    const { searchParams } = new URL(
-      request.url
-    );
+    const { searchParams } =
+      new URL(request.url);
 
     const productId =
       searchParams.get("productId");
 
     const includeAll =
-      searchParams.get("includeAll") === "true";
+      searchParams.get("includeAll") ===
+      "true";
 
     /* -------------------------
        ADMIN ALL REVIEWS
     ------------------------- */
 
     if (includeAll) {
-      const token = getCurrentUserToken();
+      const token =
+        getCurrentUserToken();
 
       if (!token) {
         return NextResponse.json(
           {
             success: false,
-            message: "Authentication required.",
+            message:
+              "Authentication required.",
           },
           { status: 401 }
         );
@@ -47,26 +93,29 @@ export async function GET(request) {
         return NextResponse.json(
           {
             success: false,
-            message: "Admin access required.",
+            message:
+              "Admin access required.",
           },
           { status: 403 }
         );
       }
 
-      const reviews = await Review.find({})
-        .populate(
-          "productId",
-          "name slug images image price"
-        )
-        .sort({
-          createdAt: -1,
-        })
-        .lean();
+      const reviews =
+        await Review.find({})
+          .populate(
+            "productId",
+            "name slug images image price"
+          )
+          .sort({
+            createdAt: -1,
+          })
+          .lean();
 
       return NextResponse.json({
         success: true,
         reviews,
-        totalReviews: reviews.length,
+        totalReviews:
+          reviews.length,
       });
     }
 
@@ -78,42 +127,52 @@ export async function GET(request) {
       return NextResponse.json(
         {
           success: false,
-          message: "Product ID is required.",
+          message:
+            "Product ID is required.",
         },
         { status: 400 }
       );
     }
 
-    if (
-      !mongoose.Types.ObjectId.isValid(
+    const resolvedProductId =
+      await resolveProductId(
         productId
-      )
-    ) {
+      );
+
+    if (!resolvedProductId) {
       return NextResponse.json(
         {
           success: false,
-          message: "Invalid product ID.",
+          message:
+            "Product not found.",
         },
-        { status: 400 }
+        { status: 404 }
       );
     }
 
-    const reviews = await Review.find({
-      productId,
-      isApproved: true,
-    })
-      .sort({
-        createdAt: -1,
+    const reviews =
+      await Review.find({
+        productId:
+          resolvedProductId,
+        isApproved: true,
       })
-      .lean();
+        .sort({
+          createdAt: -1,
+        })
+        .lean();
 
-    const totalReviews = reviews.length;
+    const totalReviews =
+      reviews.length;
 
-    const totalRating = reviews.reduce(
-      (sum, review) =>
-        sum + Number(review.rating || 0),
-      0
-    );
+    const totalRating =
+      reviews.reduce(
+        (sum, review) =>
+          sum +
+          Number(
+            review.rating || 0
+          ),
+        0
+      );
 
     const averageRating =
       totalReviews > 0
@@ -133,18 +192,22 @@ export async function GET(request) {
       1: 0,
     };
 
-    reviews.forEach((review) => {
-      const rating = Number(
-        review.rating
-      );
+    reviews.forEach(
+      (review) => {
+        const rating =
+          Number(
+            review.rating
+          );
 
-      if (
-        distribution[rating] !==
-        undefined
-      ) {
-        distribution[rating] += 1;
+        if (
+          distribution[rating] !==
+          undefined
+        ) {
+          distribution[rating] +=
+            1;
+        }
       }
-    });
+    );
 
     return NextResponse.json({
       success: true,
@@ -178,7 +241,8 @@ export async function POST(request) {
   try {
     await connectDB();
 
-    const token = getCurrentUserToken();
+    const token =
+      getCurrentUserToken();
 
     if (!token) {
       return NextResponse.json(
@@ -191,7 +255,8 @@ export async function POST(request) {
       );
     }
 
-    const body = await request.json();
+    const body =
+      await request.json();
 
     const {
       productId,
@@ -215,24 +280,24 @@ export async function POST(request) {
       );
     }
 
-    if (
-      !mongoose.Types.ObjectId.isValid(
+    const resolvedProductId =
+      await resolveProductId(
         productId
-      )
-    ) {
+      );
+
+    if (!resolvedProductId) {
       return NextResponse.json(
         {
           success: false,
           message:
-            "Invalid product ID.",
+            "Product not found.",
         },
-        { status: 400 }
+        { status: 404 }
       );
     }
 
-    const numericRating = Number(
-      rating
-    );
+    const numericRating =
+      Number(rating);
 
     if (
       !Number.isInteger(
@@ -285,7 +350,7 @@ export async function POST(request) {
 
     const product =
       await Product.findById(
-        productId
+        resolvedProductId
       );
 
     if (!product) {
@@ -305,7 +370,8 @@ export async function POST(request) {
 
     const existingReview =
       await Review.findOne({
-        productId,
+        productId:
+          resolvedProductId,
         userId: token.userId,
       });
 
@@ -325,7 +391,8 @@ export async function POST(request) {
     ------------------------- */
 
     let userName =
-      token.email || "Customer";
+      token.email ||
+      "Customer";
 
     let userEmail =
       token.email || "";
@@ -339,7 +406,8 @@ export async function POST(request) {
       const user =
         await User.findById(
           token.userId
-        ).lean();
+        )
+          .lean();
 
       if (user) {
         userName =
@@ -360,20 +428,18 @@ export async function POST(request) {
 
     const review =
       await Review.create({
-        productId,
-        userId: token.userId,
+        productId:
+          resolvedProductId,
+        userId:
+          token.userId,
         userName,
         userEmail,
-        rating: numericRating,
-        title: title.trim(),
-        comment: comment.trim(),
-
-        /*
-         * New reviews are approved
-         * automatically.
-         *
-         * Admin can later reject them.
-         */
+        rating:
+          numericRating,
+        title:
+          title.trim(),
+        comment:
+          comment.trim(),
         isApproved: true,
       });
 
@@ -425,7 +491,8 @@ export async function PATCH(request) {
   try {
     await connectDB();
 
-    const token = getCurrentUserToken();
+    const token =
+      getCurrentUserToken();
 
     if (!token) {
       return NextResponse.json(
@@ -449,7 +516,8 @@ export async function PATCH(request) {
       );
     }
 
-    const body = await request.json();
+    const body =
+      await request.json();
 
     const {
       reviewId,
@@ -555,7 +623,8 @@ export async function DELETE(request) {
   try {
     await connectDB();
 
-    const token = getCurrentUserToken();
+    const token =
+      getCurrentUserToken();
 
     if (!token) {
       return NextResponse.json(

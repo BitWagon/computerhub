@@ -8,11 +8,13 @@ import {
   RotateCcw,
   ShieldCheck,
   Truck,
+  Store,
+  CheckCircle2,
 } from "lucide-react";
 
 import ProductImages from "@/components/products/ProductImages";
 import ProductInfo from "@/components/products/ProductInfo";
-import ProductReviews from "@/components/products/ProductsReviews"; 
+import ProductReviews from "@/components/products/ProductsReviews";
 import RelatedProducts from "@/components/products/RelatedProducts";
 
 export default function ProductDetailsPage() {
@@ -21,9 +23,7 @@ export default function ProductDetailsPage() {
   const productId = params?.id?.toString();
 
   const [product, setProduct] = useState(null);
-
   const [loading, setLoading] = useState(true);
-
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -57,46 +57,83 @@ export default function ProductDetailsPage() {
 
         const apiProduct = data.product;
 
+        const productPrice = Number(
+          apiProduct.price || 0
+        );
+
+        const productOldPrice = Number(
+          apiProduct.oldPrice ||
+            apiProduct.originalPrice ||
+            0
+        );
+
+        let productDiscount = Number(
+          apiProduct.discount || 0
+        );
+
+        if (
+          !productDiscount &&
+          productOldPrice > productPrice &&
+          productOldPrice > 0
+        ) {
+          productDiscount = Math.round(
+            ((productOldPrice - productPrice) /
+              productOldPrice) *
+              100
+          );
+        }
+
+        const productImages = Array.isArray(
+          apiProduct.images
+        )
+          ? apiProduct.images.filter(Boolean)
+          : apiProduct.image
+            ? [apiProduct.image]
+            : [];
+
+        const productSeller =
+          apiProduct.sellerName ||
+          apiProduct.seller ||
+          "ComputerHub Official";
+
         const formattedProduct = {
           ...apiProduct,
 
           id:
             apiProduct._id?.toString() ||
-            apiProduct.id,
+            apiProduct.id ||
+            productId,
+
+          name:
+            apiProduct.name ||
+            "ComputerHub Product",
 
           image:
             apiProduct.image ||
-            apiProduct.images?.[0] ||
+            productImages[0] ||
             "",
 
-          images:
-            Array.isArray(apiProduct.images)
-              ? apiProduct.images
-              : apiProduct.image
-                ? [apiProduct.image]
-                : [],
+          images: productImages,
 
           category:
             apiProduct.category ||
             apiProduct.categoryId?.name ||
             "",
 
-          seller:
-            apiProduct.sellerName ||
-            apiProduct.seller ||
-            "",
+          categoryId:
+            apiProduct.categoryId || null,
 
-          price: Number(
-            apiProduct.price || 0
-          ),
+          seller: productSeller,
 
-          oldPrice: Number(
-            apiProduct.oldPrice || 0
-          ),
+          sellerName: productSeller,
 
-          discount: Number(
-            apiProduct.discount || 0
-          ),
+          price: productPrice,
+
+          oldPrice: productOldPrice,
+
+          originalPrice: productOldPrice,
+
+          discount: productDiscount,
 
           stock: Number(
             apiProduct.stock || 0
@@ -109,6 +146,15 @@ export default function ProductDetailsPage() {
           reviews: Number(
             apiProduct.reviews || 0
           ),
+
+          freeDelivery:
+            apiProduct.freeDelivery !== false,
+
+          featured:
+            apiProduct.featured === true,
+
+          isActive:
+            apiProduct.isActive !== false,
         };
 
         setProduct(formattedProduct);
@@ -255,6 +301,59 @@ export default function ProductDetailsPage() {
             <ProductInfo
               product={product}
             />
+
+            {/* SELLER */}
+
+            <div className="mt-6 rounded-xl border border-gray-200 bg-gray-50 p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
+                  <Store
+                    size={20}
+                    className="text-blue-600"
+                  />
+                </div>
+
+                <div>
+                  <p className="text-xs text-gray-500">
+                    Sold by
+                  </p>
+
+                  <p className="text-sm font-bold text-gray-900">
+                    {product.sellerName ||
+                      product.seller ||
+                      "ComputerHub Official"}
+                  </p>
+                </div>
+
+                <CheckCircle2
+                  size={18}
+                  className="ml-auto text-blue-600"
+                />
+              </div>
+            </div>
+
+            {/* FREE DELIVERY */}
+
+            {product.freeDelivery && (
+              <div className="mt-4 flex items-center gap-3 rounded-xl border border-green-200 bg-green-50 p-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white">
+                  <Truck
+                    size={20}
+                    className="text-green-600"
+                  />
+                </div>
+
+                <div>
+                  <p className="text-sm font-bold text-green-700">
+                    Free Delivery
+                  </p>
+
+                  <p className="mt-0.5 text-xs text-green-700">
+                    Free delivery available for this product
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -273,11 +372,11 @@ export default function ProductDetailsPage() {
 
             <div>
               <h3 className="font-semibold text-gray-900">
-                Fast Delivery
+                Free Delivery
               </h3>
 
               <p className="mt-1 text-xs text-gray-500">
-                Reliable delivery to your address
+                Fast and reliable delivery from ComputerHub
               </p>
             </div>
           </div>
@@ -384,7 +483,20 @@ export default function ProductDetailsPage() {
 
             <Specification
               label="Seller"
-              value={product.seller}
+              value={
+                product.sellerName ||
+                product.seller ||
+                "ComputerHub Official"
+              }
+            />
+
+            <Specification
+              label="Delivery"
+              value={
+                product.freeDelivery
+                  ? "Free Delivery"
+                  : "Delivery Available"
+              }
             />
 
             <Specification

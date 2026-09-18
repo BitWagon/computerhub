@@ -4,6 +4,12 @@ import { connectDB } from "@/lib/mongodb";
 import Order from "@/models/Order";
 import { getCurrentUserToken } from "@/lib/auth";
 
+
+// ============================================================
+// POST /api/orders
+// Create a new order
+// ============================================================
+
 export async function POST(request) {
   try {
     await connectDB();
@@ -34,6 +40,10 @@ export async function POST(request) {
       ? body.items
       : [];
 
+    // --------------------------------------------------------
+    // Check cart
+    // --------------------------------------------------------
+
     if (items.length === 0) {
       return NextResponse.json(
         {
@@ -44,18 +54,41 @@ export async function POST(request) {
       );
     }
 
-    /*
-     * CUSTOMER INFORMATION
-     */
 
-    const firstName = customer.firstName || "";
+    // ========================================================
+    // CUSTOMER INFORMATION
+    // ========================================================
 
-    const lastName = customer.lastName || "";
+    let firstName = customer.firstName || "";
+    let lastName = customer.lastName || "";
 
     const fullName =
       customer.fullName ||
       customer.name ||
       `${firstName} ${lastName}`.trim();
+
+    /*
+     * If checkout sends only fullName, split it into
+     * firstName and lastName because Order.js requires
+     * both fields.
+     */
+
+    if (!firstName && fullName) {
+      const nameParts = fullName.trim().split(/\s+/);
+
+      firstName = nameParts.shift() || "";
+
+      lastName = nameParts.join(" ") || "";
+    }
+
+    /*
+     * If firstName exists but lastName does not,
+     * use a safe fallback so Mongoose validation passes.
+     */
+
+    if (!lastName) {
+      lastName = "Customer";
+    }
 
     const email =
       customer.email ||
@@ -66,39 +99,38 @@ export async function POST(request) {
       customer.phone ||
       "";
 
-    const country =
-      customer.country ||
+    const address =
+      customer.address ||
       "";
 
     const city =
       customer.city ||
       "";
 
-    const state =
-      customer.state ||
-      "";
-
     const postalCode =
       customer.postalCode ||
       "";
 
-    const address =
-      customer.address ||
-      "";
 
-    const notes =
-      customer.notes ||
-      "";
+    // ========================================================
+    // VALIDATE CUSTOMER INFORMATION
+    // ========================================================
 
-    /*
-     * VALIDATE CUSTOMER INFORMATION
-     */
-
-    if (!fullName.trim()) {
+    if (!firstName.trim()) {
       return NextResponse.json(
         {
           success: false,
-          message: "Full name is required.",
+          message: "First name is required.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (!lastName.trim()) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Last name is required.",
         },
         { status: 400 }
       );
@@ -124,11 +156,11 @@ export async function POST(request) {
       );
     }
 
-    if (!country.trim()) {
+    if (!address.trim()) {
       return NextResponse.json(
         {
           success: false,
-          message: "Country is required.",
+          message: "Address is required.",
         },
         { status: 400 }
       );
@@ -144,39 +176,10 @@ export async function POST(request) {
       );
     }
 
-    if (!state.trim()) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "State is required.",
-        },
-        { status: 400 }
-      );
-    }
 
-    if (!postalCode.trim()) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Postal code is required.",
-        },
-        { status: 400 }
-      );
-    }
-
-    if (!address.trim()) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Address is required.",
-        },
-        { status: 400 }
-      );
-    }
-
-    /*
-     * FORMAT ORDER ITEMS
-     */
+    // ========================================================
+    // FORMAT ORDER ITEMS
+    // ========================================================
 
     const formattedItems = items.map((item) => {
       const productId =
@@ -189,9 +192,15 @@ export async function POST(request) {
         Number(item.price) || 0;
 
       const quantity =
-        Number(item.quantity) || 1;
+        Math.max(
+          1,
+          Number(item.quantity) || 1
+        );
 
-      const total =
+      // IMPORTANT:
+      // Order.js requires "subtotal", not "total".
+
+      const itemSubtotal =
         price * quantity;
 
       return {
@@ -210,13 +219,14 @@ export async function POST(request) {
 
         quantity,
 
-        total,
+        subtotal: itemSubtotal,
       };
     });
 
-    /*
-     * MAKE SURE PRODUCTS HAVE IDs
-     */
+
+    // ========================================================
+    // MAKE SURE PRODUCTS HAVE IDs
+    // ========================================================
 
     const invalidItem =
       formattedItems.find(
@@ -234,67 +244,95 @@ export async function POST(request) {
       );
     }
 
-    /*
-     * CALCULATE TOTALS
-     */
 
-    const subtotal =
-      formattedItems.reduce(
-        (sum, item) =>
-          sum + item.total,
-        0
+    // ========================================================
+    // VALIDATE ITEM PRICES
+    // ========================================================
+
+    const invalidPrice =
+      formattedItems.find(
+        (item) =>
+          !Number.isFinite(item.price) ||
+          item.price < 0
       );
 
-    const delivery =
-      subtotal >= 500
-        ? 0
-        : 15;
-
-    const total =
-      subtotal + delivery;
-
-    /*
-     * PAYMENT METHOD
-     */
-
-    const paymentMethod =
-      body.paymentMethod ||
-      "cod";
-
-    const allowedPaymentMethods = [
-      "card",
-      "cod",
-      "wallet",
-    ];
-
-    if (
-      !allowedPaymentMethods.includes(
-        paymentMethod
-      )
-    ) {
+    if (invalidPrice) {
       return NextResponse.json(
         {
           success: false,
           message:
-            "Invalid payment method.",
+            "One or more products have an invalid price.",
         },
         { status: 400 }
       );
     }
 
+
+    // ========================================================
+    // CALCULATE TOTALS
+    // ========================================================
+
+    const subtotal =
+      formattedItems.reduce(
+        (sum, item) =>
+          sum + item.subtotal,
+        0
+      );
+
     /*
-     * CREATE ORDER NUMBER
+     * Delivery rule:
+     * Orders of 500 or more = free delivery
+     * Orders below 500 = 15 delivery fee
      */
+
+    const deliveryFee =
+      subtotal >= 500
+        ? 0
+        : 15;
+
+    const total =
+      subtotal + deliveryFee;
+
+
+    // ========================================================
+    // PAYMENT METHOD
+    // ========================================================
+
+    /*
+     * Your Order.js currently supports ONLY:
+     *
+     * "cod"
+     */
+
+    const paymentMethod =
+      body.paymentMethod || "cod";
+
+    if (paymentMethod !== "cod") {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Only Cash on Delivery is currently available.",
+        },
+        { status: 400 }
+      );
+    }
+
+
+    // ========================================================
+    // CREATE ORDER NUMBER
+    // ========================================================
 
     const orderNumber =
       `CH-${Date.now()}-${Math.floor(
         1000 +
-          Math.random() * 9000
+        Math.random() * 9000
       )}`;
 
-    /*
-     * CREATE ORDER
-     */
+
+    // ========================================================
+    // CREATE ORDER
+    // ========================================================
 
     const order =
       await Order.create({
@@ -304,8 +342,11 @@ export async function POST(request) {
         orderNumber,
 
         customer: {
-          fullName:
-            fullName.trim(),
+          firstName:
+            firstName.trim(),
+
+          lastName:
+            lastName.trim(),
 
           email:
             email
@@ -315,23 +356,14 @@ export async function POST(request) {
           phone:
             phone.trim(),
 
-          country:
-            country.trim(),
+          address:
+            address.trim(),
 
           city:
             city.trim(),
 
-          state:
-            state.trim(),
-
           postalCode:
             postalCode.trim(),
-
-          address:
-            address.trim(),
-
-          notes:
-            notes.trim(),
         },
 
         items:
@@ -339,7 +371,7 @@ export async function POST(request) {
 
         subtotal,
 
-        delivery,
+        deliveryFee,
 
         total,
 
@@ -352,9 +384,10 @@ export async function POST(request) {
           "pending",
       });
 
-    /*
-     * TERMINAL LOG
-     */
+
+    // ========================================================
+    // TERMINAL LOG
+    // ========================================================
 
     console.log("====================================");
     console.log(
@@ -387,8 +420,8 @@ export async function POST(request) {
     );
 
     console.log(
-      "Delivery:",
-      order.delivery
+      "Delivery Fee:",
+      order.deliveryFee
     );
 
     console.log(
@@ -397,6 +430,11 @@ export async function POST(request) {
     );
 
     console.log("====================================");
+
+
+    // ========================================================
+    // RESPONSE
+    // ========================================================
 
     return NextResponse.json(
       {
@@ -413,7 +451,9 @@ export async function POST(request) {
             order.orderNumber,
 
           userId:
-            order.userId.toString(),
+            order.userId
+              ? order.userId.toString()
+              : null,
 
           customer:
             order.customer,
@@ -424,8 +464,8 @@ export async function POST(request) {
           subtotal:
             order.subtotal,
 
-          delivery:
-            order.delivery,
+          deliveryFee:
+            order.deliveryFee,
 
           total:
             order.total,
@@ -438,10 +478,14 @@ export async function POST(request) {
 
           orderStatus:
             order.orderStatus,
+
+          createdAt:
+            order.createdAt,
         },
       },
       { status: 201 }
     );
+
   } catch (error) {
     console.error("====================================");
     console.error(
@@ -453,7 +497,6 @@ export async function POST(request) {
     return NextResponse.json(
       {
         success: false,
-
         message:
           error.message ||
           "Unable to create order.",
@@ -464,15 +507,11 @@ export async function POST(request) {
 }
 
 
-/*
- * GET ORDERS
- *
- * Customer:
- * - sees their own orders
- *
- * Admin:
- * - sees all orders
- */
+// ============================================================
+// GET /api/orders
+// Customer: own orders
+// Admin: all orders
+// ============================================================
 
 export async function GET() {
   try {
@@ -537,6 +576,7 @@ export async function GET() {
       },
       { status: 200 }
     );
+
   } catch (error) {
     console.error(
       "❌ GET ORDERS ERROR:",
@@ -557,11 +597,10 @@ export async function GET() {
 }
 
 
-/*
- * PATCH ORDER
- *
- * Admin only.
- */
+// ============================================================
+// PATCH /api/orders
+// Admin only
+// ============================================================
 
 export async function PATCH(request) {
   try {
@@ -614,6 +653,11 @@ export async function PATCH(request) {
       );
     }
 
+
+    // --------------------------------------------------------
+    // Allowed order statuses
+    // --------------------------------------------------------
+
     const allowedOrderStatuses = [
       "pending",
       "confirmed",
@@ -623,14 +667,24 @@ export async function PATCH(request) {
       "cancelled",
     ];
 
+
+    // --------------------------------------------------------
+    // Allowed payment statuses
+    // --------------------------------------------------------
+
     const allowedPaymentStatuses = [
       "pending",
       "paid",
       "failed",
-      "refunded",
     ];
 
+
     const updateData = {};
+
+
+    // --------------------------------------------------------
+    // Order status
+    // --------------------------------------------------------
 
     if (
       orderStatus !== undefined
@@ -654,6 +708,11 @@ export async function PATCH(request) {
         orderStatus;
     }
 
+
+    // --------------------------------------------------------
+    // Payment status
+    // --------------------------------------------------------
+
     if (
       paymentStatus !== undefined
     ) {
@@ -676,6 +735,11 @@ export async function PATCH(request) {
         paymentStatus;
     }
 
+
+    // --------------------------------------------------------
+    // Nothing to update
+    // --------------------------------------------------------
+
     if (
       Object.keys(updateData)
         .length === 0
@@ -690,6 +754,11 @@ export async function PATCH(request) {
       );
     }
 
+
+    // --------------------------------------------------------
+    // Update order
+    // --------------------------------------------------------
+
     const order =
       await Order.findByIdAndUpdate(
         orderId,
@@ -699,6 +768,7 @@ export async function PATCH(request) {
           runValidators: true,
         }
       );
+
 
     if (!order) {
       return NextResponse.json(
@@ -711,33 +781,46 @@ export async function PATCH(request) {
       );
     }
 
+
+    // --------------------------------------------------------
+    // Terminal log
+    // --------------------------------------------------------
+
     console.log("====================================");
     console.log(
       "✅ ORDER UPDATED"
     );
+
     console.log(
       "Order ID:",
       order._id.toString()
     );
+
     console.log(
       "Order Status:",
       order.orderStatus
     );
+
     console.log(
       "Payment Status:",
       order.paymentStatus
     );
+
     console.log("====================================");
+
 
     return NextResponse.json(
       {
         success: true,
+
         message:
           "Order updated successfully.",
+
         order,
       },
       { status: 200 }
     );
+
   } catch (error) {
     console.error(
       "❌ UPDATE ORDER ERROR:",
