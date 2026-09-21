@@ -24,9 +24,7 @@ async function createUniqueSlug(name, excludeId = null) {
   let counter = 2;
 
   while (true) {
-    const query = {
-      slug,
-    };
+    const query = { slug };
 
     if (
       excludeId &&
@@ -37,10 +35,11 @@ async function createUniqueSlug(name, excludeId = null) {
       };
     }
 
-    const existingProduct =
-      await Product.findOne(query).lean();
+    const existing = await Product.findOne(query)
+      .select("_id")
+      .lean();
 
-    if (!existingProduct) {
+    if (!existing) {
       return slug;
     }
 
@@ -62,9 +61,7 @@ function calculateDiscount(price, oldPrice) {
   }
 
   return Math.round(
-    ((previousPrice - currentPrice) /
-      previousPrice) *
-      100
+    ((previousPrice - currentPrice) / previousPrice) * 100
   );
 }
 
@@ -85,10 +82,84 @@ function normalizeImages(images) {
   return [];
 }
 
+function formatProduct(product) {
+  const images = normalizeImages(product.images);
+
+  const price = Number(product.price) || 0;
+  const oldPrice = Number(product.oldPrice) || 0;
+
+  let discount = Number(product.discount) || 0;
+
+  if (
+    discount === 0 &&
+    oldPrice > price &&
+    oldPrice > 0
+  ) {
+    discount = calculateDiscount(price, oldPrice);
+  }
+
+  return {
+    ...product,
+
+    _id: product._id
+      ? product._id.toString()
+      : null,
+
+    id: product._id
+      ? product._id.toString()
+      : null,
+
+    image: images[0] || "",
+    images,
+
+    price,
+    oldPrice,
+    discount,
+
+    stock: Number(product.stock) || 0,
+
+    featured: Boolean(product.featured),
+    freeDelivery: Boolean(product.freeDelivery),
+
+    isActive: product.isActive !== false,
+
+    sellerId: product.sellerId
+      ? product.sellerId.toString()
+      : null,
+
+    categoryId: product.categoryId
+      ? {
+          _id: product.categoryId._id
+            ? product.categoryId._id.toString()
+            : null,
+
+          name: product.categoryId.name || "",
+          slug: product.categoryId.slug || "",
+          description:
+            product.categoryId.description || "",
+          image: product.categoryId.image || "",
+          isActive:
+            product.categoryId.isActive !== false,
+        }
+      : null,
+  };
+}
+
 /*
 |--------------------------------------------------------------------------
 | GET /api/products
 |--------------------------------------------------------------------------
+|
+| Public:
+|   Active products
+|
+| Admin:
+|   All products when includeInactive=true
+|
+| Seller:
+|   Own products, including inactive, when
+|   includeInactive=true
+|
 */
 
 export async function GET(request) {
@@ -99,8 +170,7 @@ export async function GET(request) {
       new URL(request.url);
 
     const includeInactive =
-      searchParams.get("includeInactive") ===
-      "true";
+      searchParams.get("includeInactive") === "true";
 
     const categoryId =
       searchParams.get("categoryId");
@@ -114,127 +184,108 @@ export async function GET(request) {
     const user =
       getCurrentUserToken();
 
+    /*
+    |--------------------------------------------------------------------------
+    | Determine access
+    |--------------------------------------------------------------------------
+    */
+
     if (includeInactive) {
-      if (!user || user.role !== "admin") {
+      if (!user) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Authentication required.",
+          },
+          { status: 401 }
+        );
+      }
+
+      if (
+        user.role !== "admin" &&
+        user.role !== "seller"
+      ) {
         return NextResponse.json(
           {
             success: false,
             message:
-              "Admin access required.",
+              "Admin or seller access required.",
           },
-          {
-            status: 403,
-          }
+          { status: 403 }
         );
       }
     }
 
     const query = {};
 
+    /*
+    |--------------------------------------------------------------------------
+    | Active / inactive filtering
+    |--------------------------------------------------------------------------
+    */
+
     if (!includeInactive) {
       query.isActive = true;
+    } else if (user?.role === "seller") {
+      /*
+       * Seller can see ONLY their own products.
+       * This is the important ownership rule.
+       */
+      query.sellerId = user.userId;
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Category filtering
+    |--------------------------------------------------------------------------
+    */
 
     if (
       categoryId &&
-      mongoose.Types.ObjectId.isValid(
-        categoryId
-      )
+      mongoose.Types.ObjectId.isValid(categoryId)
     ) {
       query.categoryId = categoryId;
-    }
-
-    if (category && !categoryId) {
+    } else if (category) {
       query.category = category;
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Featured filtering
+    |--------------------------------------------------------------------------
+    */
 
     if (featured === "true") {
       query.featured = true;
     }
 
-    const products =
-      await Product.find(query)
-        .populate(
-          "categoryId",
-          "name slug description image isActive"
-        )
-        .sort({
-          featured: -1,
-          createdAt: -1,
-        })
-        .lean();
+    /*
+    |--------------------------------------------------------------------------
+    | Load products
+    |--------------------------------------------------------------------------
+    */
+
+    const products = await Product.find(query)
+      .populate(
+        "categoryId",
+        "name slug description image isActive"
+      )
+      .sort({
+        featured: -1,
+        createdAt: -1,
+      })
+      .lean();
 
     const formattedProducts =
-      products.map((product) => {
-        const images = normalizeImages(
-          product.images
-        );
-
-        return {
-          ...product,
-
-          id: product._id.toString(),
-
-          _id: product._id.toString(),
-
-          image:
-            images[0] || "",
-
-          images,
-
-          price:
-            Number(product.price) || 0,
-
-          oldPrice:
-            Number(product.oldPrice) || 0,
-
-          discount:
-            Number(product.discount) ||
-            calculateDiscount(
-              product.price,
-              product.oldPrice
-            ),
-
-          stock:
-            Number(product.stock) || 0,
-
-          categoryId:
-            product.categoryId
-              ? {
-                  _id:
-                    product.categoryId._id?.toString(),
-
-                  name:
-                    product.categoryId.name,
-
-                  slug:
-                    product.categoryId.slug,
-
-                  description:
-                    product.categoryId
-                      .description || "",
-
-                  image:
-                    product.categoryId.image ||
-                    "",
-
-                  isActive:
-                    product.categoryId.isActive,
-                }
-              : null,
-        };
-      });
+      products.map(formatProduct);
 
     return NextResponse.json(
       {
         success: true,
         products: formattedProducts,
-        count:
-          formattedProducts.length,
+        count: formattedProducts.length,
       },
-      {
-        status: 200,
-      }
+      { status: 200 }
     );
   } catch (error) {
     console.error(
@@ -245,17 +296,13 @@ export async function GET(request) {
     return NextResponse.json(
       {
         success: false,
-        message:
-          "Failed to load products.",
+        message: "Failed to load products.",
         error:
-          process.env.NODE_ENV ===
-          "development"
+          process.env.NODE_ENV === "development"
             ? error.message
             : undefined,
       },
-      {
-        status: 500,
-      }
+      { status: 500 }
     );
   }
 }
@@ -264,9 +311,6 @@ export async function GET(request) {
 |--------------------------------------------------------------------------
 | POST /api/products
 |--------------------------------------------------------------------------
-|
-| Seller or Admin can create products.
-|
 */
 
 export async function POST(request) {
@@ -280,12 +324,9 @@ export async function POST(request) {
       return NextResponse.json(
         {
           success: false,
-          message:
-            "You must be logged in.",
+          message: "You must be logged in.",
         },
-        {
-          status: 401,
-        }
+        { status: 401 }
       );
     }
 
@@ -299,14 +340,11 @@ export async function POST(request) {
           message:
             "Only sellers and admins can create products.",
         },
-        {
-          status: 403,
-        }
+        { status: 403 }
       );
     }
 
-    const body =
-      await request.json();
+    const body = await request.json();
 
     const {
       name,
@@ -332,19 +370,13 @@ export async function POST(request) {
       isActive,
     } = body;
 
-    if (
-      !name ||
-      !String(name).trim()
-    ) {
+    if (!String(name || "").trim()) {
       return NextResponse.json(
         {
           success: false,
-          message:
-            "Product name is required.",
+          message: "Product name is required.",
         },
-        {
-          status: 400,
-        }
+        { status: 400 }
       );
     }
 
@@ -359,9 +391,7 @@ export async function POST(request) {
           message:
             "Valid product price is required.",
         },
-        {
-          status: 400,
-        }
+        { status: 400 }
       );
     }
 
@@ -371,22 +401,15 @@ export async function POST(request) {
     |--------------------------------------------------------------------------
     */
 
-    let finalCategoryId =
-      categoryId || null;
-
-    let finalCategory =
-      category || "";
+    let finalCategoryId = null;
+    let finalCategory = String(category || "").trim();
 
     if (
-      finalCategoryId &&
-      mongoose.Types.ObjectId.isValid(
-        finalCategoryId
-      )
+      categoryId &&
+      mongoose.Types.ObjectId.isValid(categoryId)
     ) {
       const foundCategory =
-        await Category.findById(
-          finalCategoryId
-        ).lean();
+        await Category.findById(categoryId).lean();
 
       if (!foundCategory) {
         return NextResponse.json(
@@ -395,19 +418,15 @@ export async function POST(request) {
             message:
               "Selected category was not found.",
           },
-          {
-            status: 400,
-          }
+          { status: 400 }
         );
       }
 
-      finalCategory =
-        foundCategory.name;
-
       finalCategoryId =
         foundCategory._id;
-    } else {
-      finalCategoryId = null;
+
+      finalCategory =
+        foundCategory.name;
     }
 
     /*
@@ -429,7 +448,7 @@ export async function POST(request) {
 
     /*
     |--------------------------------------------------------------------------
-    | Seller
+    | Seller ownership
     |--------------------------------------------------------------------------
     */
 
@@ -440,47 +459,89 @@ export async function POST(request) {
       sellerId = user.userId;
 
       const seller =
-        await User.findById(
-          user.userId
-        ).lean();
+        await User.findById(user.userId)
+          .select("firstName lastName role isActive")
+          .lean();
 
-      if (seller) {
-        sellerName =
-          `${seller.firstName || ""} ${
-            seller.lastName || ""
-          }`.trim();
+      if (!seller) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Seller account not found.",
+          },
+          { status: 404 }
+        );
       }
+
+      if (
+        seller.role !== "seller" ||
+        seller.isActive === false
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Your seller account is not active.",
+          },
+          { status: 403 }
+        );
+      }
+
+      sellerName =
+        `${seller.firstName || ""} ${
+          seller.lastName || ""
+        }`.trim();
     }
 
     /*
     |--------------------------------------------------------------------------
-    | Admin may optionally create for another seller
+    | Admin can optionally assign product to seller
     |--------------------------------------------------------------------------
     */
 
     if (
       user.role === "admin" &&
-      body.sellerId &&
-      mongoose.Types.ObjectId.isValid(
-        body.sellerId
-      )
+      body.sellerId
     ) {
-      const seller =
-        await User.findById(
+      if (
+        !mongoose.Types.ObjectId.isValid(
           body.sellerId
-        ).lean();
+        )
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Invalid seller ID.",
+          },
+          { status: 400 }
+        );
+      }
+
+      const seller =
+        await User.findById(body.sellerId)
+          .select("firstName lastName role isActive")
+          .lean();
 
       if (
-        seller &&
-        seller.role === "seller"
+        !seller ||
+        seller.role !== "seller"
       ) {
-        sellerId = seller._id;
-
-        sellerName =
-          `${seller.firstName || ""} ${
-            seller.lastName || ""
-          }`.trim();
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Selected seller was not found.",
+          },
+          { status: 400 }
+        );
       }
+
+      sellerId = seller._id;
+
+      sellerName =
+        `${seller.firstName || ""} ${
+          seller.lastName || ""
+        }`.trim();
     }
 
     /*
@@ -498,56 +559,47 @@ export async function POST(request) {
       const existingSku =
         await Product.findOne({
           sku: finalSku,
-        }).lean();
+        })
+          .select("_id")
+          .lean();
 
       if (existingSku) {
         return NextResponse.json(
           {
             success: false,
-            message:
-              "SKU already exists.",
+            message: "SKU already exists.",
           },
-          {
-            status: 400,
-          }
+          { status: 400 }
         );
       }
     } else {
-      let generatedSku = "";
-      let skuExists = true;
+      let exists = true;
 
-      while (skuExists) {
-        const randomPart =
-          Math.floor(
-            1000 +
-              Math.random() * 9000
-          );
+      while (exists) {
+        finalSku =
+          `CH-${Date.now()}-${Math.floor(
+            1000 + Math.random() * 9000
+          )}`;
 
-        generatedSku =
-          `CH-${Date.now()}-${randomPart}`;
-
-        const existingProduct =
+        const found =
           await Product.findOne({
-            sku: generatedSku,
-          }).lean();
+            sku: finalSku,
+          })
+            .select("_id")
+            .lean();
 
-        skuExists =
-          Boolean(existingProduct);
+        exists = Boolean(found);
       }
-
-      finalSku = generatedSku;
     }
 
     /*
     |--------------------------------------------------------------------------
-    | Slug
+    | Create slug
     |--------------------------------------------------------------------------
     */
 
     const slug =
-      await createUniqueSlug(
-        name
-      );
+      await createUniqueSlug(name);
 
     const numericPrice =
       Number(price) || 0;
@@ -563,69 +615,62 @@ export async function POST(request) {
 
     /*
     |--------------------------------------------------------------------------
-    | Create product
+    | Create
     |--------------------------------------------------------------------------
     */
 
     const product =
       await Product.create({
-        name:
-          String(name).trim(),
+        name: String(name).trim(),
 
         slug,
 
         shortDescription:
-          shortDescription || "",
+          String(shortDescription || ""),
 
         description:
-          description || "",
+          String(description || ""),
 
-        price:
-          numericPrice,
+        price: numericPrice,
 
-        oldPrice:
-          numericOldPrice,
+        oldPrice: numericOldPrice,
 
         discount,
 
-        stock:
-          Number(stock) || 0,
+        stock: Math.max(
+          0,
+          Number(stock) || 0
+        ),
 
-        sku:
-          finalSku || undefined,
+        sku: finalSku,
 
-        brand:
-          brand || "",
+        brand: String(brand || "").trim(),
 
-        category:
-          finalCategory,
+        category: finalCategory,
 
-        categoryId:
-          finalCategoryId,
+        categoryId: finalCategoryId,
 
         subcategory:
-          subcategory || "",
+          String(subcategory || "").trim(),
 
         processor:
-          processor || "",
+          String(processor || "").trim(),
 
         ram:
-          ram || "",
+          String(ram || "").trim(),
 
         storage:
-          storage || "",
+          String(storage || "").trim(),
 
         graphics:
-          graphics || "",
+          String(graphics || "").trim(),
 
         screenSize:
-          screenSize || "",
+          String(screenSize || "").trim(),
 
-        images:
-          finalImages,
+        images: finalImages,
 
-        featured:
-          Boolean(featured),
+        featured: Boolean(featured),
 
         freeDelivery:
           Boolean(freeDelivery),
@@ -643,23 +688,13 @@ export async function POST(request) {
     return NextResponse.json(
       {
         success: true,
-
         message:
           "Product created successfully.",
-
-        product: {
-          ...product.toObject(),
-
-          id:
-            product._id.toString(),
-
-          _id:
-            product._id.toString(),
-        },
+        product: formatProduct(
+          product.toObject()
+        ),
       },
-      {
-        status: 201,
-      }
+      { status: 201 }
     );
   } catch (error) {
     console.error(
@@ -674,9 +709,7 @@ export async function POST(request) {
           message:
             "A product with the same unique value already exists.",
         },
-        {
-          status: 400,
-        }
+        { status: 400 }
       );
     }
 
@@ -686,14 +719,11 @@ export async function POST(request) {
         message:
           "Failed to create product.",
         error:
-          process.env.NODE_ENV ===
-          "development"
+          process.env.NODE_ENV === "development"
             ? error.message
             : undefined,
       },
-      {
-        status: 500,
-      }
+      { status: 500 }
     );
   }
 }
@@ -702,13 +732,6 @@ export async function POST(request) {
 |--------------------------------------------------------------------------
 | PATCH /api/products
 |--------------------------------------------------------------------------
-|
-| Seller:
-|   Can update own products.
-|
-| Admin:
-|   Can update any product.
-|
 */
 
 export async function PATCH(request) {
@@ -722,12 +745,23 @@ export async function PATCH(request) {
       return NextResponse.json(
         {
           success: false,
-          message:
-            "You must be logged in.",
+          message: "You must be logged in.",
         },
+        { status: 401 }
+      );
+    }
+
+    if (
+      user.role !== "seller" &&
+      user.role !== "admin"
+    ) {
+      return NextResponse.json(
         {
-          status: 401,
-        }
+          success: false,
+          message:
+            "You are not allowed to update products.",
+        },
+        { status: 403 }
       );
     }
 
@@ -735,8 +769,8 @@ export async function PATCH(request) {
       await request.json();
 
     const productId =
-      body.id ||
       body.productId ||
+      body.id ||
       body._id;
 
     if (
@@ -751,33 +785,26 @@ export async function PATCH(request) {
           message:
             "Valid product ID is required.",
         },
-        {
-          status: 400,
-        }
+        { status: 400 }
       );
     }
 
     const product =
-      await Product.findById(
-        productId
-      );
+      await Product.findById(productId);
 
     if (!product) {
       return NextResponse.json(
         {
           success: false,
-          message:
-            "Product not found.",
+          message: "Product not found.",
         },
-        {
-          status: 404,
-        }
+        { status: 404 }
       );
     }
 
     /*
     |--------------------------------------------------------------------------
-    | Seller ownership
+    | Seller can only update own products
     |--------------------------------------------------------------------------
     */
 
@@ -793,29 +820,14 @@ export async function PATCH(request) {
             message:
               "You can only edit your own products.",
           },
-          {
-            status: 403,
-          }
+          { status: 403 }
         );
       }
-    } else if (
-      user.role !== "admin"
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "You are not allowed to update products.",
-        },
-        {
-          status: 403,
-        }
-      );
     }
 
     /*
     |--------------------------------------------------------------------------
-    | Product fields
+    | Allowed fields
     |--------------------------------------------------------------------------
     */
 
@@ -840,8 +852,6 @@ export async function PATCH(request) {
       "featured",
       "freeDelivery",
       "isActive",
-      "sellerId",
-      "sellerName",
     ];
 
     for (const field of allowedFields) {
@@ -851,21 +861,92 @@ export async function PATCH(request) {
           field
         )
       ) {
-        if (
-          user.role === "seller" &&
-          field === "sellerId"
-        ) {
-          continue;
-        }
-
-        product[field] =
-          body[field];
+        product[field] = body[field];
       }
     }
 
     /*
     |--------------------------------------------------------------------------
-    | Category handling
+    | Seller ownership cannot be changed by seller
+    |--------------------------------------------------------------------------
+    */
+
+    if (user.role === "seller") {
+      product.sellerId = user.userId;
+
+      const seller =
+        await User.findById(user.userId)
+          .select("firstName lastName")
+          .lean();
+
+      if (seller) {
+        product.sellerName =
+          `${seller.firstName || ""} ${
+            seller.lastName || ""
+          }`.trim();
+      }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Admin seller assignment
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+      user.role === "admin" &&
+      Object.prototype.hasOwnProperty.call(
+        body,
+        "sellerId"
+      )
+    ) {
+      if (
+        body.sellerId === null ||
+        body.sellerId === ""
+      ) {
+        product.sellerId = null;
+        product.sellerName = "";
+      } else if (
+        mongoose.Types.ObjectId.isValid(
+          body.sellerId
+        )
+      ) {
+        const seller =
+          await User.findById(
+            body.sellerId
+          )
+            .select(
+              "firstName lastName role"
+            )
+            .lean();
+
+        if (
+          !seller ||
+          seller.role !== "seller"
+        ) {
+          return NextResponse.json(
+            {
+              success: false,
+              message:
+                "Selected seller was not found.",
+            },
+            { status: 400 }
+          );
+        }
+
+        product.sellerId =
+          seller._id;
+
+        product.sellerName =
+          `${seller.firstName || ""} ${
+            seller.lastName || ""
+          }`.trim();
+      }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Category
     |--------------------------------------------------------------------------
     */
 
@@ -887,9 +968,7 @@ export async function PATCH(request) {
             message:
               "Selected category was not found.",
           },
-          {
-            status: 400,
-          }
+          { status: 400 }
         );
       }
 
@@ -902,8 +981,7 @@ export async function PATCH(request) {
       body.categoryId === null ||
       body.categoryId === ""
     ) {
-      product.categoryId =
-        null;
+      product.categoryId = null;
     }
 
     /*
@@ -919,9 +997,7 @@ export async function PATCH(request) {
       )
     ) {
       product.images =
-        normalizeImages(
-          body.images
-        );
+        normalizeImages(body.images);
     }
 
     /*
@@ -937,39 +1013,35 @@ export async function PATCH(request) {
       )
     ) {
       const newSku =
-        String(
-          body.sku || ""
-        )
+        String(body.sku || "")
           .trim()
           .toUpperCase();
 
       if (newSku) {
-        const duplicateSku =
+        const duplicate =
           await Product.findOne({
             sku: newSku,
             _id: {
               $ne: product._id,
             },
-          }).lean();
+          })
+            .select("_id")
+            .lean();
 
-        if (duplicateSku) {
+        if (duplicate) {
           return NextResponse.json(
             {
               success: false,
               message:
                 "SKU already exists.",
             },
-            {
-              status: 400,
-            }
+            { status: 400 }
           );
         }
 
-        product.sku =
-          newSku;
+        product.sku = newSku;
       } else {
-        product.sku =
-          undefined;
+        product.sku = undefined;
       }
     }
 
@@ -984,7 +1056,7 @@ export async function PATCH(request) {
         body,
         "name"
       ) &&
-      body.name
+      String(body.name || "").trim()
     ) {
       product.slug =
         await createUniqueSlug(
@@ -1005,39 +1077,6 @@ export async function PATCH(request) {
         product.oldPrice
       );
 
-    /*
-    |--------------------------------------------------------------------------
-    | Seller repair
-    |--------------------------------------------------------------------------
-    */
-
-    if (
-      user.role === "admin" &&
-      !product.sellerId &&
-      body.sellerId &&
-      mongoose.Types.ObjectId.isValid(
-        body.sellerId
-      )
-    ) {
-      const seller =
-        await User.findById(
-          body.sellerId
-        ).lean();
-
-      if (
-        seller &&
-        seller.role === "seller"
-      ) {
-        product.sellerId =
-          seller._id;
-
-        product.sellerName =
-          `${seller.firstName || ""} ${
-            seller.lastName || ""
-          }`.trim();
-      }
-    }
-
     await product.save();
 
     return NextResponse.json(
@@ -1045,17 +1084,11 @@ export async function PATCH(request) {
         success: true,
         message:
           "Product updated successfully.",
-        product: {
-          ...product.toObject(),
-          id:
-            product._id.toString(),
-          _id:
-            product._id.toString(),
-        },
+        product: formatProduct(
+          product.toObject()
+        ),
       },
-      {
-        status: 200,
-      }
+      { status: 200 }
     );
   } catch (error) {
     console.error(
@@ -1070,9 +1103,7 @@ export async function PATCH(request) {
           message:
             "A product with the same unique value already exists.",
         },
-        {
-          status: 400,
-        }
+        { status: 400 }
       );
     }
 
@@ -1082,14 +1113,11 @@ export async function PATCH(request) {
         message:
           "Failed to update product.",
         error:
-          process.env.NODE_ENV ===
-          "development"
+          process.env.NODE_ENV === "development"
             ? error.message
             : undefined,
       },
-      {
-        status: 500,
-      }
+      { status: 500 }
     );
   }
 }
@@ -1099,8 +1127,8 @@ export async function PATCH(request) {
 | DELETE /api/products
 |--------------------------------------------------------------------------
 |
-| Permanent delete:
-| Only INACTIVE products can be permanently deleted.
+| Permanent deletion only.
+| Product must already be inactive.
 |
 */
 
@@ -1115,12 +1143,23 @@ export async function DELETE(request) {
       return NextResponse.json(
         {
           success: false,
-          message:
-            "You must be logged in.",
+          message: "You must be logged in.",
         },
+        { status: 401 }
+      );
+    }
+
+    if (
+      user.role !== "seller" &&
+      user.role !== "admin"
+    ) {
+      return NextResponse.json(
         {
-          status: 401,
-        }
+          success: false,
+          message:
+            "You are not allowed to delete products.",
+        },
+        { status: 403 }
       );
     }
 
@@ -1128,8 +1167,8 @@ export async function DELETE(request) {
       new URL(request.url);
 
     const productId =
-      searchParams.get("id") ||
-      searchParams.get("productId");
+      searchParams.get("productId") ||
+      searchParams.get("id");
 
     if (
       !productId ||
@@ -1143,27 +1182,20 @@ export async function DELETE(request) {
           message:
             "Valid product ID is required.",
         },
-        {
-          status: 400,
-        }
+        { status: 400 }
       );
     }
 
     const product =
-      await Product.findById(
-        productId
-      );
+      await Product.findById(productId);
 
     if (!product) {
       return NextResponse.json(
         {
           success: false,
-          message:
-            "Product not found.",
+          message: "Product not found.",
         },
-        {
-          status: 404,
-        }
+        { status: 404 }
       );
     }
 
@@ -1185,24 +1217,9 @@ export async function DELETE(request) {
             message:
               "You can only delete your own products.",
           },
-          {
-            status: 403,
-          }
+          { status: 403 }
         );
       }
-    } else if (
-      user.role !== "admin"
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "You are not allowed to delete products.",
-        },
-        {
-          status: 403,
-        }
-      );
     }
 
     /*
@@ -1216,23 +1233,13 @@ export async function DELETE(request) {
         {
           success: false,
           message:
-            "Only inactive products can be permanently deleted. Please deactivate the product first.",
+            "Only inactive products can be permanently deleted. Deactivate the product first.",
         },
-        {
-          status: 400,
-        }
+        { status: 400 }
       );
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Permanent delete
-    |--------------------------------------------------------------------------
-    */
-
-    await Product.findByIdAndDelete(
-      productId
-    );
+    await Product.findByIdAndDelete(productId);
 
     return NextResponse.json(
       {
@@ -1241,9 +1248,7 @@ export async function DELETE(request) {
           "Product permanently deleted successfully.",
         productId,
       },
-      {
-        status: 200,
-      }
+      { status: 200 }
     );
   } catch (error) {
     console.error(
@@ -1257,14 +1262,11 @@ export async function DELETE(request) {
         message:
           "Failed to permanently delete product.",
         error:
-          process.env.NODE_ENV ===
-          "development"
+          process.env.NODE_ENV === "development"
             ? error.message
             : undefined,
       },
-      {
-        status: 500,
-      }
+      { status: 500 }
     );
   }
 }

@@ -1,10 +1,13 @@
-
 import localFont from "next/font/local";
 import "./globals.css";
+
 import { CartProvider } from "@/context/CartContext";
+import { WishlistProvider } from "@/context/WishlistContext";
+
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import { WishlistProvider } from "@/context/WishlistContext";
+
+import { Toaster } from "sonner";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -32,13 +35,20 @@ export default function RootLayout({ children }) {
       >
         <CartProvider>
           <WishlistProvider>
-          <Navbar />
-          <main>{children}</main>
-          <Footer />
+            <Navbar />
+
+            <main>{children}</main>
+
+            <Footer />
+
+            <Toaster
+              position="top-right"
+              richColors
+              closeButton
+            />
           </WishlistProvider>
         </CartProvider>
       </body>
     </html>
   );
 }
-
