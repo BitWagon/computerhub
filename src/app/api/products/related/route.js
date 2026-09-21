@@ -4,12 +4,13 @@ import mongoose from "mongoose";
 import { connectDB } from "@/lib/mongodb";
 import Product from "@/models/Product";
 
+export const dynamic = "force-dynamic";
+
 async function resolveProduct(productId) {
   if (!productId) {
     return null;
   }
 
-  // Normal MongoDB ObjectId
   if (
     mongoose.Types.ObjectId.isValid(productId)
   ) {
@@ -18,7 +19,6 @@ async function resolveProduct(productId) {
     ).lean();
   }
 
-  // Support frontend numeric IDs
   if (/^\d+$/.test(String(productId))) {
     const numericId = Number(productId);
 
@@ -119,29 +119,19 @@ export async function GET(request) {
       new URL(request.url);
 
     const productId =
-      searchParams.get(
-        "productId"
-      );
+      searchParams.get("productId");
 
     const category =
-      searchParams.get(
-        "category"
-      );
+      searchParams.get("category");
 
     const categoryId =
-      searchParams.get(
-        "categoryId"
-      );
+      searchParams.get("categoryId");
 
     const brand =
-      searchParams.get(
-        "brand"
-      );
+      searchParams.get("brand");
 
     const subcategory =
-      searchParams.get(
-        "subcategory"
-      );
+      searchParams.get("subcategory");
 
     if (!productId) {
       return NextResponse.json(
@@ -155,9 +145,7 @@ export async function GET(request) {
     }
 
     const currentProduct =
-      await resolveProduct(
-        productId
-      );
+      await resolveProduct(productId);
 
     if (!currentProduct) {
       return NextResponse.json(
@@ -170,65 +158,41 @@ export async function GET(request) {
       );
     }
 
-    /*
-     * Build related-product conditions.
-     *
-     * We support:
-     * - categoryId
-     * - category
-     * - brand
-     * - subcategory
-     */
-
     const orConditions = [];
 
-    if (
-      currentProduct.categoryId
-    ) {
+    if (currentProduct.categoryId) {
       orConditions.push({
         categoryId:
           currentProduct.categoryId,
       });
     }
 
-    if (
-      currentProduct.category
-    ) {
+    if (currentProduct.category) {
       orConditions.push({
         category:
           currentProduct.category,
       });
     }
 
-    if (
-      currentProduct.brand
-    ) {
+    if (currentProduct.brand) {
       orConditions.push({
         brand:
           currentProduct.brand,
       });
     }
 
-    if (
-      currentProduct.subcategory
-    ) {
+    if (currentProduct.subcategory) {
       orConditions.push({
         subcategory:
           currentProduct.subcategory,
       });
     }
 
-    /*
-     * Also accept values sent by
-     * the frontend.
-     */
-
     if (
       category &&
       !orConditions.some(
         (condition) =>
-          condition.category ===
-          category
+          condition.category === category
       )
     ) {
       orConditions.push({
@@ -243,8 +207,7 @@ export async function GET(request) {
       )
     ) {
       orConditions.push({
-        categoryId:
-          categoryId,
+        categoryId,
       });
     }
 
@@ -252,8 +215,7 @@ export async function GET(request) {
       brand &&
       !orConditions.some(
         (condition) =>
-          condition.brand ===
-          brand
+          condition.brand === brand
       )
     ) {
       orConditions.push({
@@ -274,13 +236,6 @@ export async function GET(request) {
       });
     }
 
-    /*
-     * If there is no category/brand/
-     * subcategory information, return
-     * other active products instead
-     * of throwing a 400 error.
-     */
-
     const query = {
       isActive: true,
       stock: {
@@ -288,22 +243,11 @@ export async function GET(request) {
       },
     };
 
-    /*
-     * Exclude current product.
-     */
-
-    if (
-      currentProduct._id
-    ) {
+    if (currentProduct._id) {
       query._id = {
         $ne: currentProduct._id,
       };
     }
-
-    /*
-     * Only add $or when we actually
-     * have related fields.
-     */
 
     if (orConditions.length > 0) {
       query.$or = orConditions;
@@ -318,24 +262,14 @@ export async function GET(request) {
         .limit(8)
         .lean();
 
-    /*
-     * If there are fewer than 4 related
-     * products, fill the remaining slots
-     * with other active products.
-     */
-
-    if (
-      relatedProducts.length < 4
-    ) {
+    if (relatedProducts.length < 4) {
       const existingIds =
         relatedProducts.map(
           (product) =>
             product._id
         );
 
-      if (
-        currentProduct._id
-      ) {
+      if (currentProduct._id) {
         existingIds.push(
           currentProduct._id
         );

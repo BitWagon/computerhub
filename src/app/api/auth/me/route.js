@@ -6,6 +6,8 @@ import {
   getCurrentUserToken,
 } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     await connectDB();

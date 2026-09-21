@@ -1,8 +1,18 @@
 "use client";
 
+import {
+  Suspense,
+} from "react";
+
 import Link from "next/link";
-import { Search } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+
+import {
+  Search,
+} from "lucide-react";
+
+import {
+  useSearchParams,
+} from "next/navigation";
 
 import ProductCard from "@/components/products/ProductCard";
 
@@ -189,29 +199,36 @@ const products = [
   },
 ];
 
-export default function SearchPage() {
+function SearchResults() {
   const searchParams = useSearchParams();
 
+  const rawQuery =
+    searchParams.get("q") || "";
+
   const searchQuery =
-    searchParams.get("q")?.trim().toLowerCase() || "";
+    rawQuery.trim().toLowerCase();
 
-  const results = products.filter((product) => {
-    if (!searchQuery) {
-      return true;
+  const results = products.filter(
+    (product) => {
+      if (!searchQuery) {
+        return true;
+      }
+
+      const searchableText = `
+        ${product.name}
+        ${product.category}
+        ${product.brand}
+        ${product.seller}
+      `.toLowerCase();
+
+      return searchableText.includes(
+        searchQuery
+      );
     }
-
-    const searchableText = `
-      ${product.name}
-      ${product.category}
-      ${product.brand}
-      ${product.seller}
-    `.toLowerCase();
-
-    return searchableText.includes(searchQuery);
-  });
+  );
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <>
       <section className="border-b border-gray-200 bg-white">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           <div className="flex items-center gap-2 text-blue-600">
@@ -224,13 +241,16 @@ export default function SearchPage() {
 
           <h1 className="mt-2 text-2xl font-bold text-gray-900 md:text-3xl">
             {searchQuery
-              ? `Search results for "${searchParams.get("q")}"`
+              ? `Search results for "${rawQuery}"`
               : "Search Products"}
           </h1>
 
           <p className="mt-2 text-sm text-gray-500">
             {results.length} product
-            {results.length !== 1 ? "s" : ""} found
+            {results.length !== 1
+              ? "s"
+              : ""}{" "}
+            found
           </p>
         </div>
       </section>
@@ -259,9 +279,9 @@ export default function SearchPage() {
             </h2>
 
             <p className="mx-auto mt-2 max-w-md text-sm text-gray-500">
-              We couldn't find any products matching your
-              search. Try another keyword such as laptop,
-              gaming, Dell, SSD or monitor.
+              We couldn't find any products matching
+              your search. Try another keyword such as
+              laptop, gaming, Dell, SSD or monitor.
             </p>
 
             <Link
@@ -273,6 +293,24 @@ export default function SearchPage() {
           </div>
         )}
       </section>
+    </>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <main className="min-h-screen bg-gray-50">
+      <Suspense
+        fallback={
+          <section className="flex min-h-[70vh] items-center justify-center">
+            <div className="text-sm text-gray-500">
+              Loading search...
+            </div>
+          </section>
+        }
+      >
+        <SearchResults />
+      </Suspense>
     </main>
   );
 }

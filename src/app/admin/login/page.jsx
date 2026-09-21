@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -16,7 +15,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 
-export default function AdminLoginPage() {
+function AdminLoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -28,8 +27,12 @@ export default function AdminLoginPage() {
     password: "",
   });
 
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] =
+    useState(false);
+
+  const [loading, setLoading] =
+    useState(false);
+
   const [error, setError] = useState("");
 
   const handleChange = (event) => {
@@ -63,23 +66,29 @@ export default function AdminLoginPage() {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          email: formData.email.trim().toLowerCase(),
-          password: formData.password,
-        }),
-      });
+      const response = await fetch(
+        "/api/auth/login",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            email: formData.email
+              .trim()
+              .toLowerCase(),
+            password: formData.password,
+          }),
+        }
+      );
 
       const data = await response.json();
 
       if (!response.ok) {
         throw new Error(
-          data.message || "Invalid email or password."
+          data.message ||
+            "Invalid email or password."
         );
       }
 
@@ -101,12 +110,17 @@ export default function AdminLoginPage() {
         return;
       }
 
-      toast.success("Admin login successful!");
+      toast.success(
+        "Admin login successful!"
+      );
 
       router.replace(redirect);
       router.refresh();
     } catch (error) {
-      console.error("Admin login error:", error);
+      console.error(
+        "Admin login error:",
+        error
+      );
 
       const message =
         error instanceof Error
@@ -124,7 +138,7 @@ export default function AdminLoginPage() {
     <main className="min-h-screen bg-gray-50">
       <div className="flex min-h-screen items-center justify-center px-4 py-10">
         <div className="w-full max-w-md">
-          {/* Logo / Admin Badge */}
+
           <div className="mb-8 text-center">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg">
               <ShieldCheck size={32} />
@@ -139,9 +153,8 @@ export default function AdminLoginPage() {
             </p>
           </div>
 
-          {/* Login Card */}
           <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
-            {/* Security Badge */}
+
             <div className="mb-6 flex items-center gap-3 rounded-xl border border-blue-100 bg-blue-50 p-4">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-blue-600">
                 <ShieldCheck size={20} />
@@ -158,7 +171,6 @@ export default function AdminLoginPage() {
               </div>
             </div>
 
-            {/* Error Message */}
             {error && (
               <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4">
                 <AlertCircle
@@ -172,12 +184,10 @@ export default function AdminLoginPage() {
               </div>
             )}
 
-            {/* Login Form */}
             <form
               onSubmit={handleSubmit}
               className="space-y-5"
             >
-              {/* Email */}
               <div>
                 <label
                   htmlFor="email"
@@ -206,7 +216,6 @@ export default function AdminLoginPage() {
                 </div>
               </div>
 
-              {/* Password */}
               <div>
                 <label
                   htmlFor="password"
@@ -261,7 +270,6 @@ export default function AdminLoginPage() {
                 </div>
               </div>
 
-              {/* Submit */}
               <button
                 type="submit"
                 disabled={loading}
@@ -284,7 +292,6 @@ export default function AdminLoginPage() {
               </button>
             </form>
 
-            {/* Back to Website */}
             <div className="mt-6 border-t border-gray-100 pt-6 text-center">
               <Link
                 href="/"
@@ -295,7 +302,6 @@ export default function AdminLoginPage() {
             </div>
           </div>
 
-          {/* Footer Security Text */}
           <p className="mt-6 text-center text-xs text-gray-400">
             ComputerHub Admin Panel
           </p>
@@ -305,3 +311,18 @@ export default function AdminLoginPage() {
   );
 }
 
+export default function AdminLoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center bg-gray-50">
+          <div className="text-sm text-gray-500">
+            Loading admin login...
+          </div>
+        </main>
+      }
+    >
+      <AdminLoginForm />
+    </Suspense>
+  );
+}
