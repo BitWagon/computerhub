@@ -1,4 +1,3 @@
-
 import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 
@@ -9,27 +8,18 @@ const AUTH_COOKIE_NAME = "computerhub_token";
 export function middleware(request) {
   const { pathname } = request.nextUrl;
 
-  // ==========================================
-  // GET AUTH COOKIE
-  // ==========================================
   const token =
-    request.cookies.get(
-      AUTH_COOKIE_NAME
-    )?.value;
+    request.cookies.get(AUTH_COOKIE_NAME)?.value;
 
-  // ==========================================
-  // PUBLIC ADMIN LOGIN PAGE
-  // ==========================================
-  if (
-    pathname === "/admin/login"
-  ) {
-    // If there is no token, allow the
-    // user to open the admin login page.
+  // =========================================================
+  // ADMIN LOGIN PAGE
+  // =========================================================
+
+  if (pathname === "/admin/login") {
     if (!token) {
       return NextResponse.next();
     }
 
-    // If token exists, check the role.
     try {
       if (!JWT_SECRET) {
         return NextResponse.next();
@@ -40,55 +30,41 @@ export function middleware(request) {
         JWT_SECRET
       );
 
-      // Admin is already logged in.
-      // Send admin to dashboard.
-      if (
-        decoded.role === "admin"
-      ) {
+      if (decoded.role === "admin") {
         return NextResponse.redirect(
-          new URL(
-            "/admin",
-            request.url
-          )
+          new URL("/admin", request.url)
         );
       }
 
-      // Non-admin users can still
-      // open the admin login page.
       return NextResponse.next();
     } catch (error) {
-      // Invalid/expired token.
-      // Let the user log in again.
       return NextResponse.next();
     }
   }
 
-  // ==========================================
-  // PROTECT ADMIN ROUTES
-  // ==========================================
+  // =========================================================
+  // ADMIN ROUTES
+  // ONLY ADMIN CAN ACCESS
+  // =========================================================
+
   if (
     pathname === "/admin" ||
     pathname.startsWith("/admin/")
   ) {
-    // No token
     if (!token) {
-      const loginUrl =
-        new URL(
-          "/admin/login",
-          request.url
-        );
+      const loginUrl = new URL(
+        "/admin/login",
+        request.url
+      );
 
       loginUrl.searchParams.set(
         "redirect",
         pathname
       );
 
-      return NextResponse.redirect(
-        loginUrl
-      );
+      return NextResponse.redirect(loginUrl);
     }
 
-    // Token exists
     try {
       if (!JWT_SECRET) {
         console.error(
@@ -108,16 +84,9 @@ export function middleware(request) {
         JWT_SECRET
       );
 
-      // Only admin can access
-      // admin pages.
-      if (
-        decoded.role !== "admin"
-      ) {
+      if (decoded.role !== "admin") {
         return NextResponse.redirect(
-          new URL(
-            "/account",
-            request.url
-          )
+          new URL("/account", request.url)
         );
       }
 
@@ -128,49 +97,48 @@ export function middleware(request) {
         error
       );
 
-      const loginUrl =
-        new URL(
-          "/admin/login",
-          request.url
-        );
+      const loginUrl = new URL(
+        "/admin/login",
+        request.url
+      );
 
       loginUrl.searchParams.set(
         "redirect",
         pathname
       );
 
-      return NextResponse.redirect(
-        loginUrl
-      );
+      return NextResponse.redirect(loginUrl);
     }
   }
 
-  // ==========================================
-  // PROTECT SELLER ROUTES
-  // ==========================================
+  // =========================================================
+  // SELLER ROUTES
+  //
+  // SELLERS ARE NO LONGER ALLOWED TO MANAGE PRODUCTS.
+  //
+  // ADMIN CAN STILL OPEN THE OLD SELLER PRODUCT PAGES.
+  // This lets us reuse your existing product add/edit pages
+  // without rebuilding them.
+  // =========================================================
+
   if (
     pathname === "/seller" ||
     pathname.startsWith("/seller/")
   ) {
-    // No token
     if (!token) {
-      const loginUrl =
-        new URL(
-          "/login",
-          request.url
-        );
+      const loginUrl = new URL(
+        "/login",
+        request.url
+      );
 
       loginUrl.searchParams.set(
         "redirect",
         pathname
       );
 
-      return NextResponse.redirect(
-        loginUrl
-      );
+      return NextResponse.redirect(loginUrl);
     }
 
-    // Token exists
     try {
       if (!JWT_SECRET) {
         console.error(
@@ -190,65 +158,60 @@ export function middleware(request) {
         JWT_SECRET
       );
 
-      // Only seller can access
-      // seller dashboard.
-      if (
-        decoded.role !== "seller"
-      ) {
-        // Admin goes to admin dashboard.
-        if (
-          decoded.role === "admin"
-        ) {
-          return NextResponse.redirect(
-            new URL(
-              "/admin",
-              request.url
-            )
-          );
-        }
+      // =====================================================
+      // ADMIN
+      // Admin is allowed to use the existing product
+      // management pages under /seller/products.
+      // =====================================================
 
-        // Customer goes to account.
+      if (decoded.role === "admin") {
+        return NextResponse.next();
+      }
+
+      // =====================================================
+      // SELLER
+      // Sellers can no longer access seller dashboard.
+      // =====================================================
+
+      if (decoded.role === "seller") {
         return NextResponse.redirect(
-          new URL(
-            "/account",
-            request.url
-          )
+          new URL("/account", request.url)
         );
       }
 
-      return NextResponse.next();
+      // =====================================================
+      // CUSTOMER
+      // =====================================================
+
+      return NextResponse.redirect(
+        new URL("/account", request.url)
+      );
     } catch (error) {
       console.error(
         "Seller authorization error:",
         error
       );
 
-      const loginUrl =
-        new URL(
-          "/login",
-          request.url
-        );
+      const loginUrl = new URL(
+        "/login",
+        request.url
+      );
 
       loginUrl.searchParams.set(
         "redirect",
         pathname
       );
 
-      return NextResponse.redirect(
-        loginUrl
-      );
+      return NextResponse.redirect(loginUrl);
     }
   }
 
-  // ==========================================
-  // ALL OTHER ROUTES
-  // ==========================================
   return NextResponse.next();
 }
 
-// ==========================================
+// =========================================================
 // MIDDLEWARE MATCHER
-// ==========================================
+// =========================================================
 
 export const config = {
   matcher: [
@@ -256,4 +219,3 @@ export const config = {
     "/seller/:path*",
   ],
 };
-

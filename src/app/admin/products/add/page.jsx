@@ -11,11 +11,13 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-export default function AddAdminProductPage() {
+export default function AdminAddProductPage() {
   const router = useRouter();
 
   const [loading, setLoading] = useState(false);
-  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [categoriesLoading, setCategoriesLoading] =
+    useState(true);
+
   const [categories, setCategories] = useState([]);
 
   const [formData, setFormData] = useState({
@@ -37,38 +39,48 @@ export default function AddAdminProductPage() {
       try {
         setCategoriesLoading(true);
 
-        const response = await fetch("/api/categories", {
-          method: "GET",
-          credentials: "include",
-          cache: "no-store",
-        });
+        const response = await fetch(
+          "/api/categories",
+          {
+            method: "GET",
+            credentials: "include",
+            cache: "no-store",
+          }
+        );
 
         const data = await response.json();
 
         if (!response.ok) {
           throw new Error(
-            data?.message || "Failed to load categories."
+            data?.message ||
+              "Failed to load categories."
           );
         }
 
-        const loadedCategories = Array.isArray(data)
-          ? data
-          : Array.isArray(data?.categories)
-          ? data.categories
-          : Array.isArray(data?.data)
-          ? data.data
-          : [];
+        const loadedCategories =
+          Array.isArray(data)
+            ? data
+            : Array.isArray(data?.categories)
+            ? data.categories
+            : Array.isArray(data?.data)
+            ? data.data
+            : [];
 
         setCategories(
           loadedCategories.filter(
-            (category) => category?.isActive !== false
+            (category) =>
+              category?.isActive !== false
           )
         );
       } catch (error) {
-        console.error("Category loading error:", error);
+        console.error(
+          "Category loading error:",
+          error
+        );
 
         toast.error(
-          error?.message || "Failed to load categories."
+          error?.message ||
+            "Failed to load categories."
         );
 
         setCategories([]);
@@ -93,11 +105,14 @@ export default function AddAdminProductPage() {
   }
 
   /*
-   * CALCULATE DISCOUNT
+   * DISCOUNT
    */
   const calculatedDiscount = useMemo(() => {
     const price = Number(formData.price);
-    const originalPrice = Number(formData.originalPrice);
+
+    const originalPrice = Number(
+      formData.originalPrice
+    );
 
     if (
       !price ||
@@ -108,23 +123,32 @@ export default function AddAdminProductPage() {
     }
 
     return Math.round(
-      ((originalPrice - price) / originalPrice) * 100
+      ((originalPrice - price) /
+        originalPrice) *
+        100
     );
-  }, [formData.price, formData.originalPrice]);
+  }, [
+    formData.price,
+    formData.originalPrice,
+  ]);
 
   /*
-   * SUBMIT PRODUCT
+   * SUBMIT
    */
   async function handleSubmit(event) {
     event.preventDefault();
 
     if (!formData.name.trim()) {
-      toast.error("Please enter a product name.");
+      toast.error(
+        "Please enter a product name."
+      );
       return;
     }
 
     if (!formData.description.trim()) {
-      toast.error("Please enter a product description.");
+      toast.error(
+        "Please enter a product description."
+      );
       return;
     }
 
@@ -135,7 +159,9 @@ export default function AddAdminProductPage() {
       !Number.isFinite(price) ||
       price < 0
     ) {
-      toast.error("Please enter a valid selling price.");
+      toast.error(
+        "Please enter a valid selling price."
+      );
       return;
     }
 
@@ -148,7 +174,9 @@ export default function AddAdminProductPage() {
       !Number.isFinite(originalPrice) ||
       originalPrice < 0
     ) {
-      toast.error("Please enter a valid original price.");
+      toast.error(
+        "Please enter a valid original price."
+      );
       return;
     }
 
@@ -160,54 +188,73 @@ export default function AddAdminProductPage() {
     }
 
     if (!formData.category.trim()) {
-      toast.error("Please select a category.");
+      toast.error(
+        "Please select a category."
+      );
       return;
     }
 
     const stock =
-      formData.stock === "" ? 0 : Number(formData.stock);
+      formData.stock === ""
+        ? 0
+        : Number(formData.stock);
 
-    if (!Number.isFinite(stock) || stock < 0) {
-      toast.error("Please enter a valid stock quantity.");
+    if (
+      !Number.isFinite(stock) ||
+      stock < 0
+    ) {
+      toast.error(
+        "Please enter a valid stock quantity."
+      );
       return;
     }
 
     try {
       setLoading(true);
 
-      const response = await fetch("/api/products", {
-        method: "POST",
+      const response = await fetch(
+        "/api/products",
+        {
+          method: "POST",
 
-        headers: {
-          "Content-Type": "application/json",
-        },
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
 
-        credentials: "include",
+          credentials: "include",
 
-        body: JSON.stringify({
-          name: formData.name.trim(),
+          body: JSON.stringify({
+            name: formData.name.trim(),
 
-          description: formData.description.trim(),
+            description:
+              formData.description.trim(),
 
-          price,
+            price,
 
-          oldPrice: originalPrice,
+            /*
+             * Product API uses oldPrice.
+             */
+            oldPrice: originalPrice,
 
-          /*
-           * Keep this for compatibility with
-           * older product code.
-           */
-          originalPrice,
+            /*
+             * Kept for compatibility.
+             */
+            originalPrice,
 
-          category: formData.category.trim(),
+            category:
+              formData.category.trim(),
 
-          brand: formData.brand.trim(),
+            brand:
+              formData.brand.trim(),
 
-          stock,
+            stock,
 
-          image: formData.image.trim(),
-        }),
-      });
+            image:
+              formData.image.trim(),
+          }),
+        }
+      );
 
       const data = await response.json();
 
@@ -216,20 +263,26 @@ export default function AddAdminProductPage() {
         data?.success === false
       ) {
         throw new Error(
-          data?.message || "Failed to add product."
+          data?.message ||
+            "Failed to add product."
         );
       }
 
-      toast.success("Product added successfully.");
+      toast.success(
+        "Product added successfully."
+      );
 
       router.push("/admin/products");
-
       router.refresh();
     } catch (error) {
-      console.error("Add product error:", error);
+      console.error(
+        "Admin add product error:",
+        error
+      );
 
       toast.error(
-        error?.message || "Failed to add product."
+        error?.message ||
+          "Failed to add product."
       );
     } finally {
       setLoading(false);
@@ -241,11 +294,15 @@ export default function AddAdminProductPage() {
       <div className="container-main">
         <div className="mx-auto max-w-4xl">
 
-          {/* BACK BUTTON */}
+          {/* BACK */}
 
           <button
             type="button"
-            onClick={() => router.push("/admin/products")}
+            onClick={() =>
+              router.push(
+                "/admin/products"
+              )
+            }
             className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-gray-600 transition hover:text-blue-600"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -291,7 +348,7 @@ export default function AddAdminProductPage() {
             >
               <div className="grid gap-6">
 
-                {/* PRODUCT NAME */}
+                {/* NAME */}
 
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-gray-900">
@@ -303,7 +360,7 @@ export default function AddAdminProductPage() {
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
-                    placeholder="Example: Apple MacBook Air M3"
+                    placeholder="Example: ASUS Gaming Laptop"
                     className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                   />
                 </div>
@@ -329,8 +386,6 @@ export default function AddAdminProductPage() {
 
                 <div className="grid gap-6 sm:grid-cols-2">
 
-                  {/* SELLING PRICE */}
-
                   <div>
                     <label className="mb-2 block text-sm font-semibold text-gray-900">
                       Selling Price
@@ -348,8 +403,6 @@ export default function AddAdminProductPage() {
                     />
                   </div>
 
-                  {/* ORIGINAL PRICE */}
-
                   <div>
                     <label className="mb-2 block text-sm font-semibold text-gray-900">
                       Original Price
@@ -360,7 +413,9 @@ export default function AddAdminProductPage() {
                       name="originalPrice"
                       min="0"
                       step="0.01"
-                      value={formData.originalPrice}
+                      value={
+                        formData.originalPrice
+                      }
                       onChange={handleChange}
                       placeholder="100"
                       className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
@@ -369,10 +424,11 @@ export default function AddAdminProductPage() {
 
                 </div>
 
-                {/* DISCOUNT PREVIEW */}
+                {/* DISCOUNT */}
 
                 {calculatedDiscount > 0 && (
                   <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3">
+
                     <div className="flex flex-wrap items-center justify-between gap-2">
 
                       <div>
@@ -385,7 +441,9 @@ export default function AddAdminProductPage() {
                           {Number(
                             formData.originalPrice
                           ).toFixed(2)}
+
                           {" → "}
+
                           Selling price $
                           {Number(
                             formData.price
@@ -405,8 +463,6 @@ export default function AddAdminProductPage() {
 
                 <div className="grid gap-6 sm:grid-cols-2">
 
-                  {/* CATEGORY */}
-
                   <div>
                     <label className="mb-2 block text-sm font-semibold text-gray-900">
                       Category
@@ -414,9 +470,13 @@ export default function AddAdminProductPage() {
 
                     <select
                       name="category"
-                      value={formData.category}
+                      value={
+                        formData.category
+                      }
                       onChange={handleChange}
-                      disabled={categoriesLoading}
+                      disabled={
+                        categoriesLoading
+                      }
                       className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-gray-100"
                     >
                       <option value="">
@@ -425,25 +485,25 @@ export default function AddAdminProductPage() {
                           : "Select a category"}
                       </option>
 
-                      {categories.map((category) => (
-                        <option
-                          key={
-                            category._id ||
-                            category.id ||
-                            category.slug
-                          }
-                          value={
-                            category.name ||
-                            category.slug
-                          }
-                        >
-                          {category.name}
-                        </option>
-                      ))}
+                      {categories.map(
+                        (category) => (
+                          <option
+                            key={
+                              category._id ||
+                              category.id ||
+                              category.slug
+                            }
+                            value={
+                              category.name ||
+                              category.slug
+                            }
+                          >
+                            {category.name}
+                          </option>
+                        )
+                      )}
                     </select>
                   </div>
-
-                  {/* BRAND */}
 
                   <div>
                     <label className="mb-2 block text-sm font-semibold text-gray-900">
@@ -533,7 +593,11 @@ export default function AddAdminProductPage() {
 
                 <button
                   type="button"
-                  onClick={() => router.push("/admin/products")}
+                  onClick={() =>
+                    router.push(
+                      "/admin/products"
+                    )
+                  }
                   disabled={loading}
                   className="rounded-xl border border-gray-300 px-5 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
                 >
@@ -542,7 +606,10 @@ export default function AddAdminProductPage() {
 
                 <button
                   type="submit"
-                  disabled={loading || categoriesLoading}
+                  disabled={
+                    loading ||
+                    categoriesLoading
+                  }
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {loading ? (

@@ -8,6 +8,10 @@ import Product from "@/models/Product";
 import Category from "@/models/Category";
 import User from "@/models/User";
 
+/* =========================================================
+   HELPERS
+========================================================= */
+
 function createSlug(value) {
   return String(value || "")
     .trim()
@@ -16,28 +20,37 @@ function createSlug(value) {
     .replace(/^-+|-+$/g, "");
 }
 
-async function createUniqueSlug(name, excludeId = null) {
+async function createUniqueSlug(
+  name,
+  excludeId = null
+) {
   const baseSlug =
-    createSlug(name) || `product-${Date.now()}`;
+    createSlug(name) ||
+    `product-${Date.now()}`;
 
   let slug = baseSlug;
   let counter = 2;
 
   while (true) {
-    const query = { slug };
+    const query = {
+      slug,
+    };
 
     if (
       excludeId &&
-      mongoose.Types.ObjectId.isValid(excludeId)
+      mongoose.Types.ObjectId.isValid(
+        excludeId
+      )
     ) {
       query._id = {
         $ne: excludeId,
       };
     }
 
-    const existing = await Product.findOne(query)
-      .select("_id")
-      .lean();
+    const existing =
+      await Product.findOne(query)
+        .select("_id")
+        .lean();
 
     if (!existing) {
       return slug;
@@ -48,27 +61,37 @@ async function createUniqueSlug(name, excludeId = null) {
   }
 }
 
-function calculateDiscount(price, oldPrice) {
-  const currentPrice = Number(price) || 0;
-  const previousPrice = Number(oldPrice) || 0;
+function calculateDiscount(
+  price,
+  oldPrice
+) {
+  const currentPrice =
+    Number(price) || 0;
+
+  const originalPrice =
+    Number(oldPrice) || 0;
 
   if (
-    previousPrice <= 0 ||
     currentPrice <= 0 ||
-    previousPrice <= currentPrice
+    originalPrice <= 0 ||
+    originalPrice <= currentPrice
   ) {
     return 0;
   }
 
   return Math.round(
-    ((previousPrice - currentPrice) / previousPrice) * 100
+    ((originalPrice - currentPrice) /
+      originalPrice) *
+      100
   );
 }
 
 function normalizeImages(images) {
   if (Array.isArray(images)) {
     return images
-      .map((image) => String(image || "").trim())
+      .map((image) =>
+        String(image || "").trim()
+      )
       .filter(Boolean);
   }
 
@@ -83,84 +106,111 @@ function normalizeImages(images) {
 }
 
 function formatProduct(product) {
-  const images = normalizeImages(product.images);
+  const images = normalizeImages(
+    product.images
+  );
 
-  const price = Number(product.price) || 0;
-  const oldPrice = Number(product.oldPrice) || 0;
+  const price =
+    Number(product.price) || 0;
 
-  let discount = Number(product.discount) || 0;
+  const oldPrice =
+    Number(product.oldPrice) || 0;
 
-  if (
-    discount === 0 &&
-    oldPrice > price &&
-    oldPrice > 0
-  ) {
-    discount = calculateDiscount(price, oldPrice);
-  }
+  const storedDiscount =
+    Number(product.discount) || 0;
+
+  const discount =
+    storedDiscount > 0
+      ? storedDiscount
+      : calculateDiscount(
+          price,
+          oldPrice
+        );
 
   return {
     ...product,
-
-    _id: product._id
-      ? product._id.toString()
-      : null,
 
     id: product._id
       ? product._id.toString()
       : null,
 
-    image: images[0] || "",
+    _id: product._id
+      ? product._id.toString()
+      : null,
+
+    image:
+      images[0] || "",
+
     images,
 
     price,
+
     oldPrice,
+
     discount,
 
-    stock: Number(product.stock) || 0,
+    stock:
+      Number(product.stock) || 0,
 
-    featured: Boolean(product.featured),
-    freeDelivery: Boolean(product.freeDelivery),
+    featured:
+      Boolean(product.featured),
 
-    isActive: product.isActive !== false,
+    freeDelivery:
+      Boolean(product.freeDelivery),
 
-    sellerId: product.sellerId
-      ? product.sellerId.toString()
-      : null,
+    isActive:
+      product.isActive !== false,
 
-    categoryId: product.categoryId
-      ? {
-          _id: product.categoryId._id
-            ? product.categoryId._id.toString()
-            : null,
+    sellerId:
+      product.sellerId
+        ? product.sellerId.toString()
+        : null,
 
-          name: product.categoryId.name || "",
-          slug: product.categoryId.slug || "",
-          description:
-            product.categoryId.description || "",
-          image: product.categoryId.image || "",
-          isActive:
-            product.categoryId.isActive !== false,
-        }
-      : null,
+    categoryId:
+      product.categoryId &&
+      typeof product.categoryId ===
+        "object"
+        ? {
+            _id:
+              product.categoryId._id
+                ? product.categoryId._id.toString()
+                : null,
+
+            name:
+              product.categoryId.name ||
+              "",
+
+            slug:
+              product.categoryId.slug ||
+              "",
+
+            description:
+              product.categoryId
+                .description || "",
+
+            image:
+              product.categoryId.image ||
+              "",
+
+            isActive:
+              product.categoryId
+                .isActive !== false,
+          }
+        : product.categoryId
+        ? product.categoryId.toString()
+        : null,
   };
 }
 
-/*
-|--------------------------------------------------------------------------
-| GET /api/products
-|--------------------------------------------------------------------------
-|
-| Public:
-|   Active products
-|
-| Admin:
-|   All products when includeInactive=true
-|
-| Seller:
-|   Own products, including inactive, when
-|   includeInactive=true
-|
-*/
+/* =========================================================
+   GET /api/products
+
+   PUBLIC:
+   - Active products
+
+   ADMIN:
+   - Can request inactive products too
+========================================================= */
 
 export async function GET(request) {
   try {
@@ -170,122 +220,127 @@ export async function GET(request) {
       new URL(request.url);
 
     const includeInactive =
-      searchParams.get("includeInactive") === "true";
+      searchParams.get(
+        "includeInactive"
+      ) === "true";
 
     const categoryId =
-      searchParams.get("categoryId");
+      searchParams.get(
+        "categoryId"
+      );
 
     const category =
-      searchParams.get("category");
+      searchParams.get(
+        "category"
+      );
 
     const featured =
-      searchParams.get("featured");
+      searchParams.get(
+        "featured"
+      );
 
     const user =
       getCurrentUserToken();
 
-    /*
-    |--------------------------------------------------------------------------
-    | Determine access
-    |--------------------------------------------------------------------------
-    */
+    /* =====================================================
+       ONLY ADMIN CAN REQUEST INACTIVE PRODUCTS
+    ===================================================== */
 
     if (includeInactive) {
       if (!user) {
         return NextResponse.json(
           {
             success: false,
-            message: "Authentication required.",
+            message:
+              "Authentication required.",
           },
-          { status: 401 }
+          {
+            status: 401,
+          }
         );
       }
 
-      if (
-        user.role !== "admin" &&
-        user.role !== "seller"
-      ) {
+      if (user.role !== "admin") {
         return NextResponse.json(
           {
             success: false,
             message:
-              "Admin or seller access required.",
+              "Admin access required.",
           },
-          { status: 403 }
+          {
+            status: 403,
+          }
         );
       }
     }
 
     const query = {};
 
-    /*
-    |--------------------------------------------------------------------------
-    | Active / inactive filtering
-    |--------------------------------------------------------------------------
-    */
+    /* =====================================================
+       PUBLIC USERS SEE ONLY ACTIVE PRODUCTS
+    ===================================================== */
 
     if (!includeInactive) {
       query.isActive = true;
-    } else if (user?.role === "seller") {
-      /*
-       * Seller can see ONLY their own products.
-       * This is the important ownership rule.
-       */
-      query.sellerId = user.userId;
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Category filtering
-    |--------------------------------------------------------------------------
-    */
+    /* =====================================================
+       CATEGORY FILTER
+    ===================================================== */
 
     if (
       categoryId &&
-      mongoose.Types.ObjectId.isValid(categoryId)
+      mongoose.Types.ObjectId.isValid(
+        categoryId
+      )
     ) {
-      query.categoryId = categoryId;
+      query.categoryId =
+        categoryId;
     } else if (category) {
-      query.category = category;
+      query.category =
+        category;
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Featured filtering
-    |--------------------------------------------------------------------------
-    */
+    /* =====================================================
+       FEATURED FILTER
+    ===================================================== */
 
     if (featured === "true") {
       query.featured = true;
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Load products
-    |--------------------------------------------------------------------------
-    */
+    /* =====================================================
+       LOAD PRODUCTS
+    ===================================================== */
 
-    const products = await Product.find(query)
-      .populate(
-        "categoryId",
-        "name slug description image isActive"
-      )
-      .sort({
-        featured: -1,
-        createdAt: -1,
-      })
-      .lean();
+    const products =
+      await Product.find(query)
+        .populate(
+          "categoryId",
+          "name slug description image isActive"
+        )
+        .sort({
+          featured: -1,
+          createdAt: -1,
+        })
+        .lean();
 
     const formattedProducts =
-      products.map(formatProduct);
+      products.map(
+        formatProduct
+      );
 
     return NextResponse.json(
       {
         success: true,
-        products: formattedProducts,
-        count: formattedProducts.length,
+        products:
+          formattedProducts,
+        count:
+          formattedProducts.length,
       },
-      { status: 200 }
+      {
+        status: 200,
+      }
     );
   } catch (error) {
     console.error(
@@ -296,22 +351,27 @@ export async function GET(request) {
     return NextResponse.json(
       {
         success: false,
-        message: "Failed to load products.",
+        message:
+          "Failed to load products.",
+
         error:
-          process.env.NODE_ENV === "development"
+          process.env.NODE_ENV ===
+          "development"
             ? error.message
             : undefined,
       },
-      { status: 500 }
+      {
+        status: 500,
+      }
     );
   }
 }
 
-/*
-|--------------------------------------------------------------------------
-| POST /api/products
-|--------------------------------------------------------------------------
-*/
+/* =========================================================
+   POST /api/products
+
+   ADMIN ONLY
+========================================================= */
 
 export async function POST(request) {
   try {
@@ -320,31 +380,42 @@ export async function POST(request) {
     const user =
       getCurrentUserToken();
 
+    /* =====================================================
+       LOGIN REQUIRED
+    ===================================================== */
+
     if (!user) {
       return NextResponse.json(
         {
           success: false,
-          message: "You must be logged in.",
+          message:
+            "You must be logged in.",
         },
-        { status: 401 }
+        {
+          status: 401,
+        }
       );
     }
 
-    if (
-      user.role !== "seller" &&
-      user.role !== "admin"
-    ) {
+    /* =====================================================
+       ADMIN ONLY
+    ===================================================== */
+
+    if (user.role !== "admin") {
       return NextResponse.json(
         {
           success: false,
           message:
-            "Only sellers and admins can create products.",
+            "Only administrators can create products.",
         },
-        { status: 403 }
+        {
+          status: 403,
+        }
       );
     }
 
-    const body = await request.json();
+    const body =
+      await request.json();
 
     const {
       name,
@@ -368,17 +439,31 @@ export async function POST(request) {
       featured,
       freeDelivery,
       isActive,
+      sellerId,
     } = body;
 
-    if (!String(name || "").trim()) {
+    /* =====================================================
+       REQUIRED PRODUCT NAME
+    ===================================================== */
+
+    if (
+      !String(name || "").trim()
+    ) {
       return NextResponse.json(
         {
           success: false,
-          message: "Product name is required.",
+          message:
+            "Product name is required.",
         },
-        { status: 400 }
+        {
+          status: 400,
+        }
       );
     }
+
+    /* =====================================================
+       REQUIRED PRICE
+    ===================================================== */
 
     if (
       price === undefined ||
@@ -391,25 +476,32 @@ export async function POST(request) {
           message:
             "Valid product price is required.",
         },
-        { status: 400 }
+        {
+          status: 400,
+        }
       );
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Category
-    |--------------------------------------------------------------------------
-    */
+    /* =====================================================
+       CATEGORY
+    ===================================================== */
 
-    let finalCategoryId = null;
-    let finalCategory = String(category || "").trim();
+    let finalCategoryId =
+      null;
+
+    let finalCategory =
+      String(category || "").trim();
 
     if (
       categoryId &&
-      mongoose.Types.ObjectId.isValid(categoryId)
+      mongoose.Types.ObjectId.isValid(
+        categoryId
+      )
     ) {
       const foundCategory =
-        await Category.findById(categoryId).lean();
+        await Category.findById(
+          categoryId
+        ).lean();
 
       if (!foundCategory) {
         return NextResponse.json(
@@ -418,7 +510,9 @@ export async function POST(request) {
             message:
               "Selected category was not found.",
           },
-          { status: 400 }
+          {
+            status: 400,
+          }
         );
       }
 
@@ -429,97 +523,64 @@ export async function POST(request) {
         foundCategory.name;
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Images
-    |--------------------------------------------------------------------------
-    */
+    /* =====================================================
+       IMAGES
+    ===================================================== */
 
     let finalImages =
-      normalizeImages(images);
+      normalizeImages(
+        images
+      );
 
     if (
       finalImages.length === 0 &&
       image
     ) {
       finalImages =
-        normalizeImages(image);
+        normalizeImages(
+          image
+        );
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Seller ownership
-    |--------------------------------------------------------------------------
-    */
+    /* =====================================================
+       OPTIONAL SELLER ASSIGNMENT
 
-    let sellerId = null;
-    let sellerName = "";
+       ADMIN MAY ASSIGN A PRODUCT TO A SELLER.
 
-    if (user.role === "seller") {
-      sellerId = user.userId;
+       BUT THE SELLER CANNOT CREATE OR EDIT IT.
+    ===================================================== */
 
-      const seller =
-        await User.findById(user.userId)
-          .select("firstName lastName role isActive")
-          .lean();
+    let finalSellerId =
+      null;
 
-      if (!seller) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: "Seller account not found.",
-          },
-          { status: 404 }
-        );
-      }
+    let finalSellerName =
+      "";
 
-      if (
-        seller.role !== "seller" ||
-        seller.isActive === false
-      ) {
-        return NextResponse.json(
-          {
-            success: false,
-            message:
-              "Your seller account is not active.",
-          },
-          { status: 403 }
-        );
-      }
-
-      sellerName =
-        `${seller.firstName || ""} ${
-          seller.lastName || ""
-        }`.trim();
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Admin can optionally assign product to seller
-    |--------------------------------------------------------------------------
-    */
-
-    if (
-      user.role === "admin" &&
-      body.sellerId
-    ) {
+    if (sellerId) {
       if (
         !mongoose.Types.ObjectId.isValid(
-          body.sellerId
+          sellerId
         )
       ) {
         return NextResponse.json(
           {
             success: false,
-            message: "Invalid seller ID.",
+            message:
+              "Invalid seller ID.",
           },
-          { status: 400 }
+          {
+            status: 400,
+          }
         );
       }
 
       const seller =
-        await User.findById(body.sellerId)
-          .select("firstName lastName role isActive")
+        await User.findById(
+          sellerId
+        )
+          .select(
+            "firstName lastName role isActive"
+          )
           .lean();
 
       if (
@@ -532,23 +593,39 @@ export async function POST(request) {
             message:
               "Selected seller was not found.",
           },
-          { status: 400 }
+          {
+            status: 400,
+          }
         );
       }
 
-      sellerId = seller._id;
+      if (
+        seller.isActive === false
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Selected seller is inactive.",
+          },
+          {
+            status: 400,
+          }
+        );
+      }
 
-      sellerName =
+      finalSellerId =
+        seller._id;
+
+      finalSellerName =
         `${seller.firstName || ""} ${
           seller.lastName || ""
         }`.trim();
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | SKU
-    |--------------------------------------------------------------------------
-    */
+    /* =====================================================
+       SKU
+    ===================================================== */
 
     let finalSku =
       String(sku || "")
@@ -567,39 +644,48 @@ export async function POST(request) {
         return NextResponse.json(
           {
             success: false,
-            message: "SKU already exists.",
+            message:
+              "SKU already exists.",
           },
-          { status: 400 }
+          {
+            status: 400,
+          }
         );
       }
     } else {
-      let exists = true;
+      let skuExists = true;
 
-      while (exists) {
+      while (skuExists) {
         finalSku =
           `CH-${Date.now()}-${Math.floor(
-            1000 + Math.random() * 9000
+            1000 +
+              Math.random() * 9000
           )}`;
 
-        const found =
+        const existing =
           await Product.findOne({
             sku: finalSku,
           })
             .select("_id")
             .lean();
 
-        exists = Boolean(found);
+        skuExists =
+          Boolean(existing);
       }
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Create slug
-    |--------------------------------------------------------------------------
-    */
+    /* =====================================================
+       SLUG
+    ===================================================== */
 
     const slug =
-      await createUniqueSlug(name);
+      await createUniqueSlug(
+        name
+      );
+
+    /* =====================================================
+       PRICE / DISCOUNT
+    ===================================================== */
 
     const numericPrice =
       Number(price) || 0;
@@ -613,27 +699,32 @@ export async function POST(request) {
         numericOldPrice
       );
 
-    /*
-    |--------------------------------------------------------------------------
-    | Create
-    |--------------------------------------------------------------------------
-    */
+    /* =====================================================
+       CREATE PRODUCT
+    ===================================================== */
 
     const product =
       await Product.create({
-        name: String(name).trim(),
+        name:
+          String(name).trim(),
 
         slug,
 
         shortDescription:
-          String(shortDescription || ""),
+          String(
+            shortDescription || ""
+          ).trim(),
 
         description:
-          String(description || ""),
+          String(
+            description || ""
+          ).trim(),
 
-        price: numericPrice,
+        price:
+          numericPrice,
 
-        oldPrice: numericOldPrice,
+        oldPrice:
+          numericOldPrice,
 
         discount,
 
@@ -642,59 +733,88 @@ export async function POST(request) {
           Number(stock) || 0
         ),
 
-        sku: finalSku,
+        sku:
+          finalSku,
 
-        brand: String(brand || "").trim(),
+        brand:
+          String(
+            brand || ""
+          ).trim(),
 
-        category: finalCategory,
+        category:
+          finalCategory,
 
-        categoryId: finalCategoryId,
+        categoryId:
+          finalCategoryId,
 
         subcategory:
-          String(subcategory || "").trim(),
+          String(
+            subcategory || ""
+          ).trim(),
 
         processor:
-          String(processor || "").trim(),
+          String(
+            processor || ""
+          ).trim(),
 
         ram:
-          String(ram || "").trim(),
+          String(
+            ram || ""
+          ).trim(),
 
         storage:
-          String(storage || "").trim(),
+          String(
+            storage || ""
+          ).trim(),
 
         graphics:
-          String(graphics || "").trim(),
+          String(
+            graphics || ""
+          ).trim(),
 
         screenSize:
-          String(screenSize || "").trim(),
+          String(
+            screenSize || ""
+          ).trim(),
 
-        images: finalImages,
+        images:
+          finalImages,
 
-        featured: Boolean(featured),
+        featured:
+          Boolean(featured),
 
         freeDelivery:
-          Boolean(freeDelivery),
+          Boolean(
+            freeDelivery
+          ),
 
         isActive:
           isActive === undefined
             ? true
             : Boolean(isActive),
 
-        sellerId,
+        sellerId:
+          finalSellerId,
 
-        sellerName,
+        sellerName:
+          finalSellerName,
       });
 
     return NextResponse.json(
       {
         success: true,
+
         message:
           "Product created successfully.",
-        product: formatProduct(
-          product.toObject()
-        ),
+
+        product:
+          formatProduct(
+            product.toObject()
+          ),
       },
-      { status: 201 }
+      {
+        status: 201,
+      }
     );
   } catch (error) {
     console.error(
@@ -702,14 +822,18 @@ export async function POST(request) {
       error
     );
 
-    if (error.code === 11000) {
+    if (
+      error.code === 11000
+    ) {
       return NextResponse.json(
         {
           success: false,
           message:
             "A product with the same unique value already exists.",
         },
-        { status: 400 }
+        {
+          status: 400,
+        }
       );
     }
 
@@ -718,21 +842,25 @@ export async function POST(request) {
         success: false,
         message:
           "Failed to create product.",
+
         error:
-          process.env.NODE_ENV === "development"
+          process.env.NODE_ENV ===
+          "development"
             ? error.message
             : undefined,
       },
-      { status: 500 }
+      {
+        status: 500,
+      }
     );
   }
 }
 
-/*
-|--------------------------------------------------------------------------
-| PATCH /api/products
-|--------------------------------------------------------------------------
-*/
+/* =========================================================
+   PATCH /api/products
+
+   ADMIN ONLY
+========================================================= */
 
 export async function PATCH(request) {
   try {
@@ -741,27 +869,37 @@ export async function PATCH(request) {
     const user =
       getCurrentUserToken();
 
+    /* =====================================================
+       LOGIN REQUIRED
+    ===================================================== */
+
     if (!user) {
       return NextResponse.json(
         {
           success: false,
-          message: "You must be logged in.",
+          message:
+            "You must be logged in.",
         },
-        { status: 401 }
+        {
+          status: 401,
+        }
       );
     }
 
-    if (
-      user.role !== "seller" &&
-      user.role !== "admin"
-    ) {
+    /* =====================================================
+       ADMIN ONLY
+    ===================================================== */
+
+    if (user.role !== "admin") {
       return NextResponse.json(
         {
           success: false,
           message:
-            "You are not allowed to update products.",
+            "Only administrators can update products.",
         },
-        { status: 403 }
+        {
+          status: 403,
+        }
       );
     }
 
@@ -772,6 +910,10 @@ export async function PATCH(request) {
       body.productId ||
       body.id ||
       body._id;
+
+    /* =====================================================
+       VALIDATE PRODUCT ID
+    ===================================================== */
 
     if (
       !productId ||
@@ -785,51 +927,33 @@ export async function PATCH(request) {
           message:
             "Valid product ID is required.",
         },
-        { status: 400 }
+        {
+          status: 400,
+        }
       );
     }
 
     const product =
-      await Product.findById(productId);
+      await Product.findById(
+        productId
+      );
 
     if (!product) {
       return NextResponse.json(
         {
           success: false,
-          message: "Product not found.",
+          message:
+            "Product not found.",
         },
-        { status: 404 }
+        {
+          status: 404,
+        }
       );
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Seller can only update own products
-    |--------------------------------------------------------------------------
-    */
-
-    if (user.role === "seller") {
-      if (
-        !product.sellerId ||
-        String(product.sellerId) !==
-          String(user.userId)
-      ) {
-        return NextResponse.json(
-          {
-            success: false,
-            message:
-              "You can only edit your own products.",
-          },
-          { status: 403 }
-        );
-      }
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Allowed fields
-    |--------------------------------------------------------------------------
-    */
+    /* =====================================================
+       UPDATE ALLOWED FIELDS
+    ===================================================== */
 
     const allowedFields = [
       "name",
@@ -854,101 +978,23 @@ export async function PATCH(request) {
       "isActive",
     ];
 
-    for (const field of allowedFields) {
+    for (
+      const field of allowedFields
+    ) {
       if (
         Object.prototype.hasOwnProperty.call(
           body,
           field
         )
       ) {
-        product[field] = body[field];
+        product[field] =
+          body[field];
       }
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Seller ownership cannot be changed by seller
-    |--------------------------------------------------------------------------
-    */
-
-    if (user.role === "seller") {
-      product.sellerId = user.userId;
-
-      const seller =
-        await User.findById(user.userId)
-          .select("firstName lastName")
-          .lean();
-
-      if (seller) {
-        product.sellerName =
-          `${seller.firstName || ""} ${
-            seller.lastName || ""
-          }`.trim();
-      }
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Admin seller assignment
-    |--------------------------------------------------------------------------
-    */
-
-    if (
-      user.role === "admin" &&
-      Object.prototype.hasOwnProperty.call(
-        body,
-        "sellerId"
-      )
-    ) {
-      if (
-        body.sellerId === null ||
-        body.sellerId === ""
-      ) {
-        product.sellerId = null;
-        product.sellerName = "";
-      } else if (
-        mongoose.Types.ObjectId.isValid(
-          body.sellerId
-        )
-      ) {
-        const seller =
-          await User.findById(
-            body.sellerId
-          )
-            .select(
-              "firstName lastName role"
-            )
-            .lean();
-
-        if (
-          !seller ||
-          seller.role !== "seller"
-        ) {
-          return NextResponse.json(
-            {
-              success: false,
-              message:
-                "Selected seller was not found.",
-            },
-            { status: 400 }
-          );
-        }
-
-        product.sellerId =
-          seller._id;
-
-        product.sellerName =
-          `${seller.firstName || ""} ${
-            seller.lastName || ""
-          }`.trim();
-      }
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Category
-    |--------------------------------------------------------------------------
-    */
+    /* =====================================================
+       CATEGORY
+    ===================================================== */
 
     if (
       body.categoryId &&
@@ -968,7 +1014,9 @@ export async function PATCH(request) {
             message:
               "Selected category was not found.",
           },
-          { status: 400 }
+          {
+            status: 400,
+          }
         );
       }
 
@@ -977,18 +1025,19 @@ export async function PATCH(request) {
 
       product.category =
         foundCategory.name;
-    } else if (
+    }
+
+    if (
       body.categoryId === null ||
       body.categoryId === ""
     ) {
-      product.categoryId = null;
+      product.categoryId =
+        null;
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Images
-    |--------------------------------------------------------------------------
-    */
+    /* =====================================================
+       IMAGES
+    ===================================================== */
 
     if (
       Object.prototype.hasOwnProperty.call(
@@ -997,14 +1046,14 @@ export async function PATCH(request) {
       )
     ) {
       product.images =
-        normalizeImages(body.images);
+        normalizeImages(
+          body.images
+        );
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | SKU
-    |--------------------------------------------------------------------------
-    */
+    /* =====================================================
+       SKU
+    ===================================================== */
 
     if (
       Object.prototype.hasOwnProperty.call(
@@ -1013,50 +1062,52 @@ export async function PATCH(request) {
       )
     ) {
       const newSku =
-        String(body.sku || "")
+        String(
+          body.sku || ""
+        )
           .trim()
           .toUpperCase();
 
       if (newSku) {
-        const duplicate =
+        const duplicateSku =
           await Product.findOne({
             sku: newSku,
             _id: {
-              $ne: product._id,
+              $ne:
+                product._id,
             },
           })
             .select("_id")
             .lean();
 
-        if (duplicate) {
+        if (duplicateSku) {
           return NextResponse.json(
             {
               success: false,
               message:
                 "SKU already exists.",
             },
-            { status: 400 }
+            {
+              status: 400,
+            }
           );
         }
 
-        product.sku = newSku;
-      } else {
-        product.sku = undefined;
+        product.sku =
+          newSku;
       }
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Slug
-    |--------------------------------------------------------------------------
-    */
+    /* =====================================================
+       SLUG
+    ===================================================== */
 
     if (
       Object.prototype.hasOwnProperty.call(
         body,
         "name"
       ) &&
-      String(body.name || "").trim()
+      body.name
     ) {
       product.slug =
         await createUniqueSlug(
@@ -1065,11 +1116,52 @@ export async function PATCH(request) {
         );
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Discount
-    |--------------------------------------------------------------------------
-    */
+    /* =====================================================
+       NUMERIC VALUES
+    ===================================================== */
+
+    if (
+      Object.prototype.hasOwnProperty.call(
+        body,
+        "price"
+      )
+    ) {
+      product.price =
+        Number(
+          product.price
+        ) || 0;
+    }
+
+    if (
+      Object.prototype.hasOwnProperty.call(
+        body,
+        "oldPrice"
+      )
+    ) {
+      product.oldPrice =
+        Number(
+          product.oldPrice
+        ) || 0;
+    }
+
+    if (
+      Object.prototype.hasOwnProperty.call(
+        body,
+        "stock"
+      )
+    ) {
+      product.stock =
+        Math.max(
+          0,
+          Number(
+            product.stock
+          ) || 0
+        );
+    }
+
+    /* =====================================================
+       DISCOUNT
+    ===================================================== */
 
     product.discount =
       calculateDiscount(
@@ -1077,18 +1169,102 @@ export async function PATCH(request) {
         product.oldPrice
       );
 
+    /* =====================================================
+       OPTIONAL SELLER ASSIGNMENT
+
+       ADMIN ONLY
+    ===================================================== */
+
+    if (
+      Object.prototype.hasOwnProperty.call(
+        body,
+        "sellerId"
+      )
+    ) {
+      if (
+        body.sellerId ===
+          null ||
+        body.sellerId === ""
+      ) {
+        product.sellerId =
+          null;
+
+        product.sellerName =
+          "";
+      } else if (
+        mongoose.Types.ObjectId.isValid(
+          body.sellerId
+        )
+      ) {
+        const seller =
+          await User.findById(
+            body.sellerId
+          )
+            .select(
+              "firstName lastName role isActive"
+            )
+            .lean();
+
+        if (
+          !seller ||
+          seller.role !==
+            "seller"
+        ) {
+          return NextResponse.json(
+            {
+              success: false,
+              message:
+                "Selected seller was not found.",
+            },
+            {
+              status: 400,
+            }
+          );
+        }
+
+        if (
+          seller.isActive ===
+          false
+        ) {
+          return NextResponse.json(
+            {
+              success: false,
+              message:
+                "Selected seller is inactive.",
+            },
+            {
+              status: 400,
+            }
+          );
+        }
+
+        product.sellerId =
+          seller._id;
+
+        product.sellerName =
+          `${seller.firstName || ""} ${
+            seller.lastName || ""
+          }`.trim();
+      }
+    }
+
     await product.save();
 
     return NextResponse.json(
       {
         success: true,
+
         message:
           "Product updated successfully.",
-        product: formatProduct(
-          product.toObject()
-        ),
+
+        product:
+          formatProduct(
+            product.toObject()
+          ),
       },
-      { status: 200 }
+      {
+        status: 200,
+      }
     );
   } catch (error) {
     console.error(
@@ -1096,14 +1272,18 @@ export async function PATCH(request) {
       error
     );
 
-    if (error.code === 11000) {
+    if (
+      error.code === 11000
+    ) {
       return NextResponse.json(
         {
           success: false,
           message:
             "A product with the same unique value already exists.",
         },
-        { status: 400 }
+        {
+          status: 400,
+        }
       );
     }
 
@@ -1112,25 +1292,28 @@ export async function PATCH(request) {
         success: false,
         message:
           "Failed to update product.",
+
         error:
-          process.env.NODE_ENV === "development"
+          process.env.NODE_ENV ===
+          "development"
             ? error.message
             : undefined,
       },
-      { status: 500 }
+      {
+        status: 500,
+      }
     );
   }
 }
 
-/*
-|--------------------------------------------------------------------------
-| DELETE /api/products
-|--------------------------------------------------------------------------
-|
-| Permanent deletion only.
-| Product must already be inactive.
-|
-*/
+/* =========================================================
+   DELETE /api/products
+
+   ADMIN ONLY
+
+   Safety:
+   Product must first be deactivated.
+========================================================= */
 
 export async function DELETE(request) {
   try {
@@ -1139,27 +1322,37 @@ export async function DELETE(request) {
     const user =
       getCurrentUserToken();
 
+    /* =====================================================
+       LOGIN REQUIRED
+    ===================================================== */
+
     if (!user) {
       return NextResponse.json(
         {
           success: false,
-          message: "You must be logged in.",
+          message:
+            "You must be logged in.",
         },
-        { status: 401 }
+        {
+          status: 401,
+        }
       );
     }
 
-    if (
-      user.role !== "seller" &&
-      user.role !== "admin"
-    ) {
+    /* =====================================================
+       ADMIN ONLY
+    ===================================================== */
+
+    if (user.role !== "admin") {
       return NextResponse.json(
         {
           success: false,
           message:
-            "You are not allowed to delete products.",
+            "Only administrators can delete products.",
         },
-        { status: 403 }
+        {
+          status: 403,
+        }
       );
     }
 
@@ -1167,8 +1360,12 @@ export async function DELETE(request) {
       new URL(request.url);
 
     const productId =
-      searchParams.get("productId") ||
-      searchParams.get("id");
+      searchParams.get(
+        "productId"
+      ) ||
+      searchParams.get(
+        "id"
+      );
 
     if (
       !productId ||
@@ -1182,73 +1379,67 @@ export async function DELETE(request) {
           message:
             "Valid product ID is required.",
         },
-        { status: 400 }
+        {
+          status: 400,
+        }
       );
     }
 
     const product =
-      await Product.findById(productId);
+      await Product.findById(
+        productId
+      );
 
     if (!product) {
       return NextResponse.json(
         {
           success: false,
-          message: "Product not found.",
+          message:
+            "Product not found.",
         },
-        { status: 404 }
+        {
+          status: 404,
+        }
       );
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Seller ownership
-    |--------------------------------------------------------------------------
-    */
+    /* =====================================================
+       SAFETY CHECK
 
-    if (user.role === "seller") {
-      if (
-        !product.sellerId ||
-        String(product.sellerId) !==
-          String(user.userId)
-      ) {
-        return NextResponse.json(
-          {
-            success: false,
-            message:
-              "You can only delete your own products.",
-          },
-          { status: 403 }
-        );
-      }
-    }
+       Admin must deactivate product first.
+    ===================================================== */
 
-    /*
-    |--------------------------------------------------------------------------
-    | Only inactive products can be permanently deleted
-    |--------------------------------------------------------------------------
-    */
-
-    if (product.isActive !== false) {
+    if (
+      product.isActive !== false
+    ) {
       return NextResponse.json(
         {
           success: false,
           message:
             "Only inactive products can be permanently deleted. Deactivate the product first.",
         },
-        { status: 400 }
+        {
+          status: 400,
+        }
       );
     }
 
-    await Product.findByIdAndDelete(productId);
+    await Product.findByIdAndDelete(
+      productId
+    );
 
     return NextResponse.json(
       {
         success: true,
+
         message:
           "Product permanently deleted successfully.",
+
         productId,
       },
-      { status: 200 }
+      {
+        status: 200,
+      }
     );
   } catch (error) {
     console.error(
@@ -1260,13 +1451,17 @@ export async function DELETE(request) {
       {
         success: false,
         message:
-          "Failed to permanently delete product.",
+          "Failed to delete product.",
+
         error:
-          process.env.NODE_ENV === "development"
+          process.env.NODE_ENV ===
+          "development"
             ? error.message
             : undefined,
       },
-      { status: 500 }
+      {
+        status: 500,
+      }
     );
   }
 }
