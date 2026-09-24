@@ -1,17 +1,30 @@
 import Link from "next/link";
 import { ArrowRight, PackageSearch } from "lucide-react";
 
+import { connectDB } from "@/lib/mongodb";
+import Product from "@/models/Product";
+import Category from "@/models/Category";
+
 import CategoryHeader from "@/components/category/CategoryHeader";
-import CategorySidebar from "@/components/category/CategorySidebar";
 import CategorySubcategories from "@/components/category/CategorySubcategories";
+import CategoryProductsBrowser from "@/components/category/CategoryProductsBrowser";
 
 const categories = {
   laptops: {
     slug: "laptops",
+    dbNames: ["Laptops", "Laptop"],
     name: "Laptops",
     description:
-      "Explore laptops for business, education, gaming, creative work and everyday computing.",
-    brands: ["Lenovo", "Dell", "HP", "ASUS", "Acer", "MSI"],
+      "Shop laptops for business, education, professional work, creative tasks, everyday computing and gaming.",
+    brands: [
+      "Lenovo",
+      "Dell",
+      "HP",
+      "ASUS",
+      "Acer",
+      "MSI",
+      "Apple",
+    ],
     subcategories: [
       {
         name: "Gaming Laptops",
@@ -66,10 +79,23 @@ const categories = {
 
   desktops: {
     slug: "desktops",
+    dbNames: [
+      "Desktops",
+      "Desktop",
+      "Desktop PCs",
+      "Desktop PC",
+    ],
     name: "Desktop PCs",
     description:
-      "Discover desktop computers for gaming, business, professional workloads and everyday use.",
-    brands: ["Dell", "HP", "Lenovo", "ASUS", "Acer", "MSI"],
+      "Shop desktop computers for office work, home computing, professional workloads, custom builds and gaming.",
+    brands: [
+      "Dell",
+      "HP",
+      "Lenovo",
+      "ASUS",
+      "Acer",
+      "MSI",
+    ],
     subcategories: [
       {
         name: "Gaming PCs",
@@ -112,10 +138,27 @@ const categories = {
 
   components: {
     slug: "components",
+    dbNames: [
+      "Components",
+      "PC Components",
+      "Computer Components",
+      "PC Component",
+    ],
     name: "PC Components",
     description:
-      "Build or upgrade your computer with processors, graphics cards, memory, storage and other components.",
-    brands: ["Intel", "AMD", "NVIDIA", "ASUS", "MSI", "Gigabyte"],
+      "Find processors, graphics cards, motherboards, memory, SSDs, hard drives, power supplies, cases and cooling hardware.",
+    brands: [
+      "Intel",
+      "AMD",
+      "NVIDIA",
+      "ASUS",
+      "MSI",
+      "Gigabyte",
+      "Samsung",
+      "Corsair",
+      "Kingston",
+      "Crucial",
+    ],
     subcategories: [
       {
         name: "Processors",
@@ -182,10 +225,19 @@ const categories = {
 
   monitors: {
     slug: "monitors",
+    dbNames: ["Monitors", "Monitor"],
     name: "Monitors",
     description:
-      "Find gaming, professional, office, curved, ultrawide and high-resolution monitors.",
-    brands: ["Samsung", "LG", "Dell", "ASUS", "Acer", "MSI"],
+      "Shop gaming, office, professional, curved, ultrawide, QHD and 4K computer monitors.",
+    brands: [
+      "Samsung",
+      "LG",
+      "Dell",
+      "ASUS",
+      "Acer",
+      "MSI",
+      "BenQ",
+    ],
     subcategories: [
       {
         name: "Gaming Monitors",
@@ -226,12 +278,105 @@ const categories = {
     ],
   },
 
+  gaming: {
+    slug: "gaming",
+    dbNames: ["Gaming", "Gaming Products"],
+    name: "Gaming",
+    description:
+      "Build a complete gaming setup with gaming PCs, gaming laptops, monitors, keyboards, mice, headsets and gaming accessories.",
+    brands: [
+      "ASUS",
+      "MSI",
+      "Razer",
+      "Corsair",
+      "Logitech",
+      "Acer",
+      "HP",
+      "Lenovo",
+    ],
+    subcategoryNames: [
+      "Gaming PCs",
+      "Gaming Laptops",
+      "Gaming Monitors",
+      "Gaming Keyboards",
+      "Gaming Mice",
+      "Gaming Headsets",
+      "Gaming Chairs",
+      "Gaming Accessories",
+    ],
+    subcategories: [
+      {
+        name: "Gaming PCs",
+        slug: "gaming-pcs",
+        icon: "gaming",
+        parent: "gaming",
+      },
+      {
+        name: "Gaming Laptops",
+        slug: "gaming-laptops",
+        icon: "laptop",
+        parent: "gaming",
+      },
+      {
+        name: "Gaming Monitors",
+        slug: "gaming-monitors",
+        icon: "monitor",
+        parent: "gaming",
+      },
+      {
+        name: "Gaming Keyboards",
+        slug: "gaming-keyboards",
+        icon: "keyboard",
+        parent: "gaming",
+      },
+      {
+        name: "Gaming Mice",
+        slug: "gaming-mice",
+        icon: "mouse",
+        parent: "gaming",
+      },
+      {
+        name: "Gaming Headsets",
+        slug: "gaming-headsets",
+        icon: "headphones",
+        parent: "gaming",
+      },
+      {
+        name: "Gaming Chairs",
+        slug: "gaming-chairs",
+        icon: "gaming",
+        parent: "gaming",
+      },
+      {
+        name: "Gaming Accessories",
+        slug: "gaming-accessories",
+        icon: "gamepad",
+        parent: "gaming",
+      },
+    ],
+  },
+
   accessories: {
     slug: "accessories",
-    name: "Computer Accessories",
+    dbNames: [
+      "Accessories",
+      "Computer Accessories",
+      "PC Accessories",
+      "Accessory",
+    ],
+    name: "Accessories",
     description:
-      "Complete your computer setup with keyboards, mice, headsets, webcams, chargers and useful accessories.",
-    brands: ["Logitech", "Razer", "Corsair", "Anker", "HP", "Dell"],
+      "Complete your computer setup with keyboards, mice, headsets, webcams, microphones, chargers, hubs and other accessories.",
+    brands: [
+      "Logitech",
+      "Razer",
+      "Corsair",
+      "Anker",
+      "HP",
+      "Dell",
+      "Microsoft",
+      "Keychron",
+    ],
     subcategories: [
       {
         name: "Keyboards",
@@ -289,196 +434,6 @@ const categories = {
       },
     ],
   },
-
-  gaming: {
-    slug: "gaming",
-    name: "Gaming",
-    description:
-      "Build your ultimate gaming setup with gaming PCs, laptops, monitors, peripherals and accessories.",
-    brands: ["ASUS", "MSI", "Razer", "Corsair", "Logitech", "Acer"],
-    subcategories: [
-      {
-        name: "Gaming PCs",
-        slug: "gaming-pcs",
-        icon: "gaming",
-        parent: "gaming",
-      },
-      {
-        name: "Gaming Laptops",
-        slug: "gaming-laptops",
-        icon: "laptop",
-        parent: "gaming",
-      },
-      {
-        name: "Gaming Monitors",
-        slug: "gaming-monitors",
-        icon: "monitor",
-        parent: "gaming",
-      },
-      {
-        name: "Gaming Keyboards",
-        slug: "gaming-keyboards",
-        icon: "keyboard",
-        parent: "gaming",
-      },
-      {
-        name: "Gaming Mice",
-        slug: "gaming-mice",
-        icon: "mouse",
-        parent: "gaming",
-      },
-      {
-        name: "Gaming Headsets",
-        slug: "gaming-headsets",
-        icon: "headphones",
-        parent: "gaming",
-      },
-      {
-        name: "Gaming Chairs",
-        slug: "gaming-chairs",
-        icon: "gaming",
-        parent: "gaming",
-      },
-      {
-        name: "Gaming Accessories",
-        slug: "gaming-accessories",
-        icon: "gamepad",
-        parent: "gaming",
-      },
-    ],
-  },
-
-  storage: {
-    slug: "storage",
-    name: "Storage",
-    description:
-      "Upgrade your storage with fast SSDs, reliable hard drives and portable storage solutions.",
-    brands: ["Samsung", "Western Digital", "Kingston", "Crucial", "Seagate"],
-    subcategories: [
-      {
-        name: "NVMe SSDs",
-        slug: "nvme-ssds",
-        icon: "hardDrive",
-        parent: "storage",
-      },
-      {
-        name: "SATA SSDs",
-        slug: "sata-ssds",
-        icon: "hardDrive",
-        parent: "storage",
-      },
-      {
-        name: "Internal HDDs",
-        slug: "internal-hdds",
-        icon: "hardDrive",
-        parent: "storage",
-      },
-      {
-        name: "External HDDs",
-        slug: "external-hdds",
-        icon: "hardDrive",
-        parent: "storage",
-      },
-      {
-        name: "External SSDs",
-        slug: "external-ssds",
-        icon: "hardDrive",
-        parent: "storage",
-      },
-      {
-        name: "USB Flash Drives",
-        slug: "usb-flash-drives",
-        icon: "hardDrive",
-        parent: "storage",
-      },
-      {
-        name: "Memory Cards",
-        slug: "memory-cards",
-        icon: "memory",
-        parent: "storage",
-      },
-    ],
-  },
-
-  keyboards: {
-    slug: "keyboards",
-    name: "Keyboards",
-    description:
-      "Choose from mechanical, wireless, ergonomic and gaming keyboards for your setup.",
-    brands: ["Logitech", "Razer", "Corsair", "Keychron", "Microsoft"],
-    subcategories: [
-      {
-        name: "Mechanical Keyboards",
-        slug: "mechanical-keyboards",
-        icon: "keyboard",
-        parent: "keyboards",
-      },
-      {
-        name: "Gaming Keyboards",
-        slug: "gaming-keyboards",
-        icon: "gaming",
-        parent: "keyboards",
-      },
-      {
-        name: "Wireless Keyboards",
-        slug: "wireless-keyboards",
-        icon: "keyboard",
-        parent: "keyboards",
-      },
-      {
-        name: "Ergonomic Keyboards",
-        slug: "ergonomic-keyboards",
-        icon: "keyboard",
-        parent: "keyboards",
-      },
-      {
-        name: "Office Keyboards",
-        slug: "office-keyboards",
-        icon: "keyboard",
-        parent: "keyboards",
-      },
-    ],
-  },
-
-  mice: {
-    slug: "mice",
-    name: "Computer Mice",
-    description:
-      "Find accurate and comfortable mice for office work, productivity and competitive gaming.",
-    brands: ["Logitech", "Razer", "Corsair", "Microsoft", "HP"],
-    subcategories: [
-      {
-        name: "Gaming Mice",
-        slug: "gaming-mice",
-        icon: "gaming",
-        parent: "mice",
-      },
-      {
-        name: "Wireless Mice",
-        slug: "wireless-mice",
-        icon: "mouse",
-        parent: "mice",
-      },
-      {
-        name: "Ergonomic Mice",
-        slug: "ergonomic-mice",
-        icon: "mouse",
-        parent: "mice",
-      },
-      {
-        name: "Office Mice",
-        slug: "office-mice",
-        icon: "mouse",
-        parent: "mice",
-      },
-      {
-        name: "Bluetooth Mice",
-        slug: "bluetooth-mice",
-        icon: "mouse",
-        parent: "mice",
-      },
-    ],
-  },
 };
 
 export function generateStaticParams() {
@@ -487,7 +442,80 @@ export function generateStaticParams() {
   }));
 }
 
-export default async function CategoryPage({ params }) {
+function serializeProduct(product) {
+  const images = Array.isArray(product.images)
+    ? product.images
+        .map((image) => String(image || "").trim())
+        .filter(Boolean)
+    : [];
+
+  const price = Number(product.price) || 0;
+  const oldPrice = Number(product.oldPrice) || 0;
+
+  let discount = Number(product.discount) || 0;
+
+  if (
+    discount <= 0 &&
+    oldPrice > price &&
+    oldPrice > 0
+  ) {
+    discount = Math.round(
+      ((oldPrice - price) / oldPrice) * 100
+    );
+  }
+
+  return {
+    ...product,
+
+    _id: product._id?.toString() || null,
+
+    id: product._id?.toString() || null,
+
+    categoryId:
+      product.categoryId?.toString() || null,
+
+    image: images[0] || "",
+
+    images,
+
+    price,
+
+    oldPrice,
+
+    discount,
+
+    stock: Number(product.stock) || 0,
+
+    rating: Number(product.rating) || 0,
+
+    reviews: Number(product.reviews) || 0,
+
+    isActive:
+      product.isActive !== false,
+
+    featured: Boolean(product.featured),
+
+    freeDelivery:
+      Boolean(product.freeDelivery),
+
+    createdAt: product.createdAt
+      ? new Date(
+          product.createdAt
+        ).toISOString()
+      : null,
+
+    updatedAt: product.updatedAt
+      ? new Date(
+          product.updatedAt
+        ).toISOString()
+      : null,
+  };
+}
+
+export default async function CategoryPage({
+  params,
+  searchParams,
+}) {
   const { slug } = await params;
 
   const category = categories[slug];
@@ -506,15 +534,15 @@ export default async function CategoryPage({ params }) {
             </h1>
 
             <p className="mt-3 text-sm leading-6 text-gray-500">
-              The category you are looking for does not exist or may have
-              been moved.
+              The category you are looking for does
+              not exist or may have been moved.
             </p>
 
             <Link
-              href="/"
+              href="/products"
               className="mt-6 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white transition hover:bg-blue-700"
             >
-              Back to Home
+              Browse Products
               <ArrowRight size={17} />
             </Link>
           </div>
@@ -523,58 +551,97 @@ export default async function CategoryPage({ params }) {
     );
   }
 
+  let products = [];
+  let databaseError = "";
+
+  try {
+    await connectDB();
+
+    const categoryDocument =
+      await Category.findOne({
+        slug: category.slug,
+        isActive: true,
+      }).lean();
+
+    const orConditions = [
+      {
+        category: {
+          $in: category.dbNames,
+        },
+      },
+    ];
+
+    if (categoryDocument?._id) {
+      orConditions.push({
+        categoryId:
+          categoryDocument._id,
+      });
+    }
+
+    /*
+     * Gaming is a special marketplace
+     * collection. A gaming desktop may have
+     * category = "Desktops" but
+     * subcategory = "Gaming PCs".
+     */
+    if (
+      category.subcategoryNames?.length
+    ) {
+      orConditions.push({
+        subcategory: {
+          $in: category.subcategoryNames,
+        },
+      });
+    }
+
+    products = await Product.find({
+      isActive: true,
+      $or: orConditions,
+    })
+      .sort({
+        featured: -1,
+        createdAt: -1,
+      })
+      .lean();
+
+    products = products.map(
+      serializeProduct
+    );
+  } catch (error) {
+    console.error(
+      `Category ${slug} error:`,
+      error
+    );
+
+    databaseError =
+      "We could not load this category from the marketplace database.";
+  }
+
+  const selectedSubcategory =
+    typeof searchParams?.subcategory ===
+    "string"
+      ? searchParams.subcategory
+      : "";
+
   return (
     <main className="min-h-screen bg-slate-50">
-      <CategoryHeader category={category} />
+      <CategoryHeader
+        category={category}
+      />
 
       <div className="container-main py-8">
-        <CategorySubcategories items={category.subcategories} />
+        <CategorySubcategories
+          items={category.subcategories}
+        />
 
-        <div className="mt-8 flex flex-col gap-6 lg:flex-row">
-          <CategorySidebar category={category} />
-
-          <section className="min-w-0 flex-1">
-            <div className="rounded-2xl border border-gray-200 bg-white p-6">
-              <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-                <div>
-                  <h2 className="text-xl font-black text-slate-900">
-                    {category.name} Products
-                  </h2>
-
-                  <p className="mt-1 text-sm text-gray-500">
-                    Products will appear here when the ComputerHub product
-                    marketplace is connected to MongoDB.
-                  </p>
-                </div>
-
-                <Link
-                  href={`/products?category=${category.slug}`}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-700"
-                >
-                  Browse Products
-                  <ArrowRight size={17} />
-                </Link>
-              </div>
-
-              <div className="mt-8 grid min-h-[260px] place-items-center rounded-2xl border border-dashed border-gray-300 bg-gray-50">
-                <div className="max-w-sm text-center">
-                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-sm">
-                    <PackageSearch size={26} />
-                  </div>
-
-                  <h3 className="mt-4 font-black text-slate-900">
-                    Products coming from the marketplace
-                  </h3>
-
-                  <p className="mt-2 text-sm leading-6 text-gray-500">
-                    In the next phase, we will build the real product listing
-                    system with search, sorting, product cards and filters.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </section>
-        </div>
+        <CategoryProductsBrowser
+          category={category}
+          products={products}
+          databaseError={databaseError}
+          initialSubcategory={
+            selectedSubcategory
+          }
+        />
       </div>
     </main>
   );

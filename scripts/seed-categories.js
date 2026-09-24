@@ -1,16 +1,17 @@
-const mongoose = require("mongoose");
-const dotenv = require("dotenv");
-
-dotenv.config({
+require("dotenv").config({
   path: ".env.local",
 });
+
+const mongoose = require("mongoose");
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
-  throw new Error(
+  console.error(
     "❌ MONGODB_URI is missing from .env.local"
   );
+
+  process.exit(1);
 }
 
 const CategorySchema = new mongoose.Schema(
@@ -73,7 +74,7 @@ const categories = [
     name: "Laptops",
     slug: "laptops",
     description:
-      "Laptops for work, study, business and everyday use.",
+      "Business, student, professional, creator and gaming laptops from established computer manufacturers.",
     featured: true,
     sortOrder: 1,
   },
@@ -82,7 +83,7 @@ const categories = [
     name: "Desktops",
     slug: "desktops",
     description:
-      "Desktop computers and complete PC systems.",
+      "Desktop PCs for office work, home computing, professional workloads and gaming.",
     featured: true,
     sortOrder: 2,
   },
@@ -91,25 +92,25 @@ const categories = [
     name: "Components",
     slug: "components",
     description:
-      "Computer components including RAM, SSDs and graphics cards.",
+      "Processors, SSDs, memory and other hardware for PC upgrades and new builds.",
     featured: true,
     sortOrder: 3,
-  },
-
-  {
-    name: "Gaming",
-    slug: "gaming",
-    description:
-      "Gaming PCs, gaming hardware and gaming accessories.",
-    featured: true,
-    sortOrder: 4,
   },
 
   {
     name: "Monitors",
     slug: "monitors",
     description:
-      "Computer monitors for work, entertainment and gaming.",
+      "Full HD, QHD, 4K, high-refresh and professional computer monitors.",
+    featured: true,
+    sortOrder: 4,
+  },
+
+  {
+    name: "Gaming",
+    slug: "gaming",
+    description:
+      "Gaming PCs, gaming laptops, gaming displays and gaming peripherals.",
     featured: true,
     sortOrder: 5,
   },
@@ -118,7 +119,7 @@ const categories = [
     name: "Accessories",
     slug: "accessories",
     description:
-      "Keyboards, mice and other computer accessories.",
+      "Keyboards, mice, headsets and useful accessories for computer users and gamers.",
     featured: true,
     sortOrder: 6,
   },
@@ -126,15 +127,14 @@ const categories = [
 
 async function seedCategories() {
   try {
-    console.log("====================================");
-    console.log("🏷️ COMPUTERHUB CATEGORY SEEDER");
-    console.log("====================================");
-
-    console.log("🔄 Connecting to MongoDB...");
+    console.log("");
+    console.log("======================================");
+    console.log("COMPUTERHUB CATEGORY SEEDER");
+    console.log("======================================");
 
     await mongoose.connect(MONGODB_URI);
 
-    console.log("✅ MongoDB connected successfully");
+    console.log("✅ MongoDB connected");
     console.log("");
 
     for (const categoryData of categories) {
@@ -185,9 +185,6 @@ async function seedCategories() {
     }
 
     console.log("");
-    console.log("====================================");
-    console.log("📦 COMPUTERHUB CATEGORIES");
-    console.log("====================================");
 
     const allCategories =
       await Category.find({})
@@ -196,43 +193,30 @@ async function seedCategories() {
         })
         .lean();
 
-    for (const category of allCategories) {
-      console.log(
-        `${category.sortOrder}. ${category.name} | ${category.slug} | ${
-          category.isActive
-            ? "Active"
-            : "Inactive"
-        }`
-      );
-    }
-
-    console.log("");
     console.log(
       `📊 Total categories: ${allCategories.length}`
     );
 
-    console.log(
-      `🟢 Active categories: ${
-        allCategories.filter(
-          (category) =>
-            category.isActive
-        ).length
-      }`
-    );
+    console.log("");
+
+    for (const category of allCategories) {
+      console.log(
+        `${category.sortOrder}. ${category.name} | ${category.slug}`
+      );
+    }
 
     console.log("");
-    console.log("====================================");
-    console.log("🎉 CATEGORY SEED COMPLETE");
-    console.log("====================================");
 
     await mongoose.disconnect();
 
-    console.log("🔌 MongoDB connection closed");
-  } catch (error) {
-    console.error("");
-    console.error(
-      "❌ CATEGORY SEED FAILED"
+    console.log(
+      "✅ Category seed completed successfully."
     );
+  } catch (error) {
+    console.error(
+      "❌ Category seed failed:"
+    );
+
     console.error(error);
 
     try {

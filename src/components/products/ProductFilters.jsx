@@ -8,114 +8,104 @@ import {
   X,
 } from "lucide-react";
 
-const filterGroups = [
-  {
-    title: "Category",
-    key: "category",
-    options: [
-      "Laptops",
-      "Desktops",
-      "PC Components",
-      "Monitors",
-      "Accessories",
-      "Gaming",
-    ],
-  },
-  {
-    title: "Brand",
-    key: "brand",
-    options: [
-      "Dell",
-      "HP",
-      "Lenovo",
-      "Apple",
-      "ASUS",
-      "Acer",
-      "MSI",
-      "Samsung",
-      "Corsair",
-      "Logitech",
-    ],
-  },
-  {
-    title: "RAM",
-    key: "ram",
-    options: [
-      "4 GB",
-      "8 GB",
-      "16 GB",
-      "32 GB",
-      "64 GB",
-    ],
-  },
-  {
-    title: "Storage",
-    key: "storage",
-    options: [
-      "256 GB",
-      "512 GB",
-      "1 TB",
-      "2 TB",
-    ],
-  },
+const GROUPS = [
+  ["Brand", "brand"],
+  ["Processor", "processor"],
+  ["RAM", "ram"],
+  ["Storage", "storage"],
+  ["Graphics", "graphics"],
 ];
 
 export default function ProductFilters({
   filters = {},
+  options = {},
   onFilterChange,
   onClearFilters,
+  showCategory = false,
 }) {
-  const [openGroups, setOpenGroups] = useState({
-    Category: true,
-    Brand: true,
-    RAM: true,
-    Storage: true,
-  });
+  const [openGroups, setOpenGroups] =
+    useState({
+      Brand: true,
+      Processor: true,
+      RAM: true,
+      Storage: true,
+      Graphics: false,
+    });
 
-  const toggleGroup = (title) => {
+  function toggleGroup(title) {
     setOpenGroups((previous) => ({
       ...previous,
-      [title]: !previous[title],
+      [title]:
+        !previous[title],
     }));
-  };
+  }
 
-  const handleCheckbox = (key, value) => {
-    const currentValues = filters[key] || [];
+  function handleCheckbox(
+    key,
+    value
+  ) {
+    const currentValues =
+      filters[key] || [];
 
-    const updatedValues = currentValues.includes(value)
-      ? currentValues.filter((item) => item !== value)
-      : [...currentValues, value];
+    const updatedValues =
+      currentValues.includes(value)
+        ? currentValues.filter(
+            (item) =>
+              item !== value
+          )
+        : [
+            ...currentValues,
+            value,
+          ];
 
-    onFilterChange?.(key, updatedValues);
-  };
+    onFilterChange?.(
+      key,
+      updatedValues
+    );
+  }
+
+  const groups = [
+    ...GROUPS,
+  ];
+
+  if (showCategory) {
+    groups.unshift([
+      "Category",
+      "category",
+    ]);
+  }
 
   return (
-    <aside className="w-full rounded-xl border border-gray-200 bg-white">
-      {/* Header */}
+    <aside className="w-full overflow-hidden rounded-2xl border border-gray-200 bg-white">
+      {/* HEADER */}
+
       <div className="flex items-center justify-between border-b border-gray-200 p-4">
         <div className="flex items-center gap-2">
           <Filter
-            size={19}
+            size={18}
             className="text-blue-600"
           />
 
-          <h2 className="font-bold text-gray-900">
+          <h2 className="font-black text-gray-900">
             Filters
           </h2>
         </div>
 
         <button
           type="button"
-          onClick={onClearFilters}
-          className="text-xs font-semibold text-blue-600 hover:text-blue-800"
+          onClick={
+            onClearFilters
+          }
+          className="text-xs font-bold text-blue-600 hover:text-blue-800"
         >
           Clear all
         </button>
       </div>
 
-      {/* Price */}
+      {/* PRICE */}
+
       <div className="border-b border-gray-200 p-4">
-        <h3 className="mb-3 text-sm font-semibold text-gray-900">
+        <h3 className="mb-3 text-sm font-bold text-gray-900">
           Price
         </h3>
 
@@ -123,150 +113,206 @@ export default function ProductFilters({
           <input
             type="number"
             min="0"
-            placeholder="Min"
-            value={filters.minPrice || ""}
+            value={
+              filters.minPrice ||
+              ""
+            }
             onChange={(event) =>
               onFilterChange?.(
                 "minPrice",
                 event.target.value
               )
             }
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            placeholder="Min"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
           />
 
           <input
             type="number"
             min="0"
-            placeholder="Max"
-            value={filters.maxPrice || ""}
+            value={
+              filters.maxPrice ||
+              ""
+            }
             onChange={(event) =>
               onFilterChange?.(
                 "maxPrice",
                 event.target.value
               )
             }
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            placeholder="Max"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
           />
         </div>
       </div>
 
-      {/* Filter Groups */}
-      {filterGroups.map((group) => {
-        const isOpen = openGroups[group.title];
+      {/* DYNAMIC FILTER GROUPS */}
 
-        return (
-          <div
-            key={group.title}
-            className="border-b border-gray-200 last:border-b-0"
-          >
-            <button
-              type="button"
-              onClick={() => toggleGroup(group.title)}
-              className="flex w-full items-center justify-between px-4 py-4 text-left"
+      {groups.map(
+        ([title, key]) => {
+          const values =
+            Array.isArray(
+              options[key]
+            )
+              ? options[key]
+              : [];
+
+          if (!values.length) {
+            return null;
+          }
+
+          const isOpen =
+            openGroups[title] !==
+            false;
+
+          return (
+            <div
+              key={key}
+              className="border-b border-gray-200 last:border-b-0"
             >
-              <span className="text-sm font-semibold text-gray-900">
-                {group.title}
-              </span>
+              <button
+                type="button"
+                onClick={() =>
+                  toggleGroup(
+                    title
+                  )
+                }
+                className="flex w-full items-center justify-between px-4 py-4 text-left"
+              >
+                <span className="text-sm font-bold text-gray-900">
+                  {title}
+                </span>
 
-              {isOpen ? (
-                <ChevronUp
-                  size={17}
-                  className="text-gray-500"
-                />
-              ) : (
-                <ChevronDown
-                  size={17}
-                  className="text-gray-500"
-                />
-              )}
-            </button>
+                {isOpen ? (
+                  <ChevronUp
+                    size={17}
+                    className="text-gray-500"
+                  />
+                ) : (
+                  <ChevronDown
+                    size={17}
+                    className="text-gray-500"
+                  />
+                )}
+              </button>
 
-            {isOpen && (
-              <div className="space-y-3 px-4 pb-4">
-                {group.options.map((option) => {
-                  const checked =
-                    filters[group.key]?.includes(
-                      option
-                    ) || false;
-
-                  return (
-                    <label
-                      key={option}
-                      className="flex cursor-pointer items-center gap-3 text-sm text-gray-600 hover:text-gray-900"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() =>
-                          handleCheckbox(
-                            group.key,
-                            option
-                          )
+              {isOpen && (
+                <div className="max-h-56 space-y-3 overflow-y-auto px-4 pb-4 pr-2">
+                  {values.map(
+                    (option) => (
+                      <label
+                        key={
+                          option
                         }
-                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
+                        className="flex cursor-pointer items-center gap-3 text-sm text-gray-600 hover:text-gray-900"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={
+                            (
+                              filters[
+                                key
+                              ] || []
+                            ).includes(
+                              option
+                            )
+                          }
+                          onChange={() =>
+                            handleCheckbox(
+                              key,
+                              option
+                            )
+                          }
+                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
 
-                      <span>{option}</span>
-                    </label>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        );
-      })}
+                        <span>
+                          {
+                            option
+                          }
+                        </span>
+                      </label>
+                    )
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        }
+      )}
 
-      {/* Rating */}
+      {/* RATING */}
+
       <div className="border-b border-gray-200 p-4">
-        <h3 className="mb-3 text-sm font-semibold text-gray-900">
+        <h3 className="mb-3 text-sm font-bold text-gray-900">
           Rating
         </h3>
 
         <div className="space-y-3">
-          {[4, 3, 2].map((rating) => (
-            <label
-              key={rating}
-              className="flex cursor-pointer items-center gap-3 text-sm text-gray-600 hover:text-gray-900"
-            >
-              <input
-                type="radio"
-                name="product-rating"
-                checked={filters.rating === rating}
-                onChange={() =>
-                  onFilterChange?.("rating", rating)
-                }
-                className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
+          {[4, 3, 2].map(
+            (rating) => (
+              <label
+                key={rating}
+                className="flex cursor-pointer items-center gap-3 text-sm text-gray-600"
+              >
+                <input
+                  type="radio"
+                  name="product-rating"
+                  checked={
+                    filters.rating ===
+                    rating
+                  }
+                  onChange={() =>
+                    onFilterChange?.(
+                      "rating",
+                      rating
+                    )
+                  }
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                />
 
-              <span>{rating}+ stars</span>
-            </label>
-          ))}
+                <span>
+                  {rating}+ stars
+                </span>
+              </label>
+            )
+          )}
 
-          <label className="flex cursor-pointer items-center gap-3 text-sm text-gray-600 hover:text-gray-900">
+          <label className="flex cursor-pointer items-center gap-3 text-sm text-gray-600">
             <input
               type="radio"
               name="product-rating"
-              checked={!filters.rating}
-              onChange={() =>
-                onFilterChange?.("rating", null)
+              checked={
+                !filters.rating
               }
-              className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
+              onChange={() =>
+                onFilterChange?.(
+                  "rating",
+                  null
+                )
+              }
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500"
             />
 
-            <span>All ratings</span>
+            <span>
+              All ratings
+            </span>
           </label>
         </div>
       </div>
 
-      {/* Mobile Clear */}
-      <div className="p-4 lg:hidden">
+      {/* RESET */}
+
+      <div className="p-4">
         <button
           type="button"
-          onClick={onClearFilters}
-          className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+          onClick={
+            onClearFilters
+          }
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-bold text-gray-700 transition hover:bg-gray-50"
         >
           <X size={16} />
-          Clear Filters
+          Reset filters
         </button>
       </div>
     </aside>
