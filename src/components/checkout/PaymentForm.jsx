@@ -2,221 +2,174 @@
 
 import {
   Banknote,
-  CreditCard,
+  CheckCircle2,
   ShieldCheck,
-  Wallet,
 } from "lucide-react";
 
 export default function PaymentForm({
   paymentMethod,
   setPaymentMethod,
 }) {
-  const methods = [
-    {
-      id: "card",
-      title: "Credit / Debit Card",
-      description: "Pay securely using your bank card",
-      icon: CreditCard,
-    },
-    {
-      id: "cod",
-      title: "Cash on Delivery",
-      description: "Pay when your order arrives",
-      icon: Banknote,
-    },
-    {
-      id: "wallet",
-      title: "Digital Wallet",
-      description: "Pay using your supported digital wallet",
-      icon: Wallet,
-    },
-  ];
+  const paymentMethodIsCod = paymentMethod === "cod";
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+      {/* Header */}
       <div className="mb-6">
         <h2 className="text-xl font-bold text-gray-900">
           Payment Method
         </h2>
 
         <p className="mt-1 text-sm text-gray-500">
-          Choose how you want to pay for your order.
+          Choose how you want to pay for your ComputerHub order.
         </p>
       </div>
 
-      <div className="space-y-3">
-        {methods.map((method) => {
-          const Icon = method.icon;
-          const selected = paymentMethod === method.id;
+      {/* Cash on Delivery */}
+      <button
+        type="button"
+        onClick={() => setPaymentMethod("cod")}
+        className={`flex w-full items-center gap-4 rounded-xl border p-4 text-left transition ${
+          paymentMethodIsCod
+            ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100"
+            : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
+        }`}
+      >
+        {/* Icon */}
+        <div
+          className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${
+            paymentMethodIsCod
+              ? "bg-blue-600 text-white"
+              : "bg-gray-100 text-gray-600"
+          }`}
+        >
+          <Banknote size={23} />
+        </div>
 
-          return (
-            <button
-              key={method.id}
-              type="button"
-              onClick={() => setPaymentMethod(method.id)}
-              className={`flex w-full items-center gap-4 rounded-xl border p-4 text-left transition ${
-                selected
-                  ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100"
-                  : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
-              }`}
-            >
-              <div
-                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
-                  selected
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-100 text-gray-600"
-                }`}
-              >
-                <Icon size={21} />
-              </div>
+        {/* Text */}
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="font-semibold text-gray-900">
+              Cash on Delivery
+            </h3>
 
-              <div className="flex-1">
-                <h3 className="font-semibold text-gray-900">
-                  {method.title}
-                </h3>
+            <span className="rounded-full bg-green-100 px-2.5 py-1 text-[11px] font-bold text-green-700">
+              AVAILABLE
+            </span>
+          </div>
 
-                <p className="mt-1 text-sm text-gray-500">
-                  {method.description}
-                </p>
-              </div>
+          <p className="mt-1 text-sm leading-5 text-gray-500">
+            Pay in cash when your ComputerHub order is delivered.
+          </p>
+        </div>
 
-              <div
-                className={`flex h-5 w-5 items-center justify-center rounded-full border-2 ${
-                  selected
-                    ? "border-blue-600"
-                    : "border-gray-300"
-                }`}
-              >
-                {selected && (
-                  <div className="h-2.5 w-2.5 rounded-full bg-blue-600" />
-                )}
-              </div>
-            </button>
-          );
-        })}
-      </div>
+        {/* Radio */}
+        <div
+          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
+            paymentMethodIsCod
+              ? "border-blue-600"
+              : "border-gray-300"
+          }`}
+        >
+          {paymentMethodIsCod && (
+            <div className="h-2.5 w-2.5 rounded-full bg-blue-600" />
+          )}
+        </div>
+      </button>
 
-      {paymentMethod === "card" && (
-        <div className="mt-5 rounded-xl border border-gray-200 bg-gray-50 p-5">
-          <h3 className="mb-4 font-semibold text-gray-900">
-            Card Information
-          </h3>
-
-          <div className="space-y-4">
-            <div>
-              <label
-                htmlFor="cardNumber"
-                className="mb-2 block text-sm font-semibold text-gray-700"
-              >
-                Card Number
-              </label>
-
-              <input
-                id="cardNumber"
-                type="text"
-                inputMode="numeric"
-                autoComplete="cc-number"
-                placeholder="1234 5678 9012 3456"
-                className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label
-                  htmlFor="expiry"
-                  className="mb-2 block text-sm font-semibold text-gray-700"
-                >
-                  Expiry Date
-                </label>
-
-                <input
-                  id="expiry"
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="cc-exp"
-                  placeholder="MM / YY"
-                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="cvv"
-                  className="mb-2 block text-sm font-semibold text-gray-700"
-                >
-                  CVV
-                </label>
-
-                <input
-                  id="cvv"
-                  type="password"
-                  inputMode="numeric"
-                  autoComplete="cc-csc"
-                  placeholder="•••"
-                  maxLength={4}
-                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                />
-              </div>
+      {/* COD information */}
+      {paymentMethodIsCod && (
+        <div className="mt-5 rounded-xl border border-green-200 bg-green-50 p-5">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-green-100 text-green-700">
+              <CheckCircle2 size={19} />
             </div>
 
             <div>
-              <label
-                htmlFor="cardName"
-                className="mb-2 block text-sm font-semibold text-gray-700"
-              >
-                Name on Card
-              </label>
+              <h3 className="font-semibold text-green-900">
+                Cash on Delivery selected
+              </h3>
 
-              <input
-                id="cardName"
-                type="text"
-                autoComplete="cc-name"
-                placeholder="Enter name on card"
-                className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-              />
+              <p className="mt-1 text-sm leading-6 text-green-800">
+                You do not need to pay online. Your order will be
+                confirmed first, and you will pay the courier in cash
+                when your package arrives.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-lg bg-white/70 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-green-700">
+                Payment
+              </p>
+
+              <p className="mt-1 text-sm font-medium text-green-900">
+                Cash at delivery
+              </p>
             </div>
 
-            <p className="text-xs leading-5 text-gray-500">
-              Card details are only displayed for checkout UI. A real
-              payment gateway should process card information securely
-              before accepting live payments.
-            </p>
+            <div className="rounded-lg bg-white/70 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-green-700">
+                Order status
+              </p>
+
+              <p className="mt-1 text-sm font-medium text-green-900">
+                Confirmed after checkout
+              </p>
+            </div>
           </div>
         </div>
       )}
 
-      {paymentMethod === "cod" && (
-        <div className="mt-5 rounded-xl border border-green-200 bg-green-50 p-4">
-          <p className="text-sm font-medium text-green-800">
-            You will pay the delivery amount in cash when your
-            ComputerHub order arrives.
+      {/* Future payment methods */}
+      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+          <p className="text-sm font-semibold text-gray-700">
+            Credit / Debit Card
           </p>
-        </div>
-      )}
 
-      {paymentMethod === "wallet" && (
-        <div className="mt-5 rounded-xl border border-blue-200 bg-blue-50 p-4">
-          <p className="text-sm font-medium text-blue-800">
-            Digital wallet payment integration will be connected
-            during the payment gateway phase.
+          <p className="mt-1 text-xs leading-5 text-gray-500">
+            Online card payment will be connected when a live payment
+            gateway is added.
           </p>
-        </div>
-      )}
 
-      <div className="mt-6 flex items-center gap-3 rounded-xl bg-gray-50 p-4">
+          <span className="mt-3 inline-flex rounded-full bg-gray-200 px-2.5 py-1 text-[11px] font-bold text-gray-600">
+            COMING SOON
+          </span>
+        </div>
+
+        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+          <p className="text-sm font-semibold text-gray-700">
+            Digital Wallet
+          </p>
+
+          <p className="mt-1 text-xs leading-5 text-gray-500">
+            Digital wallet payments will be connected in a future
+            payment-gateway phase.
+          </p>
+
+          <span className="mt-3 inline-flex rounded-full bg-gray-200 px-2.5 py-1 text-[11px] font-bold text-gray-600">
+            COMING SOON
+          </span>
+        </div>
+      </div>
+
+      {/* Security */}
+      <div className="mt-6 flex items-start gap-3 rounded-xl bg-gray-50 p-4">
         <ShieldCheck
-          className="shrink-0 text-green-600"
+          className="mt-0.5 shrink-0 text-green-600"
           size={22}
         />
 
         <div>
           <p className="text-sm font-semibold text-gray-800">
-            Secure Payment
+            Secure Checkout
           </p>
 
-          <p className="text-xs text-gray-500">
-            Your payment information will be securely processed.
+          <p className="mt-1 text-xs leading-5 text-gray-500">
+            Your order and delivery information is submitted securely.
+            ComputerHub currently accepts Cash on Delivery.
           </p>
         </div>
       </div>

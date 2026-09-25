@@ -1,4 +1,3 @@
-
 import Link from "next/link";
 import {
   Mail,
@@ -8,12 +7,13 @@ import {
   ShieldCheck,
   Truck,
   Headphones,
+  Banknote,
 } from "lucide-react";
 
 export default function Footer() {
   return (
     <footer className="bg-slate-950 text-white">
-      {/* Newsletter */}
+      {/* Newsletter / Join section */}
       <section className="border-b border-white/10">
         <div className="container-main py-12">
           <div className="flex flex-col justify-between gap-8 rounded-3xl bg-blue-600 p-7 sm:p-10 lg:flex-row lg:items-center">
@@ -27,7 +27,7 @@ export default function Footer() {
               </h2>
 
               <p className="mt-2 text-sm leading-6 text-blue-100">
-                Stay informed about new products, special offers and useful
+                Stay informed about new products, special offers and
                 technology updates from ComputerHub.
               </p>
             </div>
@@ -62,29 +62,48 @@ export default function Footer() {
             </Link>
 
             <p className="mt-5 max-w-md text-sm leading-7 text-gray-400">
-              ComputerHub is a technology marketplace built for people who
-              want better computers, smarter upgrades and reliable tech
-              products in one place.
+              ComputerHub is a technology marketplace built for people
+              who want better computers, smarter upgrades and reliable
+              technology products in one place.
             </p>
 
+            {/* Contact information */}
             <div className="mt-6 space-y-3 text-sm text-gray-400">
-              <div className="flex items-center gap-3">
-                <Mail size={17} className="text-blue-400" />
+              <a
+                href="mailto:support@computerhub.com"
+                className="flex items-center gap-3 transition hover:text-white"
+              >
+                <Mail
+                  size={17}
+                  className="shrink-0 text-blue-400"
+                />
+
                 support@computerhub.com
-              </div>
+              </a>
 
-              <div className="flex items-center gap-3">
-                <Phone size={17} className="text-blue-400" />
+              <a
+                href="tel:+10000000000"
+                className="flex items-center gap-3 transition hover:text-white"
+              >
+                <Phone
+                  size={17}
+                  className="shrink-0 text-blue-400"
+                />
+
                 +1 000 000 0000
-              </div>
+              </a>
 
               <div className="flex items-center gap-3">
-                <MapPin size={17} className="text-blue-400" />
+                <MapPin
+                  size={17}
+                  className="shrink-0 text-blue-400"
+                />
+
                 Technology Marketplace
               </div>
             </div>
 
-            {/* Social Media */}
+            {/* Social media */}
             <div className="mt-6 flex gap-2">
               <SocialButton
                 href="https://facebook.com"
@@ -100,7 +119,7 @@ export default function Footer() {
 
               <SocialButton
                 href="https://twitter.com"
-                label="Twitter"
+                label="Twitter / X"
                 icon={<TwitterIcon />}
               />
 
@@ -126,12 +145,12 @@ export default function Footer() {
             ]}
           />
 
-          {/* Help */}
+          {/* Customer Help */}
           <FooterColumn
             title="Customer Help"
             links={[
               ["My Account", "/account"],
-              ["Orders", "/orders"],
+              ["My Orders", "/orders"],
               ["Wishlist", "/wishlist"],
               ["Shopping Cart", "/cart"],
               ["Checkout", "/checkout"],
@@ -155,7 +174,7 @@ export default function Footer() {
         </div>
 
         {/* Trust features */}
-        <div className="mt-14 grid gap-4 border-t border-white/10 pt-10 sm:grid-cols-3">
+        <div className="mt-14 grid gap-4 border-t border-white/10 pt-10 sm:grid-cols-2 lg:grid-cols-4">
           <TrustItem
             icon={ShieldCheck}
             title="Secure Shopping"
@@ -166,6 +185,12 @@ export default function Footer() {
             icon={Truck}
             title="Reliable Delivery"
             text="Get your technology delivered with care."
+          />
+
+          <TrustItem
+            icon={Banknote}
+            title="Cash on Delivery"
+            text="Pay in cash when your order arrives."
           />
 
           <TrustItem
@@ -183,9 +208,28 @@ export default function Footer() {
             © {new Date().getFullYear()} ComputerHub. All rights reserved.
           </p>
 
-          <p>
-            Built for modern technology shopping.
-          </p>
+          <div className="flex flex-wrap gap-x-4 gap-y-2">
+            <Link
+              href="/privacy"
+              className="transition hover:text-gray-300"
+            >
+              Privacy
+            </Link>
+
+            <Link
+              href="/terms"
+              className="transition hover:text-gray-300"
+            >
+              Terms
+            </Link>
+
+            <Link
+              href="/cookies"
+              className="transition hover:text-gray-300"
+            >
+              Cookies
+            </Link>
+          </div>
         </div>
       </div>
     </footer>
@@ -195,11 +239,13 @@ export default function Footer() {
 function FooterColumn({ title, links }) {
   return (
     <div>
-      <h3 className="text-sm font-bold text-white">{title}</h3>
+      <h3 className="text-sm font-bold text-white">
+        {title}
+      </h3>
 
       <ul className="mt-5 space-y-3">
         {links.map(([label, href]) => (
-          <li key={href}>
+          <li key={`${label}-${href}`}>
             <Link
               href={href}
               className="text-sm text-gray-400 transition hover:text-white"
@@ -227,7 +273,6 @@ function SocialButton({ href, label, icon }) {
   );
 }
 
-/* Facebook */
 function FacebookIcon() {
   return (
     <svg
@@ -242,7 +287,6 @@ function FacebookIcon() {
   );
 }
 
-/* Instagram */
 function InstagramIcon() {
   return (
     <svg
@@ -256,14 +300,31 @@ function InstagramIcon() {
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      <rect x="3" y="3" width="18" height="18" rx="5" />
-      <circle cx="12" cy="12" r="4" />
-      <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+      <rect
+        x="3"
+        y="3"
+        width="18"
+        height="18"
+        rx="5"
+      />
+
+      <circle
+        cx="12"
+        cy="12"
+        r="4"
+      />
+
+      <circle
+        cx="17.5"
+        cy="6.5"
+        r="1"
+        fill="currentColor"
+        stroke="none"
+      />
     </svg>
   );
 }
 
-/* Twitter / X */
 function TwitterIcon() {
   return (
     <svg
@@ -278,7 +339,6 @@ function TwitterIcon() {
   );
 }
 
-/* LinkedIn */
 function LinkedinIcon() {
   return (
     <svg
@@ -301,10 +361,14 @@ function TrustItem({ icon: Icon, title, text }) {
       </div>
 
       <div>
-        <h4 className="text-sm font-bold text-white">{title}</h4>
-        <p className="mt-1 text-xs leading-5 text-gray-500">{text}</p>
+        <h4 className="text-sm font-bold text-white">
+          {title}
+        </h4>
+
+        <p className="mt-1 text-xs leading-5 text-gray-500">
+          {text}
+        </p>
       </div>
     </div>
   );
 }
-
