@@ -45,6 +45,7 @@ const ProductSchema = new mongoose.Schema(
       type: Number,
       default: 0,
       min: 0,
+      max: 100,
     },
 
     stock: {
@@ -53,9 +54,15 @@ const ProductSchema = new mongoose.Schema(
       min: 0,
     },
 
+    /*
+     * SKU is generated automatically by the API
+     * when the seller/admin does not provide one.
+     *
+     * This prevents empty SKU duplicate-key errors.
+     */
     sku: {
       type: String,
-      default: "",
+      default: undefined,
       trim: true,
       uppercase: true,
       sparse: true,
@@ -115,6 +122,28 @@ const ProductSchema = new mongoose.Schema(
       type: String,
       default: "",
       trim: true,
+    },
+
+    /*
+     * Additional flexible specifications.
+     *
+     * This allows ComputerHub to support products
+     * that are NOT laptops.
+     *
+     * Examples:
+     *
+     * GPU:
+     * VRAM, Memory Type, Ports
+     *
+     * Monitor:
+     * Resolution, Refresh Rate, Panel Type
+     *
+     * SSD:
+     * Capacity, Interface, Read Speed
+     */
+    specifications: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
     },
 
     images: {
