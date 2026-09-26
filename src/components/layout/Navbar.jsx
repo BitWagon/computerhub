@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Search,
@@ -13,22 +13,49 @@ import {
   Headphones,
   Tag,
   Menu,
+  LogOut,
 } from "lucide-react";
 
 import MobileMenu from "./MobileMenu";
+import { useCart } from "@/context/CartContext";
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [user, setUser] = useState(null);
+
+  const { itemCount } = useCart();
+
+  useEffect(() => {
+    const loadUser = () => {
+      try {
+        const saved = localStorage.getItem("user");
+        setUser(saved ? JSON.parse(saved) : null);
+      } catch {
+        setUser(null);
+      }
+    };
+
+    loadUser();
+
+    window.addEventListener("storage", loadUser);
+
+    return () => {
+      window.removeEventListener("storage", loadUser);
+    };
+  }, []);
+
+  const logout = () => {
+    localStorage.removeItem("user");
+    window.dispatchEvent(new Event("storage"));
+    window.location.href = "/";
+  };
 
   return (
     <>
       <header className="sticky top-0 z-50 border-b border-gray-200 bg-white">
-        {/* Top bar */}
         <div className="hidden bg-slate-950 text-white md:block">
           <div className="container-main flex h-9 items-center justify-between text-xs">
-            <p>
-              Welcome to ComputerHub — your technology marketplace
-            </p>
+            <p>Welcome to ComputerHub — your technology marketplace</p>
 
             <div className="flex items-center gap-5 text-gray-300">
               <span>Fast Delivery</span>
@@ -38,9 +65,7 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Main header */}
         <div className="container-main flex h-[72px] items-center gap-3 sm:gap-5">
-          {/* Mobile menu */}
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
@@ -50,7 +75,6 @@ export default function Navbar() {
             <Menu size={24} />
           </button>
 
-          {/* Logo */}
           <Link
             href="/"
             className="flex shrink-0 items-center gap-2"
@@ -71,7 +95,6 @@ export default function Navbar() {
             </div>
           </Link>
 
-          {/* Search */}
           <div className="hidden flex-1 md:block">
             <form
               action="/search"
@@ -94,20 +117,39 @@ export default function Navbar() {
             </form>
           </div>
 
-          {/* Login */}
-          <Link
-            href="/login"
-            className="hidden items-center gap-2 rounded-xl px-3 py-2 text-gray-700 transition hover:bg-gray-100 sm:flex"
-          >
-            <User size={21} />
+          {user ? (
+            <div className="hidden items-center gap-2 rounded-xl px-3 py-2 sm:flex">
+              <User size={21} />
 
-            <div className="hidden leading-tight xl:block">
-              <p className="text-[11px] text-gray-500">Welcome</p>
-              <p className="text-sm font-bold text-gray-900">Sign In</p>
+              <div className="hidden leading-tight xl:block">
+                <p className="text-[11px] text-gray-500">Welcome</p>
+                <p className="text-sm font-bold text-gray-900">
+                  {user.firstName || user.name || "User"}
+                </p>
+              </div>
+
+              <button
+                onClick={logout}
+                className="rounded-lg p-1 text-red-600 hover:bg-red-50"
+                title="Logout"
+              >
+                <LogOut size={18} />
+              </button>
             </div>
-          </Link>
+          ) : (
+            <Link
+              href="/login"
+              className="hidden items-center gap-2 rounded-xl px-3 py-2 text-gray-700 transition hover:bg-gray-100 sm:flex"
+            >
+              <User size={21} />
 
-          {/* Cart */}
+              <div className="hidden leading-tight xl:block">
+                <p className="text-[11px] text-gray-500">Welcome</p>
+                <p className="text-sm font-bold text-gray-900">Sign In</p>
+              </div>
+            </Link>
+          )}
+
           <Link
             href="/cart"
             className="relative flex items-center gap-2 rounded-xl px-3 py-2 text-gray-700 transition hover:bg-gray-100"
@@ -116,17 +158,14 @@ export default function Navbar() {
               <ShoppingCart size={23} />
 
               <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-bold text-white">
-                0
+                {itemCount}
               </span>
             </div>
 
-            <span className="hidden text-sm font-bold xl:block">
-              Cart
-            </span>
+            <span className="hidden text-sm font-bold xl:block">Cart</span>
           </Link>
         </div>
 
-        {/* Desktop navigation */}
         <nav className="hidden border-t border-gray-100 lg:block">
           <div className="container-main flex h-12 items-center justify-between">
             <div className="flex h-full items-center gap-1">
@@ -197,7 +236,6 @@ export default function Navbar() {
           </div>
         </nav>
 
-        {/* Mobile search */}
         <div className="border-t border-gray-100 px-4 py-3 md:hidden">
           <form
             action="/search"
@@ -221,9 +259,10 @@ export default function Navbar() {
         </div>
       </header>
 
-      {mobileOpen && (
-        <MobileMenu onClose={() => setMobileOpen(false)} />
-      )}
+      <MobileMenu
+        open={mobileOpen}
+        onClose={() => setMobileOpen(false)}
+      />
     </>
   );
 }

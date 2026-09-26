@@ -22,9 +22,35 @@ const geistMono = localFont({
 });
 
 export const metadata = {
-  title: "ComputerHub | Computers, Laptops & Technology",
+  metadataBase: new URL("https://YOURDOMAIN.com"),
+
+  title: {
+    default: "ComputerHub | Computers, Laptops & Technology",
+    template: "%s | ComputerHub",
+  },
+
   description:
     "ComputerHub is a technology marketplace for laptops, desktops, PC components, monitors, accessories and gaming products.",
+
+  alternates: {
+    canonical: "/",
+  },
+
+  openGraph: {
+    title: "ComputerHub",
+    description:
+      "Technology Marketplace for laptops, desktops and gaming products.",
+    url: "https://YOURDOMAIN.com",
+    siteName: "ComputerHub",
+    type: "website",
+    images: ["/og-image.jpg"],
+  },
+
+  twitter: {
+    card: "summary_large_image",
+    title: "ComputerHub",
+    images: ["/og-image.jpg"],
+  },
 };
 
 export default function RootLayout({ children }) {

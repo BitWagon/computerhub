@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   X,
@@ -12,50 +13,48 @@ import {
   User,
   ShoppingCart,
   HardDrive,
+  LogOut,
 } from "lucide-react";
 
+import { useCart } from "@/context/CartContext";
+
 export default function MobileMenu({ onClose }) {
+  const { itemCount } = useCart();
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const loadUser = () => {
+      try {
+        const saved = localStorage.getItem("user");
+        setUser(saved ? JSON.parse(saved) : null);
+      } catch {
+        setUser(null);
+      }
+    };
+
+    loadUser();
+
+    window.addEventListener("storage", loadUser);
+
+    return () => window.removeEventListener("storage", loadUser);
+  }, []);
+
+  const logout = () => {
+    localStorage.removeItem("user");
+    window.dispatchEvent(new Event("storage"));
+    onClose();
+    window.location.href = "/";
+  };
+
   const links = [
-    {
-      label: "All Products",
-      href: "/products",
-      icon: Tag,
-    },
-    {
-      label: "Laptops",
-      href: "/category/laptops",
-      icon: Laptop,
-    },
-    {
-      label: "Desktop PCs",
-      href: "/category/desktops",
-      icon: Monitor,
-    },
-    {
-      label: "PC Components",
-      href: "/category/components",
-      icon: Cpu,
-    },
-    {
-      label: "Gaming",
-      href: "/category/gaming",
-      icon: Gamepad2,
-    },
-    {
-      label: "Monitors",
-      href: "/category/monitors",
-      icon: Monitor,
-    },
-    {
-      label: "Accessories",
-      href: "/category/accessories",
-      icon: Headphones,
-    },
-    {
-      label: "Storage",
-      href: "/category/storage",
-      icon: HardDrive,
-    },
+    { label: "All Products", href: "/products", icon: Tag },
+    { label: "Laptops", href: "/category/laptops", icon: Laptop },
+    { label: "Desktop PCs", href: "/category/desktops", icon: Monitor },
+    { label: "PC Components", href: "/category/components", icon: Cpu },
+    { label: "Gaming", href: "/category/gaming", icon: Gamepad2 },
+    { label: "Monitors", href: "/category/monitors", icon: Monitor },
+    { label: "Accessories", href: "/category/accessories", icon: Headphones },
+    { label: "Storage", href: "/category/storage", icon: HardDrive },
   ];
 
   return (
@@ -68,7 +67,6 @@ export default function MobileMenu({ onClose }) {
       />
 
       <aside className="relative h-full w-[86%] max-w-sm overflow-y-auto bg-white shadow-2xl">
-        {/* Header */}
         <div className="flex h-20 items-center justify-between border-b border-gray-200 px-5">
           <Link
             href="/"
@@ -81,35 +79,50 @@ export default function MobileMenu({ onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl p-2 text-gray-600 transition hover:bg-gray-100"
-            aria-label="Close menu"
+            className="rounded-xl p-2 text-gray-600 hover:bg-gray-100"
           >
             <X size={24} />
           </button>
         </div>
 
-        {/* Account */}
         <div className="border-b border-gray-200 p-5">
-          <Link
-            href="/login"
-            onClick={onClose}
-            className="flex items-center gap-3 rounded-xl bg-slate-900 p-4 text-white"
-          >
-            <User size={21} />
+          {user ? (
+            <div className="rounded-xl bg-slate-900 p-4 text-white">
+              <div className="flex items-center gap-3">
+                <User size={21} />
+                <div>
+                  <p className="text-xs text-gray-300">Welcome back</p>
+                  <p className="font-bold">
+                    {user.firstName || user.name || "User"}
+                  </p>
+                </div>
+              </div>
 
-            <div>
-              <p className="text-xs text-gray-300">
-                Welcome to ComputerHub
-              </p>
-
-              <p className="font-bold">
-                Sign In / Create Account
-              </p>
+              <button
+                onClick={logout}
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-red-600 py-2 font-semibold text-white hover:bg-red-700"
+              >
+                <LogOut size={18} />
+                Logout
+              </button>
             </div>
-          </Link>
+          ) : (
+            <Link
+              href="/login"
+              onClick={onClose}
+              className="flex items-center gap-3 rounded-xl bg-slate-900 p-4 text-white"
+            >
+              <User size={21} />
+              <div>
+                <p className="text-xs text-gray-300">
+                  Welcome to ComputerHub
+                </p>
+                <p className="font-bold">Sign In / Create Account</p>
+              </div>
+            </Link>
+          )}
         </div>
 
-        {/* Navigation */}
         <div className="p-4">
           <p className="mb-3 px-3 text-xs font-bold uppercase tracking-wider text-gray-400">
             Shop Technology
@@ -124,7 +137,7 @@ export default function MobileMenu({ onClose }) {
                   key={item.href}
                   href={item.href}
                   onClick={onClose}
-                  className="flex items-center gap-4 rounded-xl px-3 py-3.5 text-sm font-semibold text-gray-700 transition hover:bg-blue-50 hover:text-blue-600"
+                  className="flex items-center gap-4 rounded-xl px-3 py-3.5 text-sm font-semibold text-gray-700 hover:bg-blue-50 hover:text-blue-600"
                 >
                   <Icon size={19} />
                   {item.label}
@@ -134,15 +147,20 @@ export default function MobileMenu({ onClose }) {
           </div>
         </div>
 
-        {/* Cart */}
         <div className="border-t border-gray-200 p-4">
           <Link
             href="/cart"
             onClick={onClose}
-            className="flex items-center gap-4 rounded-xl px-3 py-3.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
+            className="flex items-center justify-between rounded-xl px-3 py-3.5 text-sm font-semibold text-gray-700 hover:bg-gray-100"
           >
-            <ShoppingCart size={19} />
-            Shopping Cart
+            <div className="flex items-center gap-4">
+              <ShoppingCart size={19} />
+              Shopping Cart
+            </div>
+
+            <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-blue-600 px-2 text-xs font-bold text-white">
+              {itemCount}
+            </span>
           </Link>
         </div>
       </aside>
