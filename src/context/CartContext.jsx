@@ -16,12 +16,9 @@ export function CartProvider({ children }) {
   const [cartItems, setCartItems] = useState([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Load cart from localStorage
   useEffect(() => {
     try {
-      const savedCart = localStorage.getItem(
-        CART_STORAGE_KEY
-      );
+      const savedCart = localStorage.getItem(CART_STORAGE_KEY);
 
       if (savedCart) {
         const parsedCart = JSON.parse(savedCart);
@@ -30,45 +27,26 @@ export function CartProvider({ children }) {
           setCartItems(parsedCart);
         }
       }
-    } catch (error) {
-      console.error(
-        "Failed to load cart:",
-        error
-      );
+    } catch {
+      setCartItems([]);
     } finally {
       setIsLoaded(true);
     }
   }, []);
 
-  // Save cart to localStorage
   useEffect(() => {
-    if (!isLoaded) {
-      return;
-    }
+    if (!isLoaded) return;
 
     try {
       localStorage.setItem(
         CART_STORAGE_KEY,
         JSON.stringify(cartItems)
       );
-    } catch (error) {
-      console.error(
-        "Failed to save cart:",
-        error
-      );
-    }
+    } catch {}
   }, [cartItems, isLoaded]);
 
-  // Add product to cart
   const addToCart = (product, quantity = 1) => {
-    if (!product || !product.id) {
-      return;
-    }
-
-    const safeQuantity = Math.max(
-      1,
-      Number(quantity) || 1
-    );
+    if (!product || !product.id) return;
 
     setCartItems((currentItems) => {
       const existingItem = currentItems.find(
@@ -77,160 +55,68 @@ export function CartProvider({ children }) {
       );
 
       if (existingItem) {
-        return currentItems.map((item) => {
-          if (
-            String(item.id) !==
-            String(product.id)
-          ) {
-            return item;
-          }
-
-          const maxStock =
-            Number(item.stock) || 999;
-
-          return {
-            ...item,
-            quantity: Math.min(
-              item.quantity + safeQuantity,
-              maxStock
-            ),
-          };
-        });
+        return currentItems.map((item) =>
+          String(item.id) === String(product.id)
+            ? {
+                ...item,
+                quantity: item.quantity + quantity,
+              }
+            : item
+        );
       }
-
-      const maxStock =
-        Number(product.stock) || 999;
 
       return [
         ...currentItems,
         {
           ...product,
-          quantity: Math.min(
-            safeQuantity,
-            maxStock
-          ),
+          quantity,
         },
       ];
     });
   };
 
-  // Remove product
   const removeFromCart = (productId) => {
     setCartItems((currentItems) =>
       currentItems.filter(
         (item) =>
-          String(item.id) !==
-          String(productId)
+          String(item.id) !== String(productId)
       )
     );
   };
 
-  // Update quantity
-  const updateQuantity = (
-    productId,
-    quantity
-  ) => {
-    const newQuantity = Number(quantity);
-
-    if (!Number.isFinite(newQuantity)) {
-      return;
-    }
-
-    if (newQuantity <= 0) {
+  const updateQuantity = (productId, quantity) => {
+    if (quantity <= 0) {
       removeFromCart(productId);
       return;
     }
 
     setCartItems((currentItems) =>
-      currentItems.map((item) => {
-        if (
-          String(item.id) !==
-          String(productId)
-        ) {
-          return item;
-        }
-
-        const maxStock =
-          Number(item.stock) || 999;
-
-        return {
-          ...item,
-          quantity: Math.min(
-            Math.max(1, newQuantity),
-            maxStock
-          ),
-        };
-      })
+      currentItems.map((item) =>
+        String(item.id) === String(productId)
+          ? {
+              ...item,
+              quantity,
+            }
+          : item
+      )
     );
   };
 
-  // Increase quantity
-  const increaseQuantity = (productId) => {
-    setCartItems((currentItems) =>
-      currentItems.map((item) => {
-        if (
-          String(item.id) !==
-          String(productId)
-        ) {
-          return item;
-        }
-
-        const maxStock =
-          Number(item.stock) || 999;
-
-        return {
-          ...item,
-          quantity: Math.min(
-            item.quantity + 1,
-            maxStock
-          ),
-        };
-      })
-    );
-  };
-
-  // Decrease quantity
-  const decreaseQuantity = (productId) => {
-    setCartItems((currentItems) =>
-      currentItems
-        .map((item) => {
-          if (
-            String(item.id) !==
-            String(productId)
-          ) {
-            return item;
-          }
-
-          return {
-            ...item,
-            quantity: item.quantity - 1,
-          };
-        })
-        .filter((item) => item.quantity > 0)
-    );
-  };
-
-  // Clear cart
   const clearCart = () => {
     setCartItems([]);
   };
 
-  // Total number of products
   const itemCount = useMemo(() => {
     return cartItems.reduce(
-      (total, item) =>
-        total + Number(item.quantity || 0),
+      (total, item) => total + item.quantity,
       0
     );
   }, [cartItems]);
 
-  // Total price
   const subtotal = useMemo(() => {
     return cartItems.reduce(
       (total, item) =>
-        total +
-        Number(item.price || 0) *
-          Number(item.quantity || 0),
+        total + Number(item.price || 0) * item.quantity,
       0
     );
   }, [cartItems]);
@@ -243,8 +129,6 @@ export function CartProvider({ children }) {
     addToCart,
     removeFromCart,
     updateQuantity,
-    increaseQuantity,
-    decreaseQuantity,
     clearCart,
   };
 

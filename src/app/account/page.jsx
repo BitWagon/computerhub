@@ -37,8 +37,11 @@ export default function AccountPage() {
         }
 
         setUser(data.user);
+
+        // Sync Navbar and MobileMenu immediately
+        localStorage.setItem("user", JSON.stringify(data.user));
+        window.dispatchEvent(new Event("storage"));
       } catch (error) {
-        console.error("Failed to load account:", error);
         toast.error("Unable to load your account.");
         router.push("/login");
       } finally {
@@ -61,19 +64,20 @@ export default function AccountPage() {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(
-          data.message || "Unable to logout."
-        );
+        throw new Error(data.message || "Unable to logout.");
       }
+
+      // Clear local sync for Navbar
+      localStorage.removeItem("user");
+      window.dispatchEvent(new Event("storage"));
 
       toast.success("Logged out successfully.");
 
       router.push("/login");
       router.refresh();
     } catch (error) {
-      console.error("Logout error:", error);
       toast.error(
-        error.message || "Unable to logout."
+        error instanceof Error ? error.message : "Unable to logout."
       );
     } finally {
       setLoggingOut(false);
@@ -93,15 +97,11 @@ export default function AccountPage() {
     );
   }
 
-  if (!user) {
-    return null;
-  }
+  if (!user) return null;
 
   return (
     <main className="min-h-screen bg-gray-50 py-10">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-
-        {/* Header */}
         <div className="mb-8">
           <p className="text-sm font-semibold uppercase tracking-wide text-blue-600">
             My Account
@@ -117,8 +117,6 @@ export default function AccountPage() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
-
-          {/* Profile */}
           <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm lg:col-span-2">
             <div className="mb-6 flex items-center justify-between">
               <div>
@@ -137,7 +135,6 @@ export default function AccountPage() {
             </div>
 
             <div className="grid gap-5 sm:grid-cols-2">
-
               <div className="rounded-xl border border-gray-200 p-4">
                 <div className="mb-2 flex items-center gap-2 text-sm text-gray-500">
                   <User className="h-4 w-4" />
@@ -192,11 +189,9 @@ export default function AccountPage() {
                   {user.isActive ? "Active" : "Disabled"}
                 </p>
               </div>
-
             </div>
           </section>
 
-          {/* Account Actions */}
           <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
             <h2 className="text-xl font-bold text-gray-900">
               Quick Actions
@@ -207,21 +202,16 @@ export default function AccountPage() {
             </p>
 
             <div className="mt-6 space-y-3">
-
               <button
                 type="button"
                 onClick={() => router.push("/orders")}
                 className="flex w-full items-center gap-3 rounded-xl border border-gray-200 px-4 py-3 text-left transition hover:border-blue-300 hover:bg-blue-50"
               >
                 <Package className="h-5 w-5 text-blue-600" />
-
                 <div>
-                  <p className="font-semibold text-gray-900">
-                    My Orders
-                  </p>
-
-                  <p className="text-xs text-gray-500">
-                    View your orders
+                  <p className="font-semibold text-gray-900">My Orders</p>
+                  <p className="text-sm text-gray-500">
+                    View purchase history
                   </p>
                 </div>
               </button>
@@ -229,17 +219,13 @@ export default function AccountPage() {
               <button
                 type="button"
                 onClick={() => router.push("/wishlist")}
-                className="flex w-full items-center gap-3 rounded-xl border border-gray-200 px-4 py-3 text-left transition hover:border-blue-300 hover:bg-blue-50"
+                className="flex w-full items-center gap-3 rounded-xl border border-gray-200 px-4 py-3 text-left transition hover:border-pink-300 hover:bg-pink-50"
               >
-                <Heart className="h-5 w-5 text-blue-600" />
-
+                <Heart className="h-5 w-5 text-pink-600" />
                 <div>
-                  <p className="font-semibold text-gray-900">
-                    Wishlist
-                  </p>
-
-                  <p className="text-xs text-gray-500">
-                    View saved products
+                  <p className="font-semibold text-gray-900">Wishlist</p>
+                  <p className="text-sm text-gray-500">
+                    Saved products
                   </p>
                 </div>
               </button>
@@ -248,21 +234,23 @@ export default function AccountPage() {
                 type="button"
                 onClick={handleLogout}
                 disabled={loggingOut}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-gray-900 px-4 py-3 font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex w-full items-center gap-3 rounded-xl border border-red-200 px-4 py-3 text-left transition hover:bg-red-50 disabled:opacity-60"
               >
                 {loggingOut ? (
-                  <>
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    Logging out...
-                  </>
+                  <Loader2 className="h-5 w-5 animate-spin text-red-600" />
                 ) : (
-                  <>
-                    <LogOut className="h-5 w-5" />
-                    Logout
-                  </>
+                  <LogOut className="h-5 w-5 text-red-600" />
                 )}
-              </button>
 
+                <div>
+                  <p className="font-semibold text-red-600">
+                    {loggingOut ? "Logging out..." : "Logout"}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Sign out of your account
+                  </p>
+                </div>
+              </button>
             </div>
           </section>
         </div>

@@ -18,7 +18,7 @@ import {
 
 import { useCart } from "@/context/CartContext";
 
-export default function MobileMenu({ onClose }) {
+export default function MobileMenu({ open, onClose }) {
   const { itemCount } = useCart();
   const [user, setUser] = useState(null);
 
@@ -33,7 +33,6 @@ export default function MobileMenu({ onClose }) {
     };
 
     loadUser();
-
     window.addEventListener("storage", loadUser);
 
     return () => window.removeEventListener("storage", loadUser);
@@ -45,6 +44,8 @@ export default function MobileMenu({ onClose }) {
     onClose();
     window.location.href = "/";
   };
+
+  if (!open) return null;
 
   const links = [
     { label: "All Products", href: "/products", icon: Tag },
@@ -80,6 +81,7 @@ export default function MobileMenu({ onClose }) {
             type="button"
             onClick={onClose}
             className="rounded-xl p-2 text-gray-600 hover:bg-gray-100"
+            aria-label="Close"
           >
             <X size={24} />
           </button>
@@ -90,8 +92,10 @@ export default function MobileMenu({ onClose }) {
             <div className="rounded-xl bg-slate-900 p-4 text-white">
               <div className="flex items-center gap-3">
                 <User size={21} />
+
                 <div>
                   <p className="text-xs text-gray-300">Welcome back</p>
+
                   <p className="font-bold">
                     {user.firstName || user.name || "User"}
                   </p>
@@ -100,7 +104,7 @@ export default function MobileMenu({ onClose }) {
 
               <button
                 onClick={logout}
-                className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-red-600 py-2 font-semibold text-white hover:bg-red-700"
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-red-600 py-2 font-semibold text-white transition hover:bg-red-700"
               >
                 <LogOut size={18} />
                 Logout
@@ -113,11 +117,15 @@ export default function MobileMenu({ onClose }) {
               className="flex items-center gap-3 rounded-xl bg-slate-900 p-4 text-white"
             >
               <User size={21} />
+
               <div>
                 <p className="text-xs text-gray-300">
                   Welcome to ComputerHub
                 </p>
-                <p className="font-bold">Sign In / Create Account</p>
+
+                <p className="font-bold">
+                  Sign In / Create Account
+                </p>
               </div>
             </Link>
           )}
@@ -137,7 +145,7 @@ export default function MobileMenu({ onClose }) {
                   key={item.href}
                   href={item.href}
                   onClick={onClose}
-                  className="flex items-center gap-4 rounded-xl px-3 py-3.5 text-sm font-semibold text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+                  className="flex items-center gap-4 rounded-xl px-3 py-3.5 text-sm font-semibold text-gray-700 transition hover:bg-blue-50 hover:text-blue-600"
                 >
                   <Icon size={19} />
                   {item.label}
@@ -151,7 +159,7 @@ export default function MobileMenu({ onClose }) {
           <Link
             href="/cart"
             onClick={onClose}
-            className="flex items-center justify-between rounded-xl px-3 py-3.5 text-sm font-semibold text-gray-700 hover:bg-gray-100"
+            className="flex items-center justify-between rounded-xl px-3 py-3.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
           >
             <div className="flex items-center gap-4">
               <ShoppingCart size={19} />

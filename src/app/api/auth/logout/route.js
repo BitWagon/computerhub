@@ -5,10 +5,6 @@ export async function POST() {
   try {
     clearAuthCookie();
 
-    console.log(
-      "✅ USER LOGGED OUT"
-    );
-
     return NextResponse.json(
       {
         success: true,
@@ -17,11 +13,6 @@ export async function POST() {
       { status: 200 }
     );
   } catch (error) {
-    console.error(
-      "❌ LOGOUT ERROR:",
-      error
-    );
-
     return NextResponse.json(
       {
         success: false,

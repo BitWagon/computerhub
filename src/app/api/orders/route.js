@@ -5,7 +5,6 @@ import Order from "@/models/Order";
 import Product from "@/models/Product";
 import { getCurrentUserToken } from "@/lib/auth";
 
-
 // ============================================================
 // POST /api/orders
 // Create a new order
@@ -29,11 +28,7 @@ export async function POST(request) {
 
     const body = await request.json();
 
-    console.log("====================================");
-    console.log("🛒 NEW ORDER REQUEST");
-    console.log("User ID:", tokenData.userId);
-    console.log("Email:", tokenData.email);
-    console.log("====================================");
+    // Order request received
 
     const customer = body.customer || {};
 
@@ -54,7 +49,6 @@ export async function POST(request) {
         { status: 400 }
       );
     }
-
 
     // ========================================================
     // CUSTOMER INFORMATION
@@ -99,7 +93,6 @@ export async function POST(request) {
     const postalCode =
       customer.postalCode ||
       "";
-
 
     // ========================================================
     // VALIDATE CUSTOMER INFORMATION
@@ -165,7 +158,6 @@ export async function POST(request) {
       );
     }
 
-
     // ========================================================
     // FORMAT ORDER ITEMS
     // ========================================================
@@ -209,7 +201,6 @@ export async function POST(request) {
       };
     });
 
-
     // ========================================================
     // MAKE SURE PRODUCTS HAVE IDs
     // ========================================================
@@ -229,7 +220,6 @@ export async function POST(request) {
         { status: 400 }
       );
     }
-
 
     // ========================================================
     // VALIDATE ITEM PRICES
@@ -253,13 +243,51 @@ export async function POST(request) {
       );
     }
 
+    // ========================================================
+    // SERVER-SIDE PRODUCT VALIDATION (NEW)
+    // Prevents fake prices and out-of-stock purchases
+    // ========================================================
+
+    const validatedItems = [];
+
+    for (const item of formattedItems) {
+      const product = await Product.findById(item.productId);
+
+      if (!product) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: `"${item.name}" is no longer available.`,
+          },
+          { status: 404 }
+        );
+      }
+
+      if (product.stock < item.quantity) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: `"${product.name}" only has ${product.stock} item(s) left.`,
+          },
+          { status: 400 }
+        );
+      }
+
+      validatedItems.push({
+        ...item,
+        name: product.name,
+        image: product.images?.[0] || item.image,
+        price: product.price,
+        subtotal: product.price * item.quantity,
+      });
+    }
 
     // ========================================================
     // CALCULATE TOTALS
     // ========================================================
 
     const subtotal =
-      formattedItems.reduce(
+      validatedItems.reduce(
         (sum, item) =>
           sum + item.subtotal,
         0
@@ -279,7 +307,6 @@ export async function POST(request) {
     const total =
       subtotal + deliveryFee;
 
-
     // ========================================================
     // PAYMENT METHOD
     // ========================================================
@@ -298,7 +325,6 @@ export async function POST(request) {
       );
     }
 
-
     // ========================================================
     // CREATE ORDER NUMBER
     // ========================================================
@@ -308,7 +334,6 @@ export async function POST(request) {
         1000 +
         Math.random() * 9000
       )}`;
-
 
     // ========================================================
     // CREATE ORDER
@@ -347,7 +372,7 @@ export async function POST(request) {
         },
 
         items:
-          formattedItems,
+          validatedItems,
 
         subtotal,
 
@@ -364,53 +389,22 @@ export async function POST(request) {
           "pending",
       });
 
-
     // ========================================================
-    // TERMINAL LOG
+    // REDUCE STOCK (NEW)
     // ========================================================
 
-    console.log("====================================");
-    console.log(
-      "✅ ORDER CREATED SUCCESSFULLY"
-    );
+    for (const item of validatedItems) {
+      await Product.findByIdAndUpdate(
+        item.productId,
+        {
+          $inc: {
+            stock: -item.quantity,
+          },
+        }
+      );
+    }
 
-    console.log(
-      "Order ID:",
-      order._id.toString()
-    );
-
-    console.log(
-      "Order Number:",
-      order.orderNumber
-    );
-
-    console.log(
-      "User ID:",
-      tokenData.userId
-    );
-
-    console.log(
-      "Customer:",
-      order.customer.email
-    );
-
-    console.log(
-      "Subtotal:",
-      order.subtotal
-    );
-
-    console.log(
-      "Delivery Fee:",
-      order.deliveryFee
-    );
-
-    console.log(
-      "Total:",
-      order.total
-    );
-
-    console.log("====================================");
-
+    // Order created successfully
 
     // ========================================================
     // RESPONSE
@@ -449,6 +443,8 @@ export async function POST(request) {
 
           total:
             order.total,
+                      total:
+            order.total,
 
           paymentMethod:
             order.paymentMethod,
@@ -467,25 +463,18 @@ export async function POST(request) {
     );
 
   } catch (error) {
-    console.error("====================================");
-    console.error(
-      "❌ CREATE ORDER ERROR"
-    );
-    console.error(error);
-    console.error("====================================");
-
     return NextResponse.json(
       {
         success: false,
         message:
-          error.message ||
-          "Unable to create order.",
+          error instanceof Error
+            ? error.message
+            : "Unable to create order.",
       },
       { status: 500 }
     );
   }
 }
-
 
 // ============================================================
 // GET /api/orders
@@ -519,28 +508,13 @@ export async function GET() {
       );
     }
 
-    console.log("====================================");
-    console.log("📦 GET ORDERS");
-    console.log(
-      "User ID:",
-      tokenData.userId
-    );
-    console.log(
-      "Role:",
-      tokenData.role
-    );
-    console.log("====================================");
-
     let orders;
-
 
     // ========================================================
     // ADMIN
     // ========================================================
 
-    if (
-      tokenData.role === "admin"
-    ) {
+    if (tokenData.role === "admin") {
       orders =
         await Order.find({})
           .sort({
@@ -549,7 +523,6 @@ export async function GET() {
           .limit(100)
           .lean();
     }
-
 
     // ========================================================
     // SELLER
@@ -577,7 +550,6 @@ export async function GET() {
             product._id
         );
 
-
       /*
        * No products means no seller orders.
        */
@@ -593,7 +565,6 @@ export async function GET() {
           { status: 200 }
         );
       }
-
 
       /*
        * Find orders containing at least
@@ -613,7 +584,6 @@ export async function GET() {
           .limit(100)
           .lean();
 
-
       /*
        * Only return the seller's own
        * products inside each order.
@@ -630,7 +600,6 @@ export async function GET() {
           )
         );
 
-
       orders =
         orders.map((order) => {
           const sellerItems =
@@ -645,7 +614,6 @@ export async function GET() {
                 )
               : [];
 
-
           const sellerSubtotal =
             sellerItems.reduce(
               (sum, item) =>
@@ -655,7 +623,6 @@ export async function GET() {
                 ),
               0
             );
-
 
           return {
             ...order,
@@ -682,7 +649,6 @@ export async function GET() {
         });
     }
 
-
     // ========================================================
     // CUSTOMER
     // ========================================================
@@ -700,7 +666,6 @@ export async function GET() {
           .lean();
     }
 
-
     // ========================================================
     // RESPONSE
     // ========================================================
@@ -714,24 +679,19 @@ export async function GET() {
     );
 
   } catch (error) {
-    console.error(
-      "❌ GET ORDERS ERROR:",
-      error
-    );
-
     return NextResponse.json(
       {
         success: false,
         message:
-          error.message ||
-          "Unable to get orders.",
+          error instanceof Error
+            ? error.message
+            : "Unable to get orders.",
         orders: [],
       },
       { status: 500 }
     );
   }
 }
-
 
 // ============================================================
 // PATCH /api/orders
@@ -761,7 +721,6 @@ export async function PATCH(request) {
       );
     }
 
-
     const body =
       await request.json();
 
@@ -770,7 +729,6 @@ export async function PATCH(request) {
       orderStatus,
       paymentStatus,
     } = body;
-
 
     if (!orderId) {
       return NextResponse.json(
@@ -782,7 +740,6 @@ export async function PATCH(request) {
         { status: 400 }
       );
     }
-
 
     // ========================================================
     // ALLOWED STATUSES
@@ -802,45 +759,35 @@ export async function PATCH(request) {
       "paid",
       "failed",
     ];
-
-
-    // ========================================================
+        // ========================================================
     // VALIDATE STATUS VALUES
     // ========================================================
 
     if (
       orderStatus !== undefined &&
-      !allowedOrderStatuses.includes(
-        orderStatus
-      )
+      !allowedOrderStatuses.includes(orderStatus)
     ) {
       return NextResponse.json(
         {
           success: false,
-          message:
-            "Invalid order status.",
+          message: "Invalid order status.",
         },
         { status: 400 }
       );
     }
-
 
     if (
       paymentStatus !== undefined &&
-      !allowedPaymentStatuses.includes(
-        paymentStatus
-      )
+      !allowedPaymentStatuses.includes(paymentStatus)
     ) {
       return NextResponse.json(
         {
           success: false,
-          message:
-            "Invalid payment status.",
+          message: "Invalid payment status.",
         },
         { status: 400 }
       );
     }
-
 
     // ========================================================
     // NOTHING TO UPDATE
@@ -853,122 +800,76 @@ export async function PATCH(request) {
       return NextResponse.json(
         {
           success: false,
-          message:
-            "Nothing to update.",
+          message: "Nothing to update.",
         },
         { status: 400 }
       );
     }
 
-
     // ========================================================
     // ADMIN
     // ========================================================
 
-    if (
-      tokenData.role === "admin"
-    ) {
+    if (tokenData.role === "admin") {
       const updateData = {};
 
-
-      if (
-        orderStatus !== undefined
-      ) {
-        updateData.orderStatus =
-          orderStatus;
+      if (orderStatus !== undefined) {
+        updateData.orderStatus = orderStatus;
       }
 
-
-      if (
-        paymentStatus !== undefined
-      ) {
-        updateData.paymentStatus =
-          paymentStatus;
+      if (paymentStatus !== undefined) {
+        updateData.paymentStatus = paymentStatus;
       }
 
-
-      const order =
-        await Order.findByIdAndUpdate(
-          orderId,
-          updateData,
-          {
-            new: true,
-            runValidators: true,
-          }
-        );
-
+      const order = await Order.findByIdAndUpdate(
+        orderId,
+        updateData,
+        {
+          new: true,
+          runValidators: true,
+        }
+      );
 
       if (!order) {
         return NextResponse.json(
           {
             success: false,
-            message:
-              "Order not found.",
+            message: "Order not found.",
           },
           { status: 404 }
         );
       }
 
-
-      console.log("====================================");
-      console.log(
-        "✅ ADMIN UPDATED ORDER"
-      );
-      console.log(
-        "Order ID:",
-        order._id.toString()
-      );
-      console.log(
-        "Order Status:",
-        order.orderStatus
-      );
-      console.log(
-        "Payment Status:",
-        order.paymentStatus
-      );
-      console.log("====================================");
-
-
       return NextResponse.json(
         {
           success: true,
-
-          message:
-            "Order updated successfully.",
-
+          message: "Order updated successfully.",
           order,
         },
         { status: 200 }
       );
     }
 
-
     // ========================================================
     // SELLER
     // ========================================================
 
-    if (
-      tokenData.role === "seller"
-    ) {
+    if (tokenData.role === "seller") {
       /*
        * Find products owned by this seller.
        */
 
       const sellerProducts =
         await Product.find({
-          sellerId:
-            tokenData.userId,
+          sellerId: tokenData.userId,
         })
           .select("_id")
           .lean();
 
-
       const sellerProductIds =
         sellerProducts.map(
-          (product) =>
-            product._id
+          (product) => product._id
         );
-
 
       if (
         sellerProductIds.length === 0
@@ -983,7 +884,6 @@ export async function PATCH(request) {
         );
       }
 
-
       /*
        * Make sure this order contains
        * at least one of the seller's products.
@@ -994,11 +894,9 @@ export async function PATCH(request) {
           _id: orderId,
 
           "items.productId": {
-            $in:
-              sellerProductIds,
+            $in: sellerProductIds,
           },
         });
-
 
       if (!sellerOrder) {
         return NextResponse.json(
@@ -1010,7 +908,6 @@ export async function PATCH(request) {
           { status: 403 }
         );
       }
-
 
       /*
        * Seller can update the order status.
@@ -1033,7 +930,6 @@ export async function PATCH(request) {
         );
       }
 
-
       if (
         orderStatus === undefined
       ) {
@@ -1047,46 +943,21 @@ export async function PATCH(request) {
         );
       }
 
-
       sellerOrder.orderStatus =
         orderStatus;
 
       await sellerOrder.save();
 
-
-      console.log("====================================");
-      console.log(
-        "✅ SELLER UPDATED ORDER"
-      );
-      console.log(
-        "Seller ID:",
-        tokenData.userId
-      );
-      console.log(
-        "Order ID:",
-        sellerOrder._id.toString()
-      );
-      console.log(
-        "Order Status:",
-        sellerOrder.orderStatus
-      );
-      console.log("====================================");
-
-
       return NextResponse.json(
         {
           success: true,
-
           message:
             "Order status updated successfully.",
-
-          order:
-            sellerOrder,
+          order: sellerOrder,
         },
         { status: 200 }
       );
     }
-
 
     // ========================================================
     // OTHER USERS
@@ -1102,17 +973,13 @@ export async function PATCH(request) {
     );
 
   } catch (error) {
-    console.error(
-      "❌ UPDATE ORDER ERROR:",
-      error
-    );
-
     return NextResponse.json(
       {
         success: false,
         message:
-          error.message ||
-          "Unable to update order.",
+          error instanceof Error
+            ? error.message
+            : "Unable to update order.",
       },
       { status: 500 }
     );

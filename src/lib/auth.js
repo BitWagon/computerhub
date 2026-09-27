@@ -1,90 +1,60 @@
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const COOKIE_NAME = "computerhub_token";
 
-if (!JWT_SECRET) {
-  throw new Error(
-    "Please define JWT_SECRET inside .env.local"
-  );
-}
-
-const AUTH_COOKIE_NAME = "computerhub_token";
-
-export function createToken(user) {
+export function signToken(user) {
   return jwt.sign(
     {
-      userId: user._id.toString(),
+      id: user._id.toString(),
       email: user.email,
       role: user.role,
     },
-    JWT_SECRET,
+    process.env.JWT_SECRET,
     {
       expiresIn: "7d",
     }
   );
 }
 
-export function setAuthCookie(token, remember = true) {
-  const cookieStore = cookies();
-
-  cookieStore.set(AUTH_COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: remember
-      ? 60 * 60 * 24 * 7
-      : 60 * 60 * 24,
-  });
-}
-
-export function clearAuthCookie() {
-  const cookieStore = cookies();
-
-  cookieStore.set(AUTH_COOKIE_NAME, "", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 0,
-  });
-}
-
-export function getAuthToken() {
-  const cookieStore = cookies();
-
-  return cookieStore.get(
-    AUTH_COOKIE_NAME
-  )?.value;
-}
-
 export function verifyToken(token) {
-  if (!token) {
-    return null;
-  }
-
   try {
-    return jwt.verify(
-      token,
-      JWT_SECRET
-    );
-  } catch (error) {
-    console.error(
-      "JWT verification failed:",
-      error
-    );
-
+    return jwt.verify(token, process.env.JWT_SECRET);
+  } catch {
     return null;
   }
 }
 
-export function getCurrentUserToken() {
-  const token = getAuthToken();
+export async function getCurrentUser() {
+  const cookieStore = await cookies();
 
-  if (!token) {
-    return null;
-  }
+  const token = cookieStore.get(COOKIE_NAME)?.value;
+
+  if (!token) return null;
 
   return verifyToken(token);
+}
+
+export async function setAuthCookie(token) {
+  const cookieStore = await cookies();
+
+  cookieStore.set(COOKIE_NAME, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 7,
+  });
+}
+
+export async function clearAuthCookie() {
+  const cookieStore = await cookies();
+
+  cookieStore.set(COOKIE_NAME, "", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    expires: new Date(0),
+  });
 }

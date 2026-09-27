@@ -27,9 +27,7 @@ export default function LoginForm() {
       [name]: type === "checkbox" ? checked : value,
     }));
 
-    if (error) {
-      setError("");
-    }
+    if (error) setError("");
   };
 
   const handleSubmit = async (event) => {
@@ -68,7 +66,6 @@ export default function LoginForm() {
         throw new Error(data.message || "Unable to login.");
       }
 
-      // Save user for Navbar
       if (data.user) {
         localStorage.setItem("user", JSON.stringify(data.user));
         window.dispatchEvent(new Event("storage"));
@@ -86,9 +83,7 @@ export default function LoginForm() {
 
       router.refresh();
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Unable to login.";
-
+      const message = error instanceof Error ? error.message : "Unable to login.";
       setError(message);
       toast.error(message);
     } finally {
@@ -105,10 +100,7 @@ export default function LoginForm() {
       )}
 
       <div>
-        <label
-          htmlFor="email"
-          className="mb-2 block text-sm font-medium text-slate-700"
-        >
+        <label htmlFor="email" className="mb-2 block text-sm font-medium text-slate-700">
           Email address
         </label>
 
@@ -127,17 +119,11 @@ export default function LoginForm() {
 
       <div>
         <div className="mb-2 flex items-center justify-between">
-          <label
-            htmlFor="password"
-            className="block text-sm font-medium text-slate-700"
-          >
+          <label htmlFor="password" className="block text-sm font-medium text-slate-700">
             Password
           </label>
 
-          <Link
-            href="#"
-            className="text-sm font-medium text-blue-600 hover:text-blue-700"
-          >
+          <Link href="#" className="text-sm font-medium text-blue-600 hover:text-blue-700">
             Forgot password?
           </Link>
         </div>
@@ -190,10 +176,7 @@ export default function LoginForm() {
 
       <p className="text-center text-sm text-slate-600">
         Don't have an account?{" "}
-        <Link
-          href="/register"
-          className="font-semibold text-blue-600 hover:text-blue-700"
-        >
+        <Link href="/register" className="font-semibold text-blue-600 hover:text-blue-700">
           Create an account
         </Link>
       </p>

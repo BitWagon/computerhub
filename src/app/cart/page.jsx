@@ -40,7 +40,6 @@ export default function CartPage() {
     return (
       <main className="min-h-screen bg-gray-50">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          {/* Breadcrumb */}
           <div className="mb-6 flex items-center gap-2 text-sm text-gray-500">
             <Link
               href="/"
@@ -65,7 +64,6 @@ export default function CartPage() {
   return (
     <main className="min-h-screen bg-gray-50">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* Header */}
         <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <div className="mb-3 flex items-center gap-2 text-sm text-gray-500">
@@ -103,7 +101,6 @@ export default function CartPage() {
             </p>
           </div>
 
-          {/* Clear Cart */}
           <button
             type="button"
             onClick={clearCart}
@@ -114,9 +111,7 @@ export default function CartPage() {
           </button>
         </div>
 
-        {/* Cart Layout */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
-          {/* Items */}
           <section className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
             <div className="border-b border-gray-200 px-5 py-4">
               <h2 className="font-bold text-gray-900">
@@ -132,11 +127,9 @@ export default function CartPage() {
             ))}
           </section>
 
-          {/* Summary */}
           <CartSummary />
         </div>
 
-        {/* Continue Shopping */}
         <div className="mt-6">
           <Link
             href="/products"
