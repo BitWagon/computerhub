@@ -2,78 +2,73 @@
 
 import {
   Package,
-  ShoppingBag,
+  ShoppingCart,
   DollarSign,
   TrendingUp,
-  Clock3,
 } from "lucide-react";
 
-export default function SellerStats({
-  products = 0,
-  orders = 0,
-  sales = 0,
-  pendingOrders = 0,
-  activeProducts = 0,
-}) {
-  const stats = [
+export default function SellerStats({ stats = {} }) {
+  const cards = [
     {
-      label: "Total Products",
-      value: products,
-      helper: `${activeProducts} active`,
+      title: "Total Products",
+      value: stats.totalProducts ?? 0,
       icon: Package,
+      color: "blue",
     },
     {
-      label: "Total Orders",
-      value: orders,
-      helper: `${pendingOrders} pending`,
-      icon: ShoppingBag,
+      title: "Total Orders",
+      value: stats.totalOrders ?? 0,
+      icon: ShoppingCart,
+      color: "green",
     },
     {
-      label: "Total Sales",
-      value: `Rs. ${Number(
-        sales || 0
-      ).toLocaleString("en-PK")}`,
-      helper: "Gross sales",
+      title: "Revenue",
+      value: `PKR ${(stats.revenue ?? 0).toLocaleString()}`,
       icon: DollarSign,
+      color: "purple",
     },
     {
-      label: "Pending Orders",
-      value: pendingOrders,
-      helper: "Need attention",
-      icon: Clock3,
+      title: "Growth",
+      value: `${stats.growth ?? 0}%`,
+      icon: TrendingUp,
+      color: "orange",
     },
   ];
 
+  const colors = {
+    blue: "bg-blue-100 text-blue-600",
+    green: "bg-green-100 text-green-600",
+    purple: "bg-purple-100 text-purple-600",
+    orange: "bg-orange-100 text-orange-600",
+  };
+
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {stats.map((stat) => {
-        const Icon = stat.icon;
+    <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+      {cards.map((card) => {
+        const Icon = card.icon;
 
         return (
           <div
-            key={stat.label}
-            className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
+            key={card.title}
+            className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition hover:shadow-md"
           >
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500">
-                  {stat.label}
+                <p className="text-sm text-gray-500">
+                  {card.title}
                 </p>
 
-                <p className="mt-2 text-2xl font-bold text-gray-900">
-                  {stat.value}
-                </p>
-
-                <p className="mt-1 text-xs text-gray-500">
-                  {stat.helper}
-                </p>
+                <h3 className="mt-2 text-3xl font-bold text-gray-900">
+                  {card.value}
+                </h3>
               </div>
 
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50">
-                <Icon
-                  size={21}
-                  className="text-blue-600"
-                />
+              <div
+                className={`flex h-12 w-12 items-center justify-center rounded-xl ${
+                  colors[card.color]
+                }`}
+              >
+                <Icon size={24} />
               </div>
             </div>
           </div>

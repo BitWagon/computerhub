@@ -10,146 +10,138 @@ import {
   Store,
   FolderTree,
   MessageSquare,
-  ArrowLeft,
+  Settings,
   LogOut,
-  ShieldCheck,
+  X,
 } from "lucide-react";
 
+const menuItems = [
+  {
+    label: "Dashboard",
+    href: "/admin",
+    icon: LayoutDashboard,
+  },
+  {
+    label: "Orders",
+    href: "/admin/orders",
+    icon: Package,
+  },
+  {
+    label: "Products",
+    href: "/admin/products",
+    icon: ShoppingCart,
+  },
+  {
+    label: "Users",
+    href: "/admin/users",
+    icon: Users,
+  },
+  {
+    label: "Sellers",
+    href: "/admin/sellers",
+    icon: Store,
+  },
+  {
+    label: "Categories",
+    href: "/admin/categories",
+    icon: FolderTree,
+  },
+  {
+    label: "Reviews",
+    href: "/admin/reviews",
+    icon: MessageSquare,
+  },
+  {
+    label: "Settings",
+    href: "/admin/settings",
+    icon: Settings,
+  },
+];
+
 export default function AdminSidebar({
-  onLogout,
-  loggingOut = false,
+  open = true,
+  onClose,
 }) {
   const pathname = usePathname();
 
-  const links = [
-    {
-      label: "Dashboard",
-      href: "/admin",
-      icon: LayoutDashboard,
-    },
-    {
-      label: "Products",
-      href: "/admin/products",
-      icon: Package,
-    },
-    {
-      label: "Orders",
-      href: "/admin/orders",
-      icon: ShoppingCart,
-    },
-    {
-      label: "Users",
-      href: "/admin/users",
-      icon: Users,
-    },
-    {
-      label: "Sellers",
-      href: "/admin/sellers",
-      icon: Store,
-    },
-    {
-      label: "Categories",
-      href: "/admin/categories",
-      icon: FolderTree,
-    },
-    {
-      label: "Reviews",
-      href: "/admin/reviews",
-      icon: MessageSquare,
-    },
-  ];
-
-  function isActive(href) {
-    if (href === "/admin") {
-      return pathname === "/admin";
-    }
-
-    return pathname.startsWith(href);
-  }
-
   return (
-    <aside className="flex h-full w-64 flex-col border-r border-gray-200 bg-white">
-      {/* BRAND */}
+    <>
+      {open && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
+          onClick={onClose}
+        />
+      )}
 
-      <div className="border-b border-gray-200 p-5">
-        <Link
-          href="/admin"
-          className="flex items-center gap-3"
-        >
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white">
-            <ShieldCheck size={20} />
-          </div>
+      <aside
+        className={`fixed left-0 top-0 z-50 h-screen w-72 border-r border-gray-200 bg-white transition-transform duration-300 lg:sticky lg:z-auto ${
+          open
+            ? "translate-x-0"
+            : "-translate-x-full lg:translate-x-0"
+        }`}
+      >
+        <div className="flex h-16 items-center justify-between border-b border-gray-200 px-6">
+          <Link
+            href="/admin"
+            className="text-xl font-bold text-blue-600"
+          >
+            ComputerHub
+          </Link>
 
-          <div>
-            <p className="font-bold text-gray-900">
-              ComputerHub
-            </p>
-
-            <p className="text-xs text-gray-500">
-              Admin Panel
-            </p>
-          </div>
-        </Link>
-      </div>
-
-      {/* NAVIGATION */}
-
-      <nav className="flex-1 space-y-1 overflow-y-auto p-4">
-        {links.map((link) => {
-          const Icon = link.icon;
-          const active = isActive(
-            link.href
-          );
-
-          return (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition ${
-                active
-                  ? "bg-blue-50 text-blue-700"
-                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-              }`}
-            >
-              <Icon size={19} />
-
-              <span>{link.label}</span>
-            </Link>
-          );
-        })}
-
-        <div className="my-4 border-t border-gray-200" />
-
-        <Link
-          href="/"
-          className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-gray-600 transition hover:bg-gray-50 hover:text-gray-900"
-        >
-          <ArrowLeft size={19} />
-
-          <span>View Store</span>
-        </Link>
-      </nav>
-
-      {/* LOGOUT */}
-
-      {onLogout && (
-        <div className="border-t border-gray-200 p-4">
           <button
             type="button"
-            onClick={onLogout}
-            disabled={loggingOut}
-            className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={onClose}
+            className="rounded-lg p-2 hover:bg-gray-100 lg:hidden"
           >
-            <LogOut size={19} />
-
-            <span>
-              {loggingOut
-                ? "Logging out..."
-                : "Logout"}
-            </span>
+            <X size={20} />
           </button>
         </div>
-      )}
-    </aside>
+
+        <nav className="flex h-[calc(100%-64px)] flex-col justify-between p-4">
+          <div className="space-y-1">
+            {menuItems.map((item) => {
+              const Icon = item.icon;
+
+              const active =
+                pathname === item.href ||
+                pathname.startsWith(item.href + "/");
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${
+                    active
+                      ? "bg-blue-600 text-white"
+                      : "text-gray-700 hover:bg-gray-100"
+                  }`}
+                >
+                  <Icon size={20} />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+
+          <div className="border-t border-gray-200 pt-4">
+            <Link
+              href="/"
+              className="mb-2 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-gray-700 transition hover:bg-gray-100"
+            >
+              <Store size={20} />
+              View Website
+            </Link>
+
+            <Link
+              href="/api/auth/logout"
+              className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-red-600 transition hover:bg-red-50"
+            >
+              <LogOut size={20} />
+              Logout
+            </Link>
+          </div>
+        </nav>
+      </aside>
+    </>
   );
 }

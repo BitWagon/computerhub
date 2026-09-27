@@ -27,9 +27,7 @@ export default function ProductDetailsPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!productId) {
-      return;
-    }
+    if (!productId) return;
 
     async function loadProduct() {
       try {
@@ -45,21 +43,13 @@ export default function ProductDetailsPage() {
 
         const data = await response.json();
 
-        if (
-          !response.ok ||
-          !data.success ||
-          !data.product
-        ) {
-          throw new Error(
-            data.message || "Product not found."
-          );
+        if (!response.ok || !data.success || !data.product) {
+          throw new Error(data.message || "Product not found.");
         }
 
         const apiProduct = data.product;
 
-        const productPrice = Number(
-          apiProduct.price || 0
-        );
+        const productPrice = Number(apiProduct.price || 0);
 
         const productOldPrice = Number(
           apiProduct.oldPrice ||
@@ -83,9 +73,7 @@ export default function ProductDetailsPage() {
           );
         }
 
-        const productImages = Array.isArray(
-          apiProduct.images
-        )
+        const productImages = Array.isArray(apiProduct.images)
           ? apiProduct.images.filter(Boolean)
           : apiProduct.image
             ? [apiProduct.image]
@@ -135,17 +123,11 @@ export default function ProductDetailsPage() {
 
           discount: productDiscount,
 
-          stock: Number(
-            apiProduct.stock || 0
-          ),
+          stock: Number(apiProduct.stock || 0),
 
-          rating: Number(
-            apiProduct.rating || 0
-          ),
+          rating: Number(apiProduct.rating || 0),
 
-          reviews: Number(
-            apiProduct.reviews || 0
-          ),
+          reviews: Number(apiProduct.reviews || 0),
 
           freeDelivery:
             apiProduct.freeDelivery !== false,
@@ -158,15 +140,12 @@ export default function ProductDetailsPage() {
         };
 
         setProduct(formattedProduct);
-      } catch (err) {
-        console.error(
-          "Product details error:",
-          err
-        );
 
+      } catch (err) {
         setError(
-          err.message ||
-            "Unable to load this product."
+          err instanceof Error
+            ? err.message
+            : "Unable to load this product."
         );
       } finally {
         setLoading(false);
@@ -175,10 +154,6 @@ export default function ProductDetailsPage() {
 
     loadProduct();
   }, [productId]);
-
-  /* -------------------------
-     LOADING
-  ------------------------- */
 
   if (loading) {
     return (
@@ -192,15 +167,10 @@ export default function ProductDetailsPage() {
 
               <div className="space-y-5 rounded-xl border border-gray-200 bg-white p-7">
                 <div className="h-8 w-3/4 rounded bg-gray-200" />
-
                 <div className="h-5 w-1/3 rounded bg-gray-200" />
-
                 <div className="h-10 w-1/2 rounded bg-gray-200" />
-
                 <div className="h-24 rounded bg-gray-200" />
-
                 <div className="h-12 rounded bg-gray-200" />
-
                 <div className="h-12 rounded bg-gray-200" />
               </div>
             </div>
@@ -210,31 +180,24 @@ export default function ProductDetailsPage() {
     );
   }
 
-  /* -------------------------
-     NOT FOUND / ERROR
-  ------------------------- */
-
   if (error || !product) {
     return (
       <main className="min-h-screen bg-gray-50">
         <div className="mx-auto max-w-7xl px-4 py-20 text-center sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-lg rounded-xl border border-gray-200 bg-white p-10">
-            <h1 className="text-2xl font-bold text-gray-900">
-              Product Not Found
-            </h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Product Not Found
+          </h1>
 
-            <p className="mt-3 text-sm leading-6 text-gray-500">
-              {error ||
-                "The product you are looking for does not exist or may have been removed."}
-            </p>
+          <p className="mt-3 text-gray-500">
+            {error || "This product is unavailable."}
+          </p>
 
-            <Link
-              href="/products"
-              className="mt-6 inline-flex rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
-            >
-              Browse Products
-            </Link>
-          </div>
+          <Link
+            href="/products"
+            className="mt-6 inline-flex items-center rounded-lg bg-blue-600 px-5 py-3 text-white hover:bg-blue-700"
+          >
+            Browse Products
+          </Link>
         </div>
       </main>
     );
@@ -242,330 +205,207 @@ export default function ProductDetailsPage() {
 
   return (
     <main className="min-h-screen bg-gray-50">
-      {/* BREADCRUMB */}
+      <div className="border-b bg-white">
+        <div className="mx-auto flex max-w-7xl items-center gap-2 px-4 py-4 text-sm text-gray-500 sm:px-6 lg:px-8">
+          <Link href="/" className="hover:text-blue-600">
+            Home
+          </Link>
 
-      <div className="border-b border-gray-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex flex-wrap items-center gap-1 text-sm text-gray-500">
-            <Link
-              href="/"
-              className="transition hover:text-blue-600"
-            >
-              Home
-            </Link>
+          <ChevronRight size={16} />
 
-            <ChevronRight size={15} />
+          <Link
+            href="/products"
+            className="hover:text-blue-600"
+          >
+            Products
+          </Link>
 
-            <Link
-              href="/products"
-              className="transition hover:text-blue-600"
-            >
-              Products
-            </Link>
+          {product.category && (
+            <>
+              <ChevronRight size={16} />
 
-            <ChevronRight size={15} />
+              <span>{product.category}</span>
+            </>
+          )}
 
-            {product.category && (
-              <>
-                <span className="text-gray-600">
-                  {product.category}
-                </span>
+          <ChevronRight size={16} />
 
-                <ChevronRight size={15} />
-              </>
-            )}
-
-            <span className="line-clamp-1 text-gray-700">
-              {product.name}
-            </span>
-          </div>
+          <span className="truncate text-gray-900">
+            {product.name}
+          </span>
         </div>
       </div>
 
-      {/* PRODUCT */}
-
-      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-          {/* IMAGES */}
+          <ProductImages product={product} />
 
-          <div>
-            <ProductImages
-              images={product.images || []}
-              productName={product.name}
-            />
-          </div>
-
-          {/* PRODUCT INFORMATION */}
-
-          <div className="rounded-xl border border-gray-200 bg-white p-5 md:p-7">
-            <ProductInfo
-              product={product}
-            />
-
-            {/* SELLER */}
-
-            <div className="mt-6 rounded-xl border border-gray-200 bg-gray-50 p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
-                  <Store
-                    size={20}
-                    className="text-blue-600"
-                  />
-                </div>
-
-                <div>
-                  <p className="text-xs text-gray-500">
-                    Sold by
-                  </p>
-
-                  <p className="text-sm font-bold text-gray-900">
-                    {product.sellerName ||
-                      product.seller ||
-                      "ComputerHub Official"}
-                  </p>
-                </div>
-
-                <CheckCircle2
-                  size={18}
-                  className="ml-auto text-blue-600"
-                />
-              </div>
-            </div>
-
-            {/* FREE DELIVERY */}
-
-            {product.freeDelivery && (
-              <div className="mt-4 flex items-center gap-3 rounded-xl border border-green-200 bg-green-50 p-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white">
-                  <Truck
-                    size={20}
-                    className="text-green-600"
-                  />
-                </div>
-
-                <div>
-                  <p className="text-sm font-bold text-green-700">
-                    Free Delivery
-                  </p>
-
-                  <p className="mt-0.5 text-xs text-green-700">
-                    Free delivery available for this product
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
+          <ProductInfo product={product} />
         </div>
 
-        {/* FEATURES */}
-
-        <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-3">
-          {/* DELIVERY */}
-
-          <div className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-5">
-            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-blue-50">
-              <Truck
-                size={22}
-                className="text-blue-600"
-              />
-            </div>
+        <div className="mt-12 grid gap-4 rounded-2xl border border-gray-200 bg-white p-6 md:grid-cols-2 lg:grid-cols-4">
+          <div className="flex items-start gap-3">
+            <Truck className="mt-1 text-blue-600" size={22} />
 
             <div>
               <h3 className="font-semibold text-gray-900">
-                Free Delivery
+                Fast Delivery
               </h3>
 
-              <p className="mt-1 text-xs text-gray-500">
-                Fast and reliable delivery from ComputerHub
+              <p className="text-sm text-gray-500">
+                Nationwide shipping across Pakistan.
               </p>
             </div>
           </div>
 
-          {/* SECURITY */}
-
-          <div className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-5">
-            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-green-50">
-              <ShieldCheck
-                size={22}
-                className="text-green-600"
-              />
-            </div>
+          <div className="flex items-start gap-3">
+            <ShieldCheck
+              className="mt-1 text-blue-600"
+              size={22}
+            />
 
             <div>
               <h3 className="font-semibold text-gray-900">
-                Secure Shopping
+                Genuine Products
               </h3>
 
-              <p className="mt-1 text-xs text-gray-500">
-                Shop with confidence on ComputerHub
+              <p className="text-sm text-gray-500">
+                100% original hardware and accessories.
               </p>
             </div>
           </div>
 
-          {/* RETURNS */}
-
-          <div className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-5">
-            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-purple-50">
-              <RotateCcw
-                size={22}
-                className="text-purple-600"
-              />
-            </div>
+          <div className="flex items-start gap-3">
+            <RotateCcw className="mt-1 text-blue-600" size={22} />
 
             <div>
               <h3 className="font-semibold text-gray-900">
                 Easy Returns
               </h3>
 
-              <p className="mt-1 text-xs text-gray-500">
-                Simple return support for eligible items
+              <p className="text-sm text-gray-500">
+                Return eligible products with ease.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <Store className="mt-1 text-blue-600" size={22} />
+
+            <div>
+              <h3 className="font-semibold text-gray-900">
+                Trusted Seller
+              </h3>
+
+              <p className="text-sm text-gray-500">
+                Verified ComputerHub marketplace sellers.
               </p>
             </div>
           </div>
         </div>
 
-        {/* SPECIFICATIONS */}
+        {/* PRODUCT DESCRIPTION */}
+                {/* PRODUCT DESCRIPTION */}
 
-        <section className="mt-8 rounded-xl border border-gray-200 bg-white p-5 md:p-7">
+        <div className="mt-8 rounded-xl border border-gray-200 bg-white p-6">
           <h2 className="text-xl font-bold text-gray-900">
-            Product Specifications
+            Product Description
           </h2>
 
-          <div className="mt-5 grid grid-cols-1 overflow-hidden rounded-lg border border-gray-200 sm:grid-cols-2">
-            <Specification
-              label="Brand"
-              value={product.brand}
-            />
-
-            <Specification
-              label="Category"
-              value={product.category}
-            />
-
-            <Specification
-              label="Subcategory"
-              value={product.subcategory}
-            />
-
-            <Specification
-              label="Processor"
-              value={product.processor}
-            />
-
-            <Specification
-              label="RAM"
-              value={product.ram}
-            />
-
-            <Specification
-              label="Storage"
-              value={product.storage}
-            />
-
-            <Specification
-              label="Graphics"
-              value={product.graphics}
-            />
-
-            <Specification
-              label="Screen Size"
-              value={product.screenSize}
-            />
-
-            <Specification
-              label="Availability"
-              value={
-                product.stock > 0
-                  ? `${product.stock} in stock`
-                  : "Out of stock"
-              }
-            />
-
-            <Specification
-              label="Seller"
-              value={
-                product.sellerName ||
-                product.seller ||
-                "ComputerHub Official"
-              }
-            />
-
-            <Specification
-              label="Delivery"
-              value={
-                product.freeDelivery
-                  ? "Free Delivery"
-                  : "Delivery Available"
-              }
-            />
-
-            <Specification
-              label="SKU"
-              value={product.sku}
-            />
+          <div className="mt-4 whitespace-pre-line text-gray-600">
+            {product.description || "No description available."}
           </div>
-        </section>
+        </div>
 
-        {/* DESCRIPTION */}
+        {/* SPECIFICATIONS */}
 
-        {product.description && (
-          <section className="mt-8 rounded-xl border border-gray-200 bg-white p-5 md:p-7">
-            <h2 className="text-xl font-bold text-gray-900">
-              Product Description
-            </h2>
+        {product.specifications &&
+          Object.keys(product.specifications).length > 0 && (
+            <div className="mt-8 rounded-xl border border-gray-200 bg-white p-6">
+              <h2 className="text-xl font-bold text-gray-900">
+                Specifications
+              </h2>
 
-            <p className="mt-4 whitespace-pre-line text-sm leading-7 text-gray-600">
-              {product.description}
-            </p>
-          </section>
-        )}
+              <div className="mt-4 divide-y divide-gray-200">
+                {Object.entries(product.specifications).map(
+                  ([key, value]) => (
+                    <div
+                      key={key}
+                      className="grid grid-cols-2 gap-4 py-3"
+                    >
+                      <div className="font-medium text-gray-700">
+                        {key}
+                      </div>
+
+                      <div className="text-gray-600">
+                        {String(value)}
+                      </div>
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
+          )}
 
         {/* REVIEWS */}
 
-        <ProductReviews
-          productId={productId}
-        />
+        <div className="mt-8">
+          <ProductReviews product={product} />
+        </div>
 
         {/* RELATED PRODUCTS */}
 
-        <RelatedProducts
-          productId={productId}
-          categoryId={
-            product.categoryId?._id?.toString() ||
-            product.categoryId?.toString()
-          }
-          category={product.category}
+        <div className="mt-10">
+          <RelatedProducts
+            category={product.category}
+            currentProductId={product.id}
+          />
+        </div>
+
+        {/* JSON-LD PRODUCT SCHEMA */}
+
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Product",
+              name: product.name,
+              image: product.images || [],
+              description: product.description,
+              sku: product.id,
+              brand: {
+                "@type": "Brand",
+                name: product.brand || "ComputerHub",
+              },
+              offers: {
+                "@type": "Offer",
+                priceCurrency: "PKR",
+                price: product.price,
+                availability:
+                  product.stock > 0
+                    ? "https://schema.org/InStock"
+                    : "https://schema.org/OutOfStock",
+                seller: {
+                  "@type": "Organization",
+                  name:
+                    product.sellerName || "ComputerHub",
+                },
+              },
+              aggregateRating:
+                product.rating > 0
+                  ? {
+                      "@type": "AggregateRating",
+                      ratingValue: product.rating,
+                      reviewCount:
+                        product.reviews || 0,
+                    }
+                  : undefined,
+            }),
+          }}
         />
-      </section>
+
+      </div>
     </main>
-  );
-}
-
-/* -------------------------
-   SPECIFICATION
-------------------------- */
-
-function Specification({
-  label,
-  value,
-}) {
-  if (
-    value === undefined ||
-    value === null ||
-    value === ""
-  ) {
-    return null;
-  }
-
-  return (
-    <div className="grid grid-cols-2 border-b border-gray-200 p-4 last:border-b-0 sm:[&:nth-child(odd)]:border-r">
-      <span className="text-sm font-medium text-gray-500">
-        {label}
-      </span>
-
-      <span className="text-right text-sm font-semibold text-gray-900">
-        {value}
-      </span>
-    </div>
   );
 }

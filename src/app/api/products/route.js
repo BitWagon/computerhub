@@ -23,87 +23,31 @@ export default function AddSellerProductPage() {
 
   const [formData, setFormData] = useState({
     name: "",
-    shortDescription: "",
     description: "",
-
+    categoryId: "",
     price: "",
     oldPrice: "",
-
-    brand: "",
-    categoryId: "",
-    subcategory: "",
-
     stock: "",
-
-    processor: "",
-    ram: "",
-    storage: "",
-    graphics: "",
-    screenSize: "",
-
-    images: "",
-
+    brand: "",
+    sku: "",
+    images: [""],
+    specifications: [{ key: "", value: "" }],
     featured: false,
     freeDelivery: true,
-    isActive: true,
   });
-
-  /*
-   * =========================================================
-   * LOAD CATEGORIES
-   * =========================================================
-   */
 
   useEffect(() => {
     async function loadCategories() {
       try {
-        setCategoriesLoading(true);
-
-        const response = await fetch(
-          "/api/categories",
-          {
-            method: "GET",
-            credentials: "include",
-            cache: "no-store",
-          }
-        );
+        const response = await fetch("/api/categories");
 
         const data = await response.json();
 
-        if (!response.ok) {
-          throw new Error(
-            data?.message ||
-              "Failed to load categories."
-          );
+        if (data.success) {
+          setCategories(data.categories || []);
         }
-
-        const loadedCategories =
-          Array.isArray(data)
-            ? data
-            : Array.isArray(data?.categories)
-            ? data.categories
-            : Array.isArray(data?.data)
-            ? data.data
-            : [];
-
-        setCategories(
-          loadedCategories.filter(
-            (category) =>
-              category?.isActive !== false
-          )
-        );
-      } catch (error) {
-        console.error(
-          "Category loading error:",
-          error
-        );
-
-        toast.error(
-          error?.message ||
-            "Failed to load categories."
-        );
-
-        setCategories([]);
+      } catch {
+        toast.error("Unable to load categories.");
       } finally {
         setCategoriesLoading(false);
       }
@@ -112,143 +56,106 @@ export default function AddSellerProductPage() {
     loadCategories();
   }, []);
 
-  /*
-   * =========================================================
-   * INPUT HANDLER
-   * =========================================================
-   */
-
-  function handleChange(event) {
-    const {
-      name,
-      value,
-      type,
-      checked,
-    } = event.target;
-
-    setFormData((previous) => ({
-      ...previous,
-
-      [name]:
-        type === "checkbox"
-          ? checked
-          : value,
-    }));
-  }
-
-  /*
-   * =========================================================
-   * DISCOUNT
-   * =========================================================
-   */
-
-  const calculatedDiscount = useMemo(() => {
-    const price = Number(
-      formData.price
-    );
-
-    const oldPrice = Number(
-      formData.oldPrice
-    );
+  const discount = useMemo(() => {
+    const price = Number(formData.price);
+    const oldPrice = Number(formData.oldPrice);
 
     if (
-      !Number.isFinite(price) ||
-      !Number.isFinite(oldPrice) ||
-      price <= 0 ||
+      !price ||
+      !oldPrice ||
       oldPrice <= price
     ) {
       return 0;
     }
 
     return Math.round(
-      ((oldPrice - price) /
-        oldPrice) *
-        100
+      ((oldPrice - price) / oldPrice) * 100
     );
-  }, [
-    formData.price,
-    formData.oldPrice,
-  ]);
+  }, [formData.price, formData.oldPrice]);
 
-  /*
-   * =========================================================
-   * SUBMIT
-   * =========================================================
-   */
+  function updateField(key, value) {
+    setFormData((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  }
 
-  async function handleSubmit(event) {
-    event.preventDefault();
+  function updateImage(index, value) {
+    const updated = [...formData.images];
+    updated[index] = value;
 
-    /*
-     * PRODUCT NAME
-     */
+    setFormData((prev) => ({
+      ...prev,
+      images: updated,
+    }));
+  }
+
+  function addImageField() {
+    setFormData((prev) => ({
+      ...prev,
+      images: [...prev.images, ""],
+    }));
+  }
+
+  function removeImageField(index) {
+    if (formData.images.length === 1) return;
+
+    setFormData((prev) => ({
+      ...prev,
+      images: prev.images.filter(
+        (_, i) => i !== index
+      ),
+    }));
+  }
+
+  function updateSpecification(index, key, value) {
+    const updated = [...formData.specifications];
+    updated[index][key] = value;
+
+    setFormData((prev) => ({
+      ...prev,
+      specifications: updated,
+    }));
+  }
+
+  function addSpecification() {
+    setFormData((prev) => ({
+      ...prev,
+      specifications: [
+        ...prev.specifications,
+        { key: "", value: "" },
+      ],
+    }));
+  }
+
+  function removeSpecification(index) {
+    if (formData.specifications.length === 1) return;
+
+    setFormData((prev) => ({
+      ...prev,
+      specifications: prev.specifications.filter(
+        (_, i) => i !== index
+      ),
+    }));
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
 
     if (!formData.name.trim()) {
-      toast.error(
-        "Please enter a product name."
-      );
+      toast.error("Product name is required.");
       return;
     }
-
-    /*
-     * DESCRIPTION
-     */
-
-    if (!formData.description.trim()) {
-      toast.error(
-        "Please enter a product description."
-      );
-      return;
-    }
-
-    /*
-     * PRICE
-     */
-
-    const price = Number(
-      formData.price
-    );
-
-    if (
-      formData.price === "" ||
-      !Number.isFinite(price) ||
-      price < 0
-    ) {
-      toast.error(
-        "Please enter a valid selling price."
-      );
-      return;
-    }
-
-    /*
-     * OLD PRICE
-     */
-
-    const oldPrice =
-      formData.oldPrice === ""
-        ? price
-        : Number(
-            formData.oldPrice
-          );
-
-    if (
-      !Number.isFinite(oldPrice) ||
-      oldPrice < price
-    ) {
-      toast.error(
-        "Original price cannot be lower than selling price."
-      );
-      return;
-    }
-
-    /*
-     * CATEGORY
-     */
 
     if (!formData.categoryId) {
-      toast.error(
-        "Please select a category."
-      );
+      toast.error("Please select a category.");
+      return;
+    }
+
+    const price = Number(formData.price);
+
+    if (!price || price <= 0) {
+      toast.error("Enter a valid price.");
       return;
     }
 
@@ -262,105 +169,65 @@ export default function AddSellerProductPage() {
         : Number(formData.stock);
 
     if (
-      !Number.isFinite(stock) ||
+      Number.isNaN(stock) ||
       stock < 0
     ) {
-      toast.error(
-        "Please enter a valid stock quantity."
-      );
+      toast.error("Enter a valid stock value.");
       return;
     }
 
-    /*
-     * IMAGES
-     */
-
-    const images = formData.images
-      .split(/\r?\n|,/)
-      .map((image) =>
-        image.trim()
-      )
-      .filter(Boolean);
+    setLoading(true);
 
     try {
-      setLoading(true);
+      const cleanedImages = formData.images
+        .map((image) => image.trim())
+        .filter(Boolean);
+
+      const cleanedSpecifications =
+        formData.specifications.filter(
+          (item) =>
+            item.key.trim() &&
+            item.value.trim()
+        );
+
+      const payload = {
+        name: formData.name.trim(),
+        description:
+          formData.description.trim(),
+        categoryId: formData.categoryId,
+        price,
+        oldPrice:
+          Number(formData.oldPrice) || 0,
+        stock,
+        brand: formData.brand.trim(),
+        sku: formData.sku.trim(),
+        images: cleanedImages,
+        specifications:
+          cleanedSpecifications,
+        featured: formData.featured,
+        freeDelivery:
+          formData.freeDelivery,
+      };
 
       const response = await fetch(
         "/api/products",
         {
           method: "POST",
-
           headers: {
             "Content-Type":
               "application/json",
           },
-
-          credentials: "include",
-
-          body: JSON.stringify({
-            name:
-              formData.name.trim(),
-
-            shortDescription:
-              formData.shortDescription.trim(),
-
-            description:
-              formData.description.trim(),
-
-            price,
-
-            oldPrice,
-
-            categoryId:
-              formData.categoryId,
-
-            subcategory:
-              formData.subcategory.trim(),
-
-            brand:
-              formData.brand.trim(),
-
-            stock,
-
-            processor:
-              formData.processor.trim(),
-
-            ram:
-              formData.ram.trim(),
-
-            storage:
-              formData.storage.trim(),
-
-            graphics:
-              formData.graphics.trim(),
-
-            screenSize:
-              formData.screenSize.trim(),
-
-            images,
-
-            featured:
-              formData.featured,
-
-            freeDelivery:
-              formData.freeDelivery,
-
-            isActive:
-              formData.isActive,
-          }),
+          body: JSON.stringify(payload),
         }
       );
 
       const data =
         await response.json();
 
-      if (
-        !response.ok ||
-        data?.success === false
-      ) {
+      if (!response.ok || !data.success) {
         throw new Error(
-          data?.message ||
-            "Failed to create product."
+          data.message ||
+            "Failed to add product."
         );
       }
 
@@ -368,20 +235,13 @@ export default function AddSellerProductPage() {
         "Product added successfully."
       );
 
-      router.push(
-        "/seller/products"
-      );
+      router.push("/seller/products");
 
-      router.refresh();
     } catch (error) {
-      console.error(
-        "Add seller product error:",
-        error
-      );
-
       toast.error(
-        error?.message ||
-          "Failed to create product."
+        error instanceof Error
+          ? error.message
+          : "Unable to add product."
       );
     } finally {
       setLoading(false);
@@ -389,71 +249,43 @@ export default function AddSellerProductPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 py-10">
-      <div className="container-main">
-        <div className="mx-auto max-w-5xl">
+    <main className="min-h-screen bg-slate-50">
+      <div className="container-main py-8">
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <Link
+              href="/seller/products"
+              className="mb-3 inline-flex items-center gap-2 text-sm text-slate-600 hover:text-blue-600"
+            >
+              <ArrowLeft size={16} />
+              Back to Products
+            </Link>
 
-          {/* BACK */}
+            <h1 className="text-3xl font-bold text-slate-900">
+              Add New Product
+            </h1>
 
-          <Link
-            href="/seller/products"
-            className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-slate-600 transition hover:text-blue-600"
-          >
-            <ArrowLeft size={17} />
-
-            Back to My Products
-          </Link>
-
-          {/* HEADER */}
-
-          <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="flex items-start gap-4">
-
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-50">
-                <PackagePlus
-                  className="text-blue-600"
-                  size={25}
-                />
-              </div>
-
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-blue-600">
-                  Seller Dashboard
-                </p>
-
-                <h1 className="mt-1 text-3xl font-black text-slate-900">
-                  Add Product
-                </h1>
-
-                <p className="mt-2 text-sm leading-6 text-slate-500">
-                  Add a product to your
-                  ComputerHub store.
-                  SKU will be generated
-                  automatically.
-                </p>
-              </div>
-
-            </div>
+            <p className="mt-2 text-slate-600">
+              Create a new product for your ComputerHub store.
+            </p>
           </div>
+        </div>
+                <form
+          onSubmit={handleSubmit}
+          className="grid gap-8 lg:grid-cols-[2fr_1fr]"
+        >
+          {/* LEFT SIDE */}
 
-          <form
-            onSubmit={handleSubmit}
-            className="space-y-6"
-          >
+          <div className="space-y-8">
 
-            {/* =================================================
-                BASIC INFORMATION
-            ================================================= */}
+            {/* BASIC INFORMATION */}
 
-            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-
+            <div className="rounded-2xl bg-white p-6 shadow-sm">
               <h2 className="mb-5 text-xl font-bold text-slate-900">
                 Basic Information
               </h2>
 
-              <div className="grid gap-5">
-
-                {/* NAME */}
+              <div className="space-y-5">
 
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-slate-700">
@@ -461,180 +293,32 @@ export default function AddSellerProductPage() {
                   </label>
 
                   <input
-                    name="name"
-                    value={
-                      formData.name
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) =>
+                      updateField("name", e.target.value)
                     }
-                    onChange={
-                      handleChange
-                    }
-                    placeholder="Example: Lenovo ThinkPad E14"
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500"
+                    placeholder="Enter product name"
                     required
                   />
                 </div>
 
-                {/* SHORT DESCRIPTION */}
-
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-slate-700">
-                    Short Description
-                  </label>
-
-                  <input
-                    name="shortDescription"
-                    value={
-                      formData.shortDescription
-                    }
-                    onChange={
-                      handleChange
-                    }
-                    placeholder="Short product summary"
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                  />
-                </div>
-
-                {/* DESCRIPTION */}
-
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-slate-700">
-                    Product Description *
+                    Description
                   </label>
 
                   <textarea
-                    name="description"
-                    value={
-                      formData.description
+                    rows={6}
+                    value={formData.description}
+                    onChange={(e) =>
+                      updateField("description", e.target.value)
                     }
-                    onChange={
-                      handleChange
-                    }
-                    rows={7}
-                    placeholder="Write the full product description..."
-                    className="w-full resize-none rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                    required
+                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500"
+                    placeholder="Describe your product"
                   />
                 </div>
-
-              </div>
-            </section>
-
-            {/* =================================================
-                PRICE / STOCK
-            ================================================= */}
-
-            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-
-              <h2 className="mb-5 text-xl font-bold text-slate-900">
-                Price & Stock
-              </h2>
-
-              <div className="grid gap-5 md:grid-cols-3">
-
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-slate-700">
-                    Selling Price *
-                  </label>
-
-                  <input
-                    type="number"
-                    name="price"
-                    min="0"
-                    step="0.01"
-                    value={
-                      formData.price
-                    }
-                    onChange={
-                      handleChange
-                    }
-                    placeholder="125000"
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-slate-700">
-                    Original Price
-                  </label>
-
-                  <input
-                    type="number"
-                    name="oldPrice"
-                    min="0"
-                    step="0.01"
-                    value={
-                      formData.oldPrice
-                    }
-                    onChange={
-                      handleChange
-                    }
-                    placeholder="140000"
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                  />
-
-                  {calculatedDiscount >
-                    0 && (
-                    <p className="mt-2 text-xs font-semibold text-green-600">
-                      Discount:{" "}
-                      {
-                        calculatedDiscount
-                      }
-                      %
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-slate-700">
-                    Stock Quantity *
-                  </label>
-
-                  <input
-                    type="number"
-                    name="stock"
-                    min="0"
-                    step="1"
-                    value={
-                      formData.stock
-                    }
-                    onChange={
-                      handleChange
-                    }
-                    placeholder="10"
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                  />
-                </div>
-
-              </div>
-
-              <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 p-4">
-                <p className="text-sm font-semibold text-blue-900">
-                  SKU
-                </p>
-
-                <p className="mt-1 text-xs leading-5 text-blue-700">
-                  You do not need to enter
-                  an SKU. ComputerHub
-                  automatically creates a
-                  unique SKU for every
-                  product.
-                </p>
-              </div>
-
-            </section>
-
-            {/* =================================================
-                CATEGORY
-            ================================================= */}
-
-            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-
-              <h2 className="mb-5 text-xl font-bold text-slate-900">
-                Category
-              </h2>
-
-              <div className="grid gap-5 md:grid-cols-2">
 
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-slate-700">
@@ -642,17 +326,12 @@ export default function AddSellerProductPage() {
                   </label>
 
                   <select
-                    name="categoryId"
-                    value={
-                      formData.categoryId
+                    value={formData.categoryId}
+                    onChange={(e) =>
+                      updateField("categoryId", e.target.value)
                     }
-                    onChange={
-                      handleChange
-                    }
-                    disabled={
-                      categoriesLoading
-                    }
-                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 disabled:bg-slate-100"
+                    disabled={categoriesLoading}
+                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500"
                     required
                   >
                     <option value="">
@@ -661,346 +340,403 @@ export default function AddSellerProductPage() {
                         : "Select category"}
                     </option>
 
-                    {categories.map(
-                      (category) => (
-                        <option
-                          key={
-                            category._id
-                          }
-                          value={
-                            category._id
-                          }
-                        >
-                          {
-                            category.name
-                          }
-                        </option>
-                      )
-                    )}
+                    {categories.map((category) => (
+                      <option
+                        key={category._id}
+                        value={category._id}
+                      >
+                        {category.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-slate-700">
-                    Subcategory
-                  </label>
-
-                  <input
-                    name="subcategory"
-                    value={
-                      formData.subcategory
-                    }
-                    onChange={
-                      handleChange
-                    }
-                    placeholder="Example: Gaming Laptops"
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                  />
-                </div>
-
               </div>
+            </div>
 
-            </section>
+            {/* PRICING */}
 
-            {/* =================================================
-                BRAND
-            ================================================= */}
-
-            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-
+            <div className="rounded-2xl bg-white p-6 shadow-sm">
               <h2 className="mb-5 text-xl font-bold text-slate-900">
-                Brand
+                Pricing
               </h2>
 
-              <input
-                name="brand"
-                value={
-                  formData.brand
-                }
-                onChange={
-                  handleChange
-                }
-                placeholder="Example: Lenovo"
-                className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-              />
-
-              <p className="mt-2 text-xs text-slate-500">
-                You can add any brand.
-              </p>
-            </section>
-
-            {/* =================================================
-                SPECIFICATIONS
-            ================================================= */}
-
-            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-
-              <h2 className="mb-2 text-xl font-bold text-slate-900">
-                Product Specifications
-              </h2>
-
-              <p className="mb-5 text-sm text-slate-500">
-                Fill in the specifications
-                that apply to this product.
-                You can leave fields blank
-                when they are not relevant.
-              </p>
-
-              <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-5 md:grid-cols-2">
 
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-slate-700">
-                    Processor
+                    Price (PKR) *
                   </label>
 
                   <input
-                    name="processor"
-                    value={
-                      formData.processor
+                    type="number"
+                    min="1"
+                    value={formData.price}
+                    onChange={(e) =>
+                      updateField("price", e.target.value)
                     }
-                    onChange={
-                      handleChange
-                    }
-                    placeholder="Intel Core i7-1365U"
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500"
+                    required
                   />
                 </div>
 
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-slate-700">
-                    RAM
+                    Old Price (PKR)
                   </label>
 
                   <input
-                    name="ram"
-                    value={
-                      formData.ram
+                    type="number"
+                    min="0"
+                    value={formData.oldPrice}
+                    onChange={(e) =>
+                      updateField("oldPrice", e.target.value)
                     }
-                    onChange={
-                      handleChange
-                    }
-                    placeholder="16GB DDR5"
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500"
                   />
                 </div>
 
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-slate-700">
-                    Storage
+                    Stock
                   </label>
 
                   <input
-                    name="storage"
-                    value={
-                      formData.storage
+                    type="number"
+                    min="0"
+                    value={formData.stock}
+                    onChange={(e) =>
+                      updateField("stock", e.target.value)
                     }
-                    onChange={
-                      handleChange
-                    }
-                    placeholder="512GB NVMe SSD"
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500"
                   />
                 </div>
 
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-slate-700">
-                    Graphics
+                    Discount
                   </label>
 
-                  <input
-                    name="graphics"
-                    value={
-                      formData.graphics
-                    }
-                    onChange={
-                      handleChange
-                    }
-                    placeholder="NVIDIA RTX 4060"
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                  />
+                  <div className="flex h-[50px] items-center rounded-xl border border-slate-300 bg-slate-50 px-4 text-slate-700">
+                    {discount > 0
+                      ? `${discount}% OFF`
+                      : "No discount"}
+                  </div>
                 </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-slate-700">
-                    Screen Size
-                  </label>
-
-                  <input
-                    name="screenSize"
-                    value={
-                      formData.screenSize
-                    }
-                    onChange={
-                      handleChange
-                    }
-                    placeholder="14 inch"
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                  />
-                </div>
-
               </div>
+            </div>
 
-            </section>
+            {/* BRAND */}
 
-            {/* =================================================
-                IMAGES
-            ================================================= */}
-
-            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-
-              <h2 className="mb-5 flex items-center gap-2 text-xl font-bold text-slate-900">
-                <ImageIcon
-                  size={22}
-                  className="text-blue-600"
-                />
-
-                Product Images
-              </h2>
-
-              <textarea
-                name="images"
-                value={
-                  formData.images
-                }
-                onChange={
-                  handleChange
-                }
-                rows={6}
-                placeholder={
-                  "Paste one image URL per line.\n\nhttps://...\nhttps://...\nhttps://..."
-                }
-                className="w-full resize-none rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-              />
-
-              <p className="mt-2 text-xs text-slate-500">
-                You can add multiple
-                product images.
-              </p>
-
-            </section>
-
-            {/* =================================================
-                OPTIONS
-            ================================================= */}
-
-            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-
+            <div className="rounded-2xl bg-white p-6 shadow-sm">
               <h2 className="mb-5 text-xl font-bold text-slate-900">
-                Product Options
+                Brand & SKU
               </h2>
 
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-5 md:grid-cols-2">
 
-                <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 p-4">
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                    Brand
+                  </label>
+
+                  <input
+                    type="text"
+                    value={formData.brand}
+                    onChange={(e) =>
+                      updateField("brand", e.target.value)
+                    }
+                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                    SKU
+                  </label>
+
+                  <input
+                    type="text"
+                    value={formData.sku}
+                    onChange={(e) =>
+                      updateField("sku", e.target.value)
+                    }
+                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* PRODUCT IMAGES */}
+
+            <div className="rounded-2xl bg-white p-6 shadow-sm">
+              <div className="mb-5 flex items-center justify-between">
+                <h2 className="text-xl font-bold text-slate-900">
+                  Product Images
+                </h2>
+
+                <button
+                  type="button"
+                  onClick={addImageField}
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                >
+                  Add Image
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {formData.images.map((image, index) => (
+                  <div
+                    key={index}
+                    className="flex gap-3"
+                  >
+                    <div className="flex flex-1 items-center gap-3 rounded-xl border border-slate-300 px-4">
+                      <ImageIcon
+                        size={18}
+                        className="text-slate-400"
+                      />
+
+                      <input
+                        type="url"
+                        value={image}
+                        onChange={(e) =>
+                          updateImage(index, e.target.value)
+                        }
+                        placeholder="https://example.com/image.jpg"
+                        className="w-full py-3 outline-none"
+                      />
+                    </div>
+
+                    {formData.images.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          removeImageField(index)
+                        }
+                        className="rounded-lg border border-red-300 px-3 text-red-600 hover:bg-red-50"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+                        {/* SPECIFICATIONS */}
+
+            <div className="rounded-2xl bg-white p-6 shadow-sm">
+              <div className="mb-5 flex items-center justify-between">
+                <h2 className="text-xl font-bold text-slate-900">
+                  Specifications
+                </h2>
+
+                <button
+                  type="button"
+                  onClick={addSpecification}
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                >
+                  Add Specification
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {formData.specifications.map((spec, index) => (
+                  <div
+                    key={index}
+                    className="grid gap-3 md:grid-cols-[1fr_1fr_auto]"
+                  >
+                    <input
+                      type="text"
+                      value={spec.key}
+                      onChange={(e) =>
+                        updateSpecification(index, "key", e.target.value)
+                      }
+                      placeholder="Specification"
+                      className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500"
+                    />
+
+                    <input
+                      type="text"
+                      value={spec.value}
+                      onChange={(e) =>
+                        updateSpecification(index, "value", e.target.value)
+                      }
+                      placeholder="Value"
+                      className="rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500"
+                    />
+
+                    {formData.specifications.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeSpecification(index)}
+                        className="rounded-lg border border-red-300 px-4 py-3 text-red-600 hover:bg-red-50"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT SIDE */}
+
+          <div className="space-y-6">
+
+            {/* PRODUCT SETTINGS */}
+
+            <div className="rounded-2xl bg-white p-6 shadow-sm">
+              <h2 className="mb-5 text-xl font-bold text-slate-900">
+                Product Settings
+              </h2>
+
+              <div className="space-y-4">
+
+                <label className="flex items-center justify-between rounded-xl border border-slate-200 p-4 cursor-pointer">
+                  <div>
+                    <p className="font-semibold text-slate-900">
+                      Featured Product
+                    </p>
+
+                    <p className="text-sm text-slate-500">
+                      Show this product in featured sections.
+                    </p>
+                  </div>
 
                   <input
                     type="checkbox"
-                    name="featured"
-                    checked={
-                      formData.featured
-                    }
-                    onChange={
-                      handleChange
+                    checked={formData.featured}
+                    onChange={(e) =>
+                      updateField("featured", e.target.checked)
                     }
                     className="h-5 w-5"
                   />
-
-                  <span className="text-sm font-semibold text-slate-700">
-                    Featured Product
-                  </span>
-
                 </label>
 
-                <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 p-4">
+                <label className="flex items-center justify-between rounded-xl border border-slate-200 p-4 cursor-pointer">
+                  <div>
+                    <p className="font-semibold text-slate-900">
+                      Free Delivery
+                    </p>
+
+                    <p className="text-sm text-slate-500">
+                      Display free delivery for this product.
+                    </p>
+                  </div>
 
                   <input
                     type="checkbox"
-                    name="freeDelivery"
-                    checked={
-                      formData.freeDelivery
-                    }
-                    onChange={
-                      handleChange
+                    checked={formData.freeDelivery}
+                    onChange={(e) =>
+                      updateField("freeDelivery", e.target.checked)
                     }
                     className="h-5 w-5"
                   />
-
-                  <span className="text-sm font-semibold text-slate-700">
-                    Free Delivery
-                  </span>
-
-                </label>
-
-                <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 p-4">
-
-                  <input
-                    type="checkbox"
-                    name="isActive"
-                    checked={
-                      formData.isActive
-                    }
-                    onChange={
-                      handleChange
-                    }
-                    className="h-5 w-5"
-                  />
-
-                  <span className="text-sm font-semibold text-slate-700">
-                    Active Product
-                  </span>
-
                 </label>
 
               </div>
+            </div>
 
-            </section>
+            {/* LIVE PREVIEW */}
 
-            {/* =================================================
-                BUTTONS
-            ================================================= */}
+            <div className="rounded-2xl bg-white p-6 shadow-sm">
+              <h2 className="mb-5 text-xl font-bold text-slate-900">
+                Live Preview
+              </h2>
 
-            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <div className="overflow-hidden rounded-xl border border-slate-200">
 
-              <Link
-                href="/seller/products"
-                className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-6 py-3 font-semibold text-slate-700 transition hover:bg-slate-50"
-              >
-                Cancel
-              </Link>
+                <div className="aspect-square bg-slate-100 flex items-center justify-center">
+                  {formData.images[0] ? (
+                    <img
+                      src={formData.images[0]}
+                      alt="Preview"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="text-center text-slate-400">
+                      <ImageIcon size={40} className="mx-auto mb-2" />
+                      <p className="text-sm">No Image</p>
+                    </div>
+                  )}
+                </div>
 
+                <div className="p-4">
+                  <h3 className="font-semibold text-slate-900 line-clamp-2">
+                    {formData.name || "Product Name"}
+                  </h3>
+
+                  <p className="mt-2 text-xl font-bold text-blue-600">
+                    PKR {Number(formData.price || 0).toLocaleString()}
+                  </p>
+
+                  {Number(formData.oldPrice) > Number(formData.price) && (
+                    <div className="mt-1 flex items-center gap-2">
+                      <span className="text-sm text-slate-400 line-through">
+                        PKR {Number(formData.oldPrice).toLocaleString()}
+                      </span>
+
+                      <span className="rounded bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-600">
+                        {discount}% OFF
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="mt-3 flex items-center justify-between text-sm">
+                    <span className="text-slate-500">
+                      Stock
+                    </span>
+
+                    <span className="font-semibold text-slate-900">
+                      {formData.stock || "0"}
+                    </span>
+                  </div>
+
+                  <div className="mt-2 flex items-center justify-between text-sm">
+                    <span className="text-slate-500">
+                      Brand
+                    </span>
+
+                    <span className="font-semibold text-slate-900">
+                      {formData.brand || "-"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* SUBMIT */}
+
+            <div className="rounded-2xl bg-white p-6 shadow-sm">
               <button
                 type="submit"
-                disabled={
-                  loading ||
-                  categoriesLoading ||
-                  categories.length ===
-                    0
-                }
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={loading}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {loading ? (
                   <>
-                    <Loader2
-                      className="animate-spin"
-                      size={20}
-                    />
-
+                    <Loader2 size={20} className="animate-spin" />
                     Saving...
                   </>
                 ) : (
                   <>
                     <Save size={20} />
-
-                    Add Product
+                    Save Product
                   </>
                 )}
               </button>
 
+              <button
+                type="button"
+                onClick={() => router.push("/seller/products")}
+                className="mt-3 w-full rounded-xl border border-slate-300 px-5 py-3 font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
             </div>
-
-          </form>
-        </div>
-      </div>
+          </div>
+        </form>
+              </div>
     </main>
   );
 }

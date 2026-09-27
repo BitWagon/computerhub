@@ -105,19 +105,16 @@ export default function SellerDashboardPage() {
           ? ordersData.orders
           : []
       );
-    } catch (err) {
-      console.error(
-        "Seller dashboard error:",
-        err
-      );
-
-      setError(
-        err.message ||
-          "Unable to load seller dashboard."
-      );
-    } finally {
-      setLoading(false);
-    }
+    
+     } catch (err) {
+  setError(
+    err instanceof Error
+      ? err.message
+      : "Unable to load seller dashboard."
+  );
+} finally {
+  setLoading(false);
+}
   }
 
   useEffect(() => {
