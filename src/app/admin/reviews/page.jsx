@@ -16,24 +16,12 @@ import { toast } from "sonner";
 
 export default function AdminReviewsPage() {
   const [reviews, setReviews] = useState([]);
-
-  const [loading, setLoading] =
-    useState(true);
-
-  const [error, setError] =
-    useState("");
-
-  const [search, setSearch] =
-    useState("");
-
-  const [filter, setFilter] =
-    useState("all");
-
-  const [updatingId, setUpdatingId] =
-    useState("");
-
-  const [deletingId, setDeletingId] =
-    useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("all");
+  const [updatingId, setUpdatingId] = useState("");
+  const [deletingId, setDeletingId] = useState("");
 
   /* -------------------------
      LOAD REVIEWS
@@ -52,35 +40,25 @@ export default function AdminReviewsPage() {
         }
       );
 
-      const data =
-        await response.json();
+      const data = await response.json();
 
-      if (
-        !response.ok ||
-        !data.success
-      ) {
+      if (!response.ok || !data.success) {
         throw new Error(
-          data.message ||
-            "Unable to load reviews."
+          data.message || "Unable to load reviews."
         );
       }
 
       setReviews(
-        Array.isArray(
-          data.reviews
-        )
+        Array.isArray(data.reviews)
           ? data.reviews
           : []
       );
-    } catch (err) {
-      console.error(
-        "Admin reviews error:",
-        err
-      );
 
+    } catch (err) {
       setError(
-        err.message ||
-          "Unable to load reviews."
+        err instanceof Error
+          ? err.message
+          : "Unable to load reviews."
       );
     } finally {
       setLoading(false);
@@ -102,65 +80,49 @@ export default function AdminReviewsPage() {
     try {
       setUpdatingId(reviewId);
 
-      const response =
-        await fetch(
-          "/api/reviews",
-          {
-            method: "PATCH",
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-            credentials: "include",
-            body: JSON.stringify({
-              reviewId,
-              isApproved,
-            }),
-          }
-        );
+      const response = await fetch(
+        "/api/reviews",
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            reviewId,
+            isApproved,
+          }),
+        }
+      );
 
-      const data =
-        await response.json();
+      const data = await response.json();
 
-      if (
-        !response.ok ||
-        !data.success
-      ) {
+      if (!response.ok || !data.success) {
         throw new Error(
-          data.message ||
-            "Unable to update review."
+          data.message || "Unable to update review."
         );
       }
 
       toast.success(
-        data.message ||
-          "Review updated."
+        data.message || "Review updated."
       );
 
-      setReviews(
-        (currentReviews) =>
-          currentReviews.map(
-            (review) =>
-              String(
-                review._id
-              ) ===
-              String(reviewId)
-                ? {
-                    ...review,
-                    isApproved,
-                  }
-                : review
-          )
+      setReviews((currentReviews) =>
+        currentReviews.map((review) =>
+          String(review._id) === String(reviewId)
+            ? {
+                ...review,
+                isApproved,
+              }
+            : review
+        )
       );
+
     } catch (err) {
-      console.error(
-        "Update review error:",
-        err
-      );
-
       toast.error(
-        err.message ||
-          "Unable to update review."
+        err instanceof Error
+          ? err.message
+          : "Unable to update review."
       );
     } finally {
       setUpdatingId("");
@@ -168,16 +130,13 @@ export default function AdminReviewsPage() {
   }
 
   /* -------------------------
-     DELETE
+     DELETE REVIEW
   ------------------------- */
 
-  async function deleteReview(
-    reviewId
-  ) {
-    const confirmed =
-      window.confirm(
-        "Are you sure you want to delete this review?"
-      );
+  async function deleteReview(reviewId) {
+    const confirmed = window.confirm(
+      "Delete this review permanently?"
+    );
 
     if (!confirmed) {
       return;
@@ -186,297 +145,170 @@ export default function AdminReviewsPage() {
     try {
       setDeletingId(reviewId);
 
-      const response =
-        await fetch(
-          `/api/reviews?reviewId=${encodeURIComponent(
-            reviewId
-          )}`,
-          {
-            method: "DELETE",
-            credentials: "include",
-          }
-        );
+      const response = await fetch(
+        `/api/reviews?reviewId=${reviewId}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+        }
+      );
 
-      const data =
-        await response.json();
+      const data = await response.json();
 
-      if (
-        !response.ok ||
-        !data.success
-      ) {
+      if (!response.ok || !data.success) {
         throw new Error(
-          data.message ||
-            "Unable to delete review."
+          data.message || "Unable to delete review."
         );
       }
 
       toast.success(
-        "Review deleted successfully."
+        data.message || "Review deleted."
       );
 
-      setReviews(
-        (currentReviews) =>
-          currentReviews.filter(
-            (review) =>
-              String(
-                review._id
-              ) !==
-              String(reviewId)
-          )
+      setReviews((currentReviews) =>
+        currentReviews.filter(
+          (review) =>
+            String(review._id) !== String(reviewId)
+        )
       );
+
     } catch (err) {
-      console.error(
-        "Delete review error:",
-        err
-      );
-
       toast.error(
-        err.message ||
-          "Unable to delete review."
+        err instanceof Error
+          ? err.message
+          : "Unable to delete review."
       );
     } finally {
       setDeletingId("");
     }
   }
-
-  /* -------------------------
-     FILTER
+    /* -------------------------
+     FILTER REVIEWS
   ------------------------- */
 
-  const filteredReviews =
-    reviews.filter((review) => {
-      const productName =
-        review.productId?.name ||
-        "";
+  const filteredReviews = reviews.filter((review) => {
+    const keyword = search.toLowerCase().trim();
 
-      const customerName =
-        review.userName || "";
+    const matchesSearch =
+      String(review.userName || "")
+        .toLowerCase()
+        .includes(keyword) ||
+      String(review.productName || "")
+        .toLowerCase()
+        .includes(keyword) ||
+      String(review.comment || "")
+        .toLowerCase()
+        .includes(keyword);
 
-      const customerEmail =
-        review.userEmail || "";
+    if (filter === "approved") {
+      return matchesSearch && review.isApproved;
+    }
 
-      const title =
-        review.title || "";
+    if (filter === "pending") {
+      return matchesSearch && !review.isApproved;
+    }
 
-      const comment =
-        review.comment || "";
+    return matchesSearch;
+  });
 
-      const searchText =
-        search
-          .toLowerCase()
-          .trim();
+  const approvedCount = reviews.filter(
+    (review) => review.isApproved
+  ).length;
 
-      const matchesSearch =
-        !searchText ||
-        productName
-          .toLowerCase()
-          .includes(searchText) ||
-        customerName
-          .toLowerCase()
-          .includes(searchText) ||
-        customerEmail
-          .toLowerCase()
-          .includes(searchText) ||
-        title
-          .toLowerCase()
-          .includes(searchText) ||
-        comment
-          .toLowerCase()
-          .includes(searchText);
-
-      const matchesFilter =
-        filter === "all" ||
-        (filter === "approved" &&
-          review.isApproved) ||
-        (filter === "rejected" &&
-          !review.isApproved);
-
-      return (
-        matchesSearch &&
-        matchesFilter
-      );
-    });
-
-  /* -------------------------
-     COUNTS
-  ------------------------- */
-
-  const totalReviews =
-    reviews.length;
-
-  const approvedReviews =
-    reviews.filter(
-      (review) =>
-        review.isApproved
-    ).length;
-
-  const rejectedReviews =
-    reviews.filter(
-      (review) =>
-        !review.isApproved
-    ).length;
-
-  /* -------------------------
-     LOADING
-  ------------------------- */
-
-  if (loading) {
-    return (
-      <main className="min-h-screen bg-gray-50">
-        <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-          <div className="animate-pulse space-y-6">
-            <div className="h-8 w-56 rounded bg-gray-200" />
-
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <div className="h-28 rounded-xl bg-gray-200" />
-              <div className="h-28 rounded-xl bg-gray-200" />
-              <div className="h-28 rounded-xl bg-gray-200" />
-            </div>
-
-            <div className="h-16 rounded-xl bg-gray-200" />
-
-            <div className="h-96 rounded-xl bg-gray-200" />
-          </div>
-        </div>
-      </main>
-    );
-  }
-
-  /* -------------------------
-     ERROR
-  ------------------------- */
-
-  if (error) {
-    return (
-      <main className="min-h-screen bg-gray-50">
-        <div className="mx-auto max-w-3xl px-4 py-20 text-center">
-          <div className="rounded-xl border border-red-200 bg-white p-10">
-            <XCircle
-              className="mx-auto text-red-500"
-              size={45}
-            />
-
-            <h1 className="mt-4 text-2xl font-bold text-gray-900">
-              Unable to Load Reviews
-            </h1>
-
-            <p className="mt-3 text-sm text-gray-500">
-              {error}
-            </p>
-
-            <button
-              type="button"
-              onClick={loadReviews}
-              className="mt-6 rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700"
-            >
-              Try Again
-            </button>
-          </div>
-        </div>
-      </main>
-    );
-  }
+  const pendingCount =
+    reviews.length - approvedCount;
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-gray-50 px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl">
+
         {/* HEADER */}
-        <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <Link
               href="/admin"
-              className="inline-flex items-center gap-1 text-sm text-gray-500 transition hover:text-blue-600"
+              className="mb-3 inline-flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-blue-600"
             >
-              <ChevronLeft
-                size={16}
-              />
-              Admin Dashboard
+              <ChevronLeft size={17} />
+              Back to Admin
             </Link>
 
-            <h1 className="mt-3 text-3xl font-bold text-gray-900">
-              Review Management
+            <h1 className="text-3xl font-bold text-gray-900">
+              Reviews
             </h1>
 
-            <p className="mt-2 text-sm text-gray-500">
-              Manage customer product reviews.
+            <p className="mt-1 text-gray-500">
+              Approve, reject and manage customer reviews.
             </p>
           </div>
+
+          <button
+            type="button"
+            onClick={loadReviews}
+            disabled={loading}
+            className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          >
+            Refresh
+          </button>
         </div>
+
+        {/* ERROR */}
+        {error && (
+          <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            {error}
+          </div>
+        )}
 
         {/* STATS */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          {/* TOTAL */}
-          <div className="rounded-xl border border-gray-200 bg-white p-5">
-            <div className="flex items-center justify-between">
+        <div className="mb-6 grid gap-4 sm:grid-cols-3">
+          <div className="rounded-2xl border bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-3">
+              <Star className="text-yellow-500" />
               <div>
-                <p className="text-sm font-medium text-gray-500">
+                <p className="text-sm text-gray-500">
                   Total Reviews
                 </p>
-
-                <p className="mt-2 text-3xl font-bold text-gray-900">
-                  {totalReviews}
+                <p className="mt-1 text-3xl font-bold text-gray-900">
+                  {reviews.length}
                 </p>
-              </div>
-
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-50">
-                <Star
-                  size={23}
-                  className="text-blue-600"
-                />
               </div>
             </div>
           </div>
 
-          {/* APPROVED */}
-          <div className="rounded-xl border border-gray-200 bg-white p-5">
-            <div className="flex items-center justify-between">
+          <div className="rounded-2xl border bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-3">
+              <CheckCircle2 className="text-green-600" />
               <div>
-                <p className="text-sm font-medium text-gray-500">
+                <p className="text-sm text-gray-500">
                   Approved
                 </p>
-
-                <p className="mt-2 text-3xl font-bold text-green-600">
-                  {approvedReviews}
+                <p className="mt-1 text-3xl font-bold text-green-600">
+                  {approvedCount}
                 </p>
-              </div>
-
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-50">
-                <CheckCircle2
-                  size={23}
-                  className="text-green-600"
-                />
               </div>
             </div>
           </div>
 
-          {/* REJECTED */}
-          <div className="rounded-xl border border-gray-200 bg-white p-5">
-            <div className="flex items-center justify-between">
+          <div className="rounded-2xl border bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-3">
+              <Clock className="text-orange-600" />
               <div>
-                <p className="text-sm font-medium text-gray-500">
-                  Rejected
+                <p className="text-sm text-gray-500">
+                  Pending
                 </p>
-
-                <p className="mt-2 text-3xl font-bold text-red-600">
-                  {rejectedReviews}
+                <p className="mt-1 text-3xl font-bold text-orange-600">
+                  {pendingCount}
                 </p>
-              </div>
-
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-50">
-                <XCircle
-                  size={23}
-                  className="text-red-600"
-                />
               </div>
             </div>
           </div>
         </div>
 
-        {/* SEARCH / FILTER */}
-        <div className="mt-8 rounded-xl border border-gray-200 bg-white p-4">
-          <div className="flex flex-col gap-4 md:flex-row">
-            {/* SEARCH */}
-            <div className="relative flex-1">
+        {/* SEARCH + FILTER */}
+        <div className="mb-6 rounded-2xl border bg-white p-4 shadow-sm">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+
+            <div className="relative w-full md:max-w-md">
               <Search
                 size={18}
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
@@ -486,307 +318,368 @@ export default function AdminReviewsPage() {
                 type="text"
                 value={search}
                 onChange={(event) =>
-                  setSearch(
-                    event.target.value
-                  )
+                  setSearch(event.target.value)
                 }
-                placeholder="Search product, customer or review..."
-                className="w-full rounded-lg border border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm outline-none transition focus:border-blue-500 focus:bg-white"
+                placeholder="Search reviews..."
+                className="w-full rounded-xl border border-gray-300 py-3 pl-10 pr-4 text-sm outline-none focus:border-blue-500"
               />
             </div>
 
-            {/* FILTER */}
-            <select
-              value={filter}
-              onChange={(event) =>
-                setFilter(
-                  event.target.value
-                )
-              }
-              className="rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-700 outline-none focus:border-blue-500"
-            >
-              <option value="all">
-                All Reviews
-              </option>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setFilter("all")}
+                className={`rounded-lg px-4 py-2 text-sm font-semibold ${
+                  filter === "all"
+                    ? "bg-blue-600 text-white"
+                    : "border border-gray-300 bg-white text-gray-700"
+                }`}
+              >
+                All
+              </button>
 
-              <option value="approved">
+              <button
+                type="button"
+                onClick={() => setFilter("approved")}
+                className={`rounded-lg px-4 py-2 text-sm font-semibold ${
+                  filter === "approved"
+                    ? "bg-green-600 text-white"
+                    : "border border-gray-300 bg-white text-gray-700"
+                }`}
+              >
                 Approved
-              </option>
+              </button>
 
-              <option value="rejected">
-                Rejected
-              </option>
-            </select>
+              <button
+                type="button"
+                onClick={() => setFilter("pending")}
+                className={`rounded-lg px-4 py-2 text-sm font-semibold ${
+                  filter === "pending"
+                    ? "bg-orange-600 text-white"
+                    : "border border-gray-300 bg-white text-gray-700"
+                }`}
+              >
+                Pending
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* REVIEW LIST */}
-        <div className="mt-6 space-y-5">
-          {filteredReviews.length ===
-          0 ? (
-            <div className="rounded-xl border border-gray-200 bg-white p-12 text-center">
+        {/* REVIEWS TABLE */}
+        <div className="overflow-hidden rounded-2xl border bg-white shadow-sm">
+
+          {loading ? (
+            <div className="flex min-h-[300px] items-center justify-center">
+              <p className="text-gray-500">
+                Loading reviews...
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[1000px]">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-5 py-4 text-left text-xs font-bold uppercase tracking-wide text-gray-500">
+                      Customer
+                    </th>
+
+                    <th className="px-5 py-4 text-left text-xs font-bold uppercase tracking-wide text-gray-500">
+                      Product
+                    </th>
+
+                    <th className="px-5 py-4 text-left text-xs font-bold uppercase tracking-wide text-gray-500">
+                      Rating
+                    </th>
+
+                    <th className="px-5 py-4 text-left text-xs font-bold uppercase tracking-wide text-gray-500">
+                      Status
+                    </th>
+
+                    <th className="px-5 py-4 text-right text-xs font-bold uppercase tracking-wide text-gray-500">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-gray-100">
+                                    {filteredReviews.map((review) => {
+                    const approving =
+                      updatingId === String(review._id);
+
+                    const deleting =
+                      deletingId === String(review._id);
+
+                    return (
+                      <tr
+                        key={review._id}
+                        className="hover:bg-gray-50"
+                      >
+                        {/* CUSTOMER */}
+                        <td className="px-5 py-4">
+                          <div>
+                            <p className="font-semibold text-gray-900">
+                              {review.userName || "Customer"}
+                            </p>
+
+                            <p className="text-xs text-gray-500">
+                              {review.userEmail || "—"}
+                            </p>
+                          </div>
+                        </td>
+
+                        {/* PRODUCT */}
+                        <td className="px-5 py-4">
+                          <div>
+                            <p className="font-semibold text-gray-900">
+                              {review.productName}
+                            </p>
+
+                            <p className="text-xs text-gray-500 max-w-xs truncate">
+                              {review.comment}
+                            </p>
+                          </div>
+                        </td>
+
+                        {/* RATING */}
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-1">
+                            {Array.from({
+                              length: 5,
+                            }).map((_, index) => (
+                              <Star
+                                key={index}
+                                size={16}
+                                className={
+                                  index <
+                                  Number(review.rating || 0)
+                                    ? "fill-yellow-400 text-yellow-400"
+                                    : "text-gray-300"
+                                }
+                              />
+                            ))}
+                          </div>
+                        </td>
+
+                        {/* STATUS */}
+                        <td className="px-5 py-4">
+                          {review.isApproved ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+                              <CheckCircle2 size={14} />
+                              Approved
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-700">
+                              <Clock size={14} />
+                              Pending
+                            </span>
+                          )}
+                        </td>
+
+                        {/* ACTIONS */}
+                        <td className="px-5 py-4">
+                          <div className="flex justify-end gap-2">
+
+                            <Link
+                              href={`/products/${review.productId}`}
+                              target="_blank"
+                              className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                            >
+                              <Eye size={14} />
+                              View
+                            </Link>
+
+                            {review.isApproved ? (
+                              <button
+                                type="button"
+                                disabled={approving}
+                                onClick={() =>
+                                  updateReview(
+                                    review._id,
+                                    false
+                                  )
+                                }
+                                className="rounded-lg bg-orange-50 px-3 py-2 text-xs font-semibold text-orange-700 hover:bg-orange-100 disabled:opacity-50"
+                              >
+                                {approving
+                                  ? "Saving..."
+                                  : "Reject"}
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                disabled={approving}
+                                onClick={() =>
+                                  updateReview(
+                                    review._id,
+                                    true
+                                  )
+                                }
+                                className="rounded-lg bg-green-50 px-3 py-2 text-xs font-semibold text-green-700 hover:bg-green-100 disabled:opacity-50"
+                              >
+                                {approving
+                                  ? "Saving..."
+                                  : "Approve"}
+                              </button>
+                            )}
+
+                            <button
+                              type="button"
+                              disabled={deleting}
+                              onClick={() =>
+                                deleteReview(review._id)
+                              }
+                              className="inline-flex items-center gap-1 rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                            >
+                              <Trash2 size={14} />
+                              {deleting
+                                ? "Deleting..."
+                                : "Delete"}
+                            </button>
+
+                          </div>
+                        </td>
+
+                      </tr>
+                    );
+                  })}
+                                  </tbody>
+              </table>
+            </div>
+          )}
+
+          {!loading && filteredReviews.length === 0 && (
+            <div className="border-t border-gray-200 p-12 text-center">
               <Star
                 size={42}
                 className="mx-auto text-gray-300"
               />
 
-              <h2 className="mt-4 text-lg font-semibold text-gray-900">
-                No Reviews Found
+              <h2 className="mt-4 text-lg font-bold text-gray-900">
+                No reviews found
               </h2>
 
               <p className="mt-2 text-sm text-gray-500">
-                No reviews match your current search or filter.
+                {search
+                  ? "Try another search or filter."
+                  : "No customer reviews are available."}
               </p>
             </div>
-          ) : (
-            filteredReviews.map(
-              (review) => {
-                const product =
-                  review.productId;
-
-                const productName =
-                  product?.name ||
-                  "Unknown Product";
-
-                const productImage =
-                  product?.images?.[0] ||
-                  product?.image ||
-                  "";
-
-                const rating =
-                  Number(
-                    review.rating || 0
-                  );
-
-                const date =
-                  review.createdAt
-                    ? new Date(
-                        review.createdAt
-                      ).toLocaleDateString(
-                        "en-US",
-                        {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        }
-                      )
-                    : "";
-
-                return (
-                  <div
-                    key={
-                      review._id
-                    }
-                    className="rounded-xl border border-gray-200 bg-white p-5 md:p-6"
-                  >
-                    <div className="flex flex-col gap-5 lg:flex-row">
-                      {/* PRODUCT */}
-                      <div className="flex min-w-0 gap-4 lg:w-72">
-                        <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
-                          {productImage ? (
-                            <img
-                              src={
-                                productImage
-                              }
-                              alt={
-                                productName
-                              }
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            <div className="flex h-full items-center justify-center text-xs text-gray-400">
-                              No image
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="min-w-0">
-                          <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
-                            Product
-                          </p>
-
-                          <h3 className="mt-1 line-clamp-2 text-sm font-semibold text-gray-900">
-                            {productName}
-                          </h3>
-
-                          {product?._id && (
-                            <Link
-                              href={`/products/${product._id}`}
-                              target="_blank"
-                              className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700"
-                            >
-                              View Product
-                              <Eye
-                                size={13}
-                              />
-                            </Link>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* REVIEW */}
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-3">
-                          <div className="flex items-center gap-1">
-                            {[
-                              1,
-                              2,
-                              3,
-                              4,
-                              5,
-                            ].map(
-                              (star) => (
-                                <Star
-                                  key={
-                                    star
-                                  }
-                                  size={17}
-                                  className={
-                                    star <=
-                                    rating
-                                      ? "fill-yellow-400 text-yellow-400"
-                                      : "text-gray-300"
-                                  }
-                                />
-                              )
-                            )}
-                          </div>
-
-                          <span className="text-sm font-semibold text-gray-900">
-                            {rating}/5
-                          </span>
-
-                          {review.isApproved ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700">
-                              <CheckCircle2
-                                size={13}
-                              />
-                              Approved
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700">
-                              <XCircle
-                                size={13}
-                              />
-                              Rejected
-                            </span>
-                          )}
-                        </div>
-
-                        <h2 className="mt-3 text-lg font-bold text-gray-900">
-                          {review.title}
-                        </h2>
-
-                        <p className="mt-2 whitespace-pre-line text-sm leading-6 text-gray-600">
-                          {review.comment}
-                        </p>
-
-                        <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-gray-500">
-                          <span>
-                            By{" "}
-                            <strong className="font-semibold text-gray-700">
-                              {review.userName ||
-                                "Customer"}
-                            </strong>
-                          </span>
-
-                          <span>
-                            {review.userEmail}
-                          </span>
-
-                          {date && (
-                            <span className="inline-flex items-center gap-1">
-                              <Clock
-                                size={13}
-                              />
-                              {date}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* ACTIONS */}
-                      <div className="flex flex-wrap items-start gap-2 lg:w-44 lg:flex-col">
-                        {review.isApproved ? (
-                          <button
-                            type="button"
-                            disabled={
-                              updatingId ===
-                              review._id
-                            }
-                            onClick={() =>
-                              updateReview(
-                                review._id,
-                                false
-                              )
-                            }
-                            className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            <XCircle
-                              size={16}
-                            />
-
-                            {updatingId ===
-                            review._id
-                              ? "Updating..."
-                              : "Reject"}
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            disabled={
-                              updatingId ===
-                              review._id
-                            }
-                            onClick={() =>
-                              updateReview(
-                                review._id,
-                                true
-                              )
-                            }
-                            className="inline-flex items-center justify-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-2.5 text-sm font-semibold text-green-700 transition hover:bg-green-100 disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            <CheckCircle2
-                              size={16}
-                            />
-
-                            {updatingId ===
-                            review._id
-                              ? "Updating..."
-                              : "Approve"}
-                          </button>
-                        )}
-
-                        <button
-                          type="button"
-                          disabled={
-                            deletingId ===
-                            review._id
-                          }
-                          onClick={() =>
-                            deleteReview(
-                              review._id
-                            )
-                          }
-                          className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          <Trash2
-                            size={16}
-                          />
-
-                          {deletingId ===
-                          review._id
-                            ? "Deleting..."
-                            : "Delete"}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              }
-            )
           )}
         </div>
+
+        {/* QUICK ACTIONS */}
+        <div className="mt-8 rounded-2xl border bg-white p-6 shadow-sm">
+          <div className="mb-5">
+            <h2 className="text-xl font-bold text-gray-900">
+              Quick Actions
+            </h2>
+
+            <p className="mt-1 text-sm text-gray-500">
+              Review management shortcuts.
+            </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+
+            <button
+              type="button"
+              onClick={loadReviews}
+              className="group rounded-xl border border-gray-200 p-5 text-left transition hover:border-blue-300 hover:bg-blue-50"
+            >
+              <div className="flex items-center gap-3">
+                <div className="rounded-lg bg-blue-100 p-3">
+                  <Search
+                    size={22}
+                    className="text-blue-600"
+                  />
+                </div>
+
+                <div>
+                  <h3 className="font-semibold text-gray-900">
+                    Refresh Reviews
+                  </h3>
+
+                  <p className="text-sm text-gray-500">
+                    Reload latest customer reviews.
+                  </p>
+                </div>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={async () => {
+                const pending = reviews.filter(
+                  (review) => !review.isApproved
+                );
+
+                if (pending.length === 0) {
+                  toast.success(
+                    "No pending reviews."
+                  );
+                  return;
+                }
+
+                for (const review of pending) {
+                  await updateReview(
+                    review._id,
+                    true
+                  );
+                }
+
+                toast.success(
+                  "All pending reviews approved."
+                );
+              }}
+              className="group rounded-xl border border-gray-200 p-5 text-left transition hover:border-green-300 hover:bg-green-50"
+            >
+              <div className="flex items-center gap-3">
+                <div className="rounded-lg bg-green-100 p-3">
+                  <CheckCircle2
+                    size={22}
+                    className="text-green-600"
+                  />
+                </div>
+
+                <div>
+                  <h3 className="font-semibold text-gray-900">
+                    Approve All Pending
+                  </h3>
+
+                  <p className="text-sm text-gray-500">
+                    Approve every pending review.
+                  </p>
+                </div>
+              </div>
+            </button>
+
+            <Link
+              href="/admin/products"
+              className="group rounded-xl border border-gray-200 p-5 transition hover:border-purple-300 hover:bg-purple-50"
+            >
+              <div className="flex items-center gap-3">
+                <div className="rounded-lg bg-purple-100 p-3">
+                  <Eye
+                    size={22}
+                    className="text-purple-600"
+                  />
+                </div>
+
+                <div>
+                  <h3 className="font-semibold text-gray-900">
+                    View Products
+                  </h3>
+
+                  <p className="text-sm text-gray-500">
+                    Open the product management page.
+                  </p>
+                </div>
+              </div>
+            </Link>
+
+          </div>
+        </div>
+
       </div>
     </main>
   );

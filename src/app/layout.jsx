@@ -22,40 +22,104 @@ const geistMono = localFont({
 });
 
 export const metadata = {
-  metadataBase: new URL("https://YOURDOMAIN.com"),
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_APP_URL ||
+      "http://localhost:3000"
+  ),
 
   title: {
-    default: "ComputerHub | Computers, Laptops & Technology",
+    default: "ComputerHub",
     template: "%s | ComputerHub",
   },
 
   description:
-    "ComputerHub is a technology marketplace for laptops, desktops, PC components, monitors, accessories and gaming products.",
+    "ComputerHub - Buy and sell computers, laptops, gaming PCs and accessories.",
 
-  alternates: {
-    canonical: "/",
-  },
+  keywords: [
+    "ComputerHub",
+    "Laptop",
+    "Gaming PC",
+    "Computer Store",
+    "Electronics",
+    "Pakistan",
+  ],
+
+  authors: [
+    {
+      name: "ComputerHub",
+    },
+  ],
+
+  creator: "ComputerHub",
+
+  applicationName: "ComputerHub",
 
   openGraph: {
     title: "ComputerHub",
     description:
-      "Technology Marketplace for laptops, desktops and gaming products.",
-    url: "https://YOURDOMAIN.com",
+      "Buy and sell computers, laptops and accessories.",
+
+    url:
+      process.env.NEXT_PUBLIC_APP_URL ||
+      "http://localhost:3000",
+
     siteName: "ComputerHub",
+
+    locale: "en_US",
+
     type: "website",
-    images: ["/og-image.jpg"],
+
+    images: [
+      {
+        url: "/icons/icon-512.png",
+        width: 512,
+        height: 512,
+        alt: "ComputerHub",
+      },
+    ],
   },
 
   twitter: {
     card: "summary_large_image",
+
     title: "ComputerHub",
-    images: ["/og-image.jpg"],
+
+    description:
+      "Buy and sell computers, laptops and accessories.",
+
+    images: ["/icons/icon-512.png"],
   },
+
+  icons: {
+    icon: "/icons/icon-192.png",
+
+    apple:
+      "/icons/apple-touch-icon.png",
+
+    shortcut: "/favicon.ico",
+  },
+
+  manifest: "/manifest.webmanifest",
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
+      <head>
+  <meta name="theme-color" content="#2563eb" />
+
+  <meta
+    name="apple-mobile-web-app-capable"
+    content="yes"
+  />
+
+  <meta
+    name="apple-mobile-web-app-status-bar-style"
+    content="default"
+  />
+
+  <link rel="manifest" href="/manifest.webmanifest" />
+</head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

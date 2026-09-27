@@ -1,221 +1,79 @@
 import { NextResponse } from "next/server";
-import jwt from "jsonwebtoken";
+import { jwtVerify } from "jose";
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const SECRET = new TextEncoder().encode(
+  process.env.JWT_SECRET || "computerhub-secret-key"
+);
 
-const AUTH_COOKIE_NAME = "computerhub_token";
+async function verifyToken(token) {
+  try {
+    const { payload } = await jwtVerify(token, SECRET);
+    return payload;
+  } catch {
+    return null;
+  }
+}
 
-export function middleware(request) {
+export async function middleware(request) {
   const { pathname } = request.nextUrl;
 
-  const token =
-    request.cookies.get(AUTH_COOKIE_NAME)?.value;
+  // Public routes
+  const publicRoutes = [
+    "/",
+    "/login",
+    "/signup",
+    "/products",
+    "/categories",
+    "/cart",
+  ];
 
-  // =========================================================
-  // ADMIN LOGIN PAGE
-  // =========================================================
+  if (publicRoutes.some((route) => pathname.startsWith(route))) {
+    return NextResponse.next();
+  }
 
-  if (pathname === "/admin/login") {
-    if (!token) {
-      return NextResponse.next();
-    }
+  const token = request.cookies.get("token")?.value;
 
-    try {
-      if (!JWT_SECRET) {
-        return NextResponse.next();
-      }
+  // No token → Login
+  if (!token) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
 
-      const decoded = jwt.verify(
-        token,
-        JWT_SECRET
-      );
+  const user = await verifyToken(token);
 
-      if (decoded.role === "admin") {
-        return NextResponse.redirect(
-          new URL("/admin", request.url)
-        );
-      }
+  if (!user) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
 
-      return NextResponse.next();
-    } catch (error) {
-      return NextResponse.next();
+  // Admin protection
+  if (pathname.startsWith("/admin")) {
+    if (user.role !== "admin") {
+      return NextResponse.redirect(new URL("/", request.url));
     }
   }
 
-  // =========================================================
-  // ADMIN ROUTES
-  // ONLY ADMIN CAN ACCESS
-  // =========================================================
-
-  if (
-    pathname === "/admin" ||
-    pathname.startsWith("/admin/")
-  ) {
-    if (!token) {
-      const loginUrl = new URL(
-        "/admin/login",
-        request.url
-      );
-
-      loginUrl.searchParams.set(
-        "redirect",
-        pathname
-      );
-
-      return NextResponse.redirect(loginUrl);
-    }
-
-    try {
-      if (!JWT_SECRET) {
-        console.error(
-          "JWT_SECRET is missing."
-        );
-
-        return NextResponse.redirect(
-          new URL(
-            "/admin/login",
-            request.url
-          )
-        );
-      }
-
-      const decoded = jwt.verify(
-        token,
-        JWT_SECRET
-      );
-
-      if (decoded.role !== "admin") {
-        return NextResponse.redirect(
-          new URL("/account", request.url)
-        );
-      }
-
-      return NextResponse.next();
-    } catch (error) {
-      console.error(
-        "Admin authorization error:",
-        error
-      );
-
-      const loginUrl = new URL(
-        "/admin/login",
-        request.url
-      );
-
-      loginUrl.searchParams.set(
-        "redirect",
-        pathname
-      );
-
-      return NextResponse.redirect(loginUrl);
+  // Seller protection
+  if (pathname.startsWith("/seller")) {
+    if (!["seller", "admin"].includes(user.role)) {
+      return NextResponse.redirect(new URL("/", request.url));
     }
   }
 
-  // =========================================================
-  // SELLER ROUTES
-  //
-  // SELLERS ARE NO LONGER ALLOWED TO MANAGE PRODUCTS.
-  //
-  // ADMIN CAN STILL OPEN THE OLD SELLER PRODUCT PAGES.
-  // This lets us reuse your existing product add/edit pages
-  // without rebuilding them.
-  // =========================================================
-
-  if (
-    pathname === "/seller" ||
-    pathname.startsWith("/seller/")
-  ) {
-    if (!token) {
-      const loginUrl = new URL(
-        "/login",
-        request.url
-      );
-
-      loginUrl.searchParams.set(
-        "redirect",
-        pathname
-      );
-
-      return NextResponse.redirect(loginUrl);
-    }
-
-    try {
-      if (!JWT_SECRET) {
-        console.error(
-          "JWT_SECRET is missing."
-        );
-
-        return NextResponse.redirect(
-          new URL(
-            "/login",
-            request.url
-          )
-        );
-      }
-
-      const decoded = jwt.verify(
-        token,
-        JWT_SECRET
-      );
-
-      // =====================================================
-      // ADMIN
-      // Admin is allowed to use the existing product
-      // management pages under /seller/products.
-      // =====================================================
-
-      if (decoded.role === "admin") {
-        return NextResponse.next();
-      }
-
-      // =====================================================
-      // SELLER
-      // Sellers can no longer access seller dashboard.
-      // =====================================================
-
-      if (decoded.role === "seller") {
-        return NextResponse.redirect(
-          new URL("/account", request.url)
-        );
-      }
-
-      // =====================================================
-      // CUSTOMER
-      // =====================================================
-
-      return NextResponse.redirect(
-        new URL("/account", request.url)
-      );
-    } catch (error) {
-      console.error(
-        "Seller authorization error:",
-        error
-      );
-
-      const loginUrl = new URL(
-        "/login",
-        request.url
-      );
-
-      loginUrl.searchParams.set(
-        "redirect",
-        pathname
-      );
-
-      return NextResponse.redirect(loginUrl);
+  // Customer protection
+  if (pathname.startsWith("/account")) {
+    if (!["customer", "seller", "admin"].includes(user.role)) {
+      return NextResponse.redirect(new URL("/login", request.url));
     }
   }
 
   return NextResponse.next();
 }
 
-// =========================================================
-// MIDDLEWARE MATCHER
-// =========================================================
-
 export const config = {
   matcher: [
     "/admin/:path*",
     "/seller/:path*",
+    "/account/:path*",
+    "/orders/:path*",
+    "/checkout/:path*",
   ],
 };

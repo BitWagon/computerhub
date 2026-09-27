@@ -51,15 +51,11 @@ export default function AdminProductsPage() {
           : []
       );
     } catch (err) {
-      console.error(
-        "Admin products error:",
-        err
-      );
-
       setError(
-        err.message ||
-          "Unable to load products."
-      );
+  err instanceof Error
+    ? err.message
+    : "Unable to load products."
+);
     } finally {
       setLoading(false);
     }
@@ -122,15 +118,11 @@ export default function AdminProductsPage() {
           : "Product deactivated successfully."
       );
     } catch (err) {
-      console.error(
-        "Product status error:",
-        err
-      );
-
       setError(
-        err.message ||
-          "Unable to update product."
-      );
+  err instanceof Error
+    ? err.message
+    : "Unable to update product."
+);
     } finally {
       setActionLoading("");
     }
@@ -186,15 +178,11 @@ export default function AdminProductsPage() {
         "Product permanently deleted."
       );
     } catch (err) {
-      console.error(
-        "Delete product error:",
-        err
-      );
-
       setError(
-        err.message ||
-          "Unable to delete product."
-      );
+  err instanceof Error
+    ? err.message
+    : "Unable to delete product."
+);
     } finally {
       setActionLoading("");
     }

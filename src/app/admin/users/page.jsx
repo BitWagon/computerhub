@@ -102,11 +102,12 @@ export default function AdminUsersPage() {
       });
 
       setSelectedRoles(roles);
-    } catch (error) {
-      console.error("Admin users error:", error);
 
+    } catch (err) {
       setError(
-        error.message || "Unable to load users."
+        err instanceof Error
+          ? err.message
+          : "Unable to load users."
       );
     } finally {
       setLoading(false);
@@ -169,11 +170,16 @@ export default function AdminUsersPage() {
             : user
         )
       );
-    } catch (error) {
-      console.error("Role update error:", error);
+            setSelectedRoles((current) => ({
+        ...current,
+        [userId]: data.user.role,
+      }));
 
+    } catch (err) {
       setError(
-        error.message || "Unable to update role."
+        err instanceof Error
+          ? err.message
+          : "Unable to update role."
       );
     } finally {
       setSavingId("");
@@ -181,257 +187,274 @@ export default function AdminUsersPage() {
   }
 
   const totalUsers = users.length;
-
-  const customerCount = users.filter(
+  const totalCustomers = users.filter(
     (user) => user.role === "customer"
   ).length;
 
-  const sellerCount = users.filter(
+  const totalSellers = users.filter(
     (user) => user.role === "seller"
   ).length;
 
-  const adminCount = users.filter(
+  const totalAdmins = users.filter(
     (user) => user.role === "admin"
   ).length;
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+    <main className="min-h-screen bg-gray-50 px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl">
+
+        {/* HEADER */}
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+
           <div>
             <Link
               href="/admin"
               className="mb-3 inline-flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-blue-600"
             >
-              <ArrowLeft size={16} />
+              <ArrowLeft size={17} />
               Back to Admin
             </Link>
 
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                <Users size={24} />
-              </div>
+            <h1 className="text-3xl font-bold text-gray-900">
+              Users
+            </h1>
 
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">
-                  Users
-                </h1>
-
-                <p className="mt-1 text-gray-600">
-                  Manage customer, seller, and admin roles.
-                </p>
-              </div>
-            </div>
+            <p className="mt-1 text-gray-500">
+              Manage all ComputerHub users and roles.
+            </p>
           </div>
 
           <button
             type="button"
             onClick={() => loadUsers(true)}
-            disabled={loading || refreshing}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-5 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+            disabled={refreshing}
+            className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
           >
             <RefreshCw
-              size={17}
-              className={refreshing ? "animate-spin" : ""}
+              size={18}
+              className={
+                refreshing ? "animate-spin" : ""
+              }
             />
             Refresh
           </button>
+
         </div>
 
-        <div className="mb-8 rounded-2xl border border-blue-100 bg-blue-50 p-5">
-          <div className="flex items-start gap-3">
-            <ShieldCheck
-              size={22}
-              className="mt-0.5 shrink-0 text-blue-600"
-            />
-
-            <div>
-              <h2 className="font-bold text-gray-900">
-                Safe role management
-              </h2>
-
-              <p className="mt-1 text-sm leading-6 text-gray-600">
-                Only administrators can change user roles.
-                You cannot change your own role, and the
-                last active administrator cannot be removed.
-              </p>
-            </div>
-          </div>
-        </div>
-
+        {/* ERROR */}
         {error && (
-          <div className="mb-8 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4">
-            <AlertCircle
-              size={20}
-              className="mt-0.5 text-red-600"
-            />
+          <div className="mb-6 flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
 
-            <p className="text-sm text-red-700">
-              {error}
-            </p>
+            <AlertCircle size={18} />
+
+            <span>{error}</span>
+
           </div>
         )}
 
-        {!loading && !error && (
-          <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-              <p className="text-sm text-gray-500">
-                Total Users
-              </p>
+        {/* STATS */}
+        <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 
-              <p className="mt-2 text-3xl font-bold text-gray-900">
-                {totalUsers}
-              </p>
-            </div>
+          <div className="rounded-2xl border bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-3">
 
-            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-              <p className="text-sm text-gray-500">
-                Customers
-              </p>
+              <Users className="text-blue-600" />
 
-              <p className="mt-2 text-3xl font-bold text-gray-900">
-                {customerCount}
-              </p>
-            </div>
+              <div>
+                <p className="text-sm text-gray-500">
+                  Total Users
+                </p>
 
-            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-              <p className="text-sm text-gray-500">
-                Sellers
-              </p>
+                <p className="mt-1 text-3xl font-bold text-gray-900">
+                  {totalUsers}
+                </p>
+              </div>
 
-              <p className="mt-2 text-3xl font-bold text-blue-600">
-                {sellerCount}
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-              <p className="text-sm text-gray-500">
-                Administrators
-              </p>
-
-              <p className="mt-2 text-3xl font-bold text-purple-600">
-                {adminCount}
-              </p>
             </div>
           </div>
-        )}
 
-        <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-          <div className="border-b border-gray-200 px-6 py-5">
-            <h2 className="text-lg font-bold text-gray-900">
-              Registered Users
-            </h2>
+          <div className="rounded-2xl border bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-3">
 
-            <p className="mt-1 text-sm text-gray-500">
-              Assign roles for your ComputerHub marketplace.
-            </p>
+              <UserRound className="text-gray-600" />
+
+              <div>
+                <p className="text-sm text-gray-500">
+                  Customers
+                </p>
+
+                <p className="mt-1 text-3xl font-bold text-gray-900">
+                  {totalCustomers}
+                </p>
+              </div>
+
+            </div>
           </div>
+
+          <div className="rounded-2xl border bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-3">
+
+              <Store className="text-blue-600" />
+
+              <div>
+                <p className="text-sm text-gray-500">
+                  Sellers
+                </p>
+
+                <p className="mt-1 text-3xl font-bold text-gray-900">
+                  {totalSellers}
+                </p>
+              </div>
+
+            </div>
+          </div>
+
+          <div className="rounded-2xl border bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-3">
+
+              <ShieldCheck className="text-purple-600" />
+
+              <div>
+                <p className="text-sm text-gray-500">
+                  Admins
+                </p>
+
+                <p className="mt-1 text-3xl font-bold text-gray-900">
+                  {totalAdmins}
+                </p>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+
+        {/* USERS TABLE */}
+        <div className="overflow-hidden rounded-2xl border bg-white shadow-sm">
 
           {loading ? (
-            <div className="flex min-h-[300px] items-center justify-center">
-              <div className="flex items-center gap-3 text-gray-600">
+            <div className="flex min-h-[320px] items-center justify-center">
+
+              <div className="text-center">
+
                 <Loader2
-                  size={22}
-                  className="animate-spin"
+                  size={34}
+                  className="mx-auto animate-spin text-blue-600"
                 />
-                Loading users...
+
+                <p className="mt-3 text-sm text-gray-500">
+                  Loading users...
+                </p>
+
               </div>
-            </div>
-          ) : users.length === 0 ? (
-            <div className="flex min-h-[300px] flex-col items-center justify-center px-6 text-center">
-              <Users
-                size={40}
-                className="text-gray-300"
-              />
 
-              <h3 className="mt-4 text-lg font-semibold text-gray-900">
-                No users found
-              </h3>
-
-              <p className="mt-2 text-sm text-gray-500">
-                Register a ComputerHub account first.
-              </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[850px]">
-                <thead>
-                  <tr className="border-b border-gray-200 bg-gray-50 text-left">
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wide text-gray-500">
+
+              <table className="w-full min-w-[900px]">
+
+                <thead className="bg-gray-50">
+                  <tr>
+
+                    <th className="px-5 py-4 text-left text-xs font-bold uppercase tracking-wide text-gray-500">
                       User
                     </th>
-
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wide text-gray-500">
-                      Current Role
+                                        <th className="px-5 py-4 text-left text-xs font-bold uppercase tracking-wide text-gray-500">
+                      Email
                     </th>
 
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wide text-gray-500">
-                      Change Role
-                    </th>
-
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wide text-gray-500">
-                      Status
-                    </th>
-
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wide text-gray-500">
+                    <th className="px-5 py-4 text-left text-xs font-bold uppercase tracking-wide text-gray-500">
                       Joined
                     </th>
 
-                    <th className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wide text-gray-500">
+                    <th className="px-5 py-4 text-left text-xs font-bold uppercase tracking-wide text-gray-500">
+                      Role
+                    </th>
+
+                    <th className="px-5 py-4 text-right text-xs font-bold uppercase tracking-wide text-gray-500">
                       Action
                     </th>
+
                   </tr>
                 </thead>
 
                 <tbody className="divide-y divide-gray-100">
+
                   {users.map((user) => {
-                    const isSaving =
-                      savingId === user.id;
-
-                    const selectedRole =
-                      selectedRoles[user.id] ||
-                      user.role;
-
-                    const isChanged =
-                      selectedRole !== user.role;
+                    const busy = savingId === user.id;
 
                     return (
                       <tr
                         key={user.id}
                         className="hover:bg-gray-50"
                       >
-                        <td className="px-6 py-5">
-                          <p className="font-semibold text-gray-900">
-                            {user.firstName}{" "}
-                            {user.lastName}
-                          </p>
 
-                          <p className="mt-1 text-sm text-gray-500">
-                            {user.email}
-                          </p>
+                        {/* USER */}
+                        <td className="px-5 py-4">
+
+                          <div className="flex items-center gap-3">
+
+                            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-blue-100 text-blue-600 font-bold">
+                              {String(
+                                user.name ||
+                                  user.firstName ||
+                                  "U"
+                              )
+                                .charAt(0)
+                                .toUpperCase()}
+                            </div>
+
+                            <div>
+
+                              <p className="font-semibold text-gray-900">
+                                {user.name ||
+                                  `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
+                                  "User"}
+                              </p>
+
+                              <span
+                                className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${getRoleClasses(
+                                  user.role
+                                )}`}
+                              >
+                                {getRoleLabel(user.role)}
+                              </span>
+
+                            </div>
+
+                          </div>
+
                         </td>
 
-                        <td className="px-6 py-5">
-                          <span
-                            className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getRoleClasses(
-                              user.role
-                            )}`}
-                          >
-                            {getRoleLabel(user.role)}
-                          </span>
+                        {/* EMAIL */}
+                        <td className="px-5 py-4 text-sm text-gray-600">
+                          {user.email}
                         </td>
 
-                        <td className="px-6 py-5">
+                        {/* JOINED */}
+                        <td className="px-5 py-4 text-sm text-gray-600">
+                          {formatDate(
+                            user.createdAt
+                          )}
+                        </td>
+
+                        {/* ROLE SELECT */}
+                        <td className="px-5 py-4">
+
                           <select
-                            value={selectedRole}
+                            value={
+                              selectedRoles[user.id] ||
+                              user.role
+                            }
                             onChange={(event) =>
                               handleRoleChange(
                                 user.id,
                                 event.target.value
                               )
                             }
-                            disabled={isSaving}
-                            className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                            disabled={busy}
+                            className="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 disabled:opacity-50"
                           >
                             {ROLE_OPTIONS.map(
                               (option) => (
@@ -444,59 +467,62 @@ export default function AdminUsersPage() {
                               )
                             )}
                           </select>
+
                         </td>
 
-                        <td className="px-6 py-5">
-                          {user.isActive ? (
-                            <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
-                              Active
-                            </span>
-                          ) : (
-                            <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
-                              Disabled
-                            </span>
-                          )}
+                        {/* ACTION */}
+                        <td className="px-5 py-4">
+
+                          <div className="flex justify-end">
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updateRole(
+                                  user.id
+                                )
+                              }
+                              disabled={
+                                busy ||
+                                selectedRoles[
+                                  user.id
+                                ] === user.role
+                              }
+                              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                            >
+                              {busy ? (
+                                <>
+                                  <Loader2
+                                    size={16}
+                                    className="animate-spin"
+                                  />
+                                  Saving...
+                                </>
+                              ) : (
+                                <>
+                                  <Save size={16} />
+                                  Save
+                                </>
+                              )}
+                            </button>
+
+                          </div>
+
                         </td>
 
-                        <td className="px-6 py-5 text-sm text-gray-500">
-                          {formatDate(user.createdAt)}
-                        </td>
-
-                        <td className="px-6 py-5 text-right">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              updateRole(user.id)
-                            }
-                            disabled={
-                              isSaving || !isChanged
-                            }
-                            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
-                          >
-                            {isSaving ? (
-                              <>
-                                <Loader2
-                                  size={16}
-                                  className="animate-spin"
-                                />
-                                Saving...
-                              </>
-                            ) : (
-                              <>
-                                <Save size={16} />
-                                Save
-                              </>
-                            )}
-                          </button>
-                        </td>
                       </tr>
                     );
                   })}
+
                 </tbody>
+
               </table>
+
             </div>
           )}
-        </section>
+
+        </div>
+
       </div>
     </main>
   );
