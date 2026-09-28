@@ -1,4 +1,5 @@
 import localFont from "next/font/local";
+import PWARegister from "@/components/PWARegister";
 import "./globals.css";
 
 import { CartProvider } from "@/context/CartContext";
@@ -124,20 +125,22 @@ export default function RootLayout({ children }) {
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <CartProvider>
-          <WishlistProvider>
-            <Navbar />
+  <WishlistProvider>
+    <Navbar />
 
-            <main>{children}</main>
+    <main>{children}</main>
 
-            <Footer />
+    <Footer />
 
-            <Toaster
-              position="top-right"
-              richColors
-              closeButton
-            />
-          </WishlistProvider>
-        </CartProvider>
+    <PWARegister />
+
+    <Toaster
+      position="top-right"
+      richColors
+      closeButton
+    />
+  </WishlistProvider>
+</CartProvider>
       </body>
     </html>
   );

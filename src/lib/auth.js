@@ -16,6 +16,9 @@ export function signToken(user) {
     }
   );
 }
+export function createToken(user) {
+  return signToken(user);
+}
 
 export function verifyToken(token) {
   try {
@@ -33,6 +36,9 @@ export async function getCurrentUser() {
   if (!token) return null;
 
   return verifyToken(token);
+}
+export async function getCurrentUserToken() {
+  return getCurrentUser();
 }
 
 export async function setAuthCookie(token) {

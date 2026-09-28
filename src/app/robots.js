@@ -1,10 +1,5 @@
-// =====================================
-// ComputerHub SEO Robots
-// src/app/robots.js
-// =====================================
-
 export default function robots() {
-  const siteUrl =
+  const baseUrl =
     process.env.NEXT_PUBLIC_APP_URL ||
     "http://localhost:3000";
 
@@ -13,19 +8,9 @@ export default function robots() {
       {
         userAgent: "*",
         allow: "/",
-
-        disallow: [
-          "/admin/",
-          "/seller/",
-          "/account/",
-          "/api/",
-          "/checkout/",
-        ],
+        disallow: ["/admin", "/api"],
       },
     ],
-
-    sitemap: `${siteUrl}/sitemap.xml`,
-
-    host: siteUrl,
+    sitemap: `${baseUrl}/sitemap.xml`,
   };
 }
