@@ -1,82 +1,131 @@
+"use client";
+
+import { useState } from "react";
+import { ChevronDown, ChevronUp, HelpCircle } from "lucide-react";
+
 const faqs = [
   {
     question: "How can I place an order?",
     answer:
-      "Add the products you want to your cart, open checkout, enter your delivery information and select Cash on Delivery.",
+      "Browse products, add your items to the cart, proceed to checkout, enter your delivery details, and confirm your order.",
   },
   {
-    question: "Does ComputerHub support Cash on Delivery?",
+    question: "Do you offer Cash on Delivery?",
     answer:
-      "Yes. Cash on Delivery is currently the available payment method. You pay the courier when your order is delivered.",
+      "Yes. Cash on Delivery is available on selected products and eligible locations across Pakistan.",
   },
   {
-    question: "Can I pay by credit or debit card?",
+    question: "What payment methods do you accept?",
     answer:
-      "Online card payments are not connected yet. A live payment gateway will be added in a future phase.",
+      "We accept Cash on Delivery, debit cards, credit cards, and supported digital payment methods where available.",
   },
   {
-    question: "Can I use a digital wallet?",
+    question: "How long does delivery take?",
     answer:
-      "Digital wallet payments are planned for a future payment-gateway phase and are not currently enabled.",
+      "Most orders are delivered within 2–5 business days depending on your location and product availability.",
   },
   {
-    question: "Where can I see my orders?",
+    question: "Can I track my order?",
     answer:
-      "After signing in, you can open the Orders section from your account area to view your orders.",
+      "Yes. After your order is confirmed, you can view its latest status from your Orders page.",
   },
   {
-    question: "Can sellers manage their products?",
+    question: "Can I return a product?",
     answer:
-      "Yes. Authorized sellers can manage their products and seller orders through the seller dashboard.",
+      "Eligible products can be returned within the return period if they meet our return policy conditions.",
   },
   {
-    question: "How can I contact ComputerHub?",
+    question: "Do products include a warranty?",
     answer:
-      "Use the Contact Us page to send your enquiry to ComputerHub.",
+      "Many products include an official brand warranty. Warranty information is displayed on the product page when applicable.",
+  },
+  {
+    question: "Can sellers manage their own products?",
+    answer:
+      "Yes. Approved sellers can add products, update stock, manage pricing, and track orders through the Seller Dashboard.",
   },
 ];
 
 export default function FAQPage() {
-  return (
-    <main className="min-h-screen bg-gray-50 py-12 md:py-16">
-      <div className="container-main">
-        <div className="mx-auto max-w-3xl text-center">
-          <p className="text-sm font-bold uppercase tracking-[0.18em] text-blue-600">
-            Customer Help
-          </p>
+  const [openIndex, setOpenIndex] = useState(0);
 
-          <h1 className="mt-3 text-4xl font-black text-gray-900">
+  return (
+    <main className="min-h-screen bg-slate-50">
+      <div className="container-main py-12">
+
+        {/* Header */}
+        <div className="mx-auto mb-10 max-w-3xl text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+            <HelpCircle size={28} />
+          </div>
+
+          <h1 className="text-4xl font-bold text-slate-900">
             Frequently Asked Questions
           </h1>
 
-          <p className="mt-4 leading-7 text-gray-600">
-            Find answers to common questions about shopping,
-            payments, orders and ComputerHub.
+          <p className="mt-3 text-slate-600">
+            Find quick answers about orders, payments, delivery, returns,
+            warranties, and your ComputerHub account.
           </p>
         </div>
 
-        <div className="mx-auto mt-10 max-w-3xl space-y-4">
-          {faqs.map((faq) => (
-            <details
-              key={faq.question}
-              className="group rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
-            >
-              <summary className="cursor-pointer list-none font-semibold text-gray-900">
-                <div className="flex items-center justify-between gap-4">
-                  <span>{faq.question}</span>
+        {/* FAQ Cards */}
+        <div className="mx-auto max-w-4xl space-y-4">
+          {faqs.map((faq, index) => {
+            const isOpen = openIndex === index;
 
-                  <span className="text-xl text-blue-600 transition group-open:rotate-45">
-                    +
+            return (
+              <div
+                key={index}
+                className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
+              >
+                <button
+                  onClick={() =>
+                    setOpenIndex(isOpen ? -1 : index)
+                  }
+                  className="flex w-full items-center justify-between px-6 py-5 text-left"
+                >
+                  <span className="text-lg font-semibold text-slate-900">
+                    {faq.question}
                   </span>
-                </div>
-              </summary>
 
-              <p className="mt-4 border-t border-gray-100 pt-4 text-sm leading-7 text-gray-600">
-                {faq.answer}
-              </p>
-            </details>
-          ))}
+                  {isOpen ? (
+                    <ChevronUp className="text-blue-600" size={22} />
+                  ) : (
+                    <ChevronDown className="text-slate-400" size={22} />
+                  )}
+                </button>
+
+                {isOpen && (
+                  <div className="border-t border-slate-100 px-6 py-5">
+                    <p className="leading-7 text-slate-600">
+                      {faq.answer}
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
+
+        {/* Bottom Support Box */}
+        <div className="mx-auto mt-12 max-w-4xl rounded-3xl bg-gradient-to-r from-blue-600 to-indigo-600 p-8 text-center text-white">
+          <h2 className="text-2xl font-bold">
+            Still need help?
+          </h2>
+
+          <p className="mt-2 text-blue-100">
+            Our support team is here to help with orders, products, and seller inquiries.
+          </p>
+
+          <a
+            href="/contact"
+            className="mt-5 inline-block rounded-xl bg-white px-6 py-3 font-semibold text-blue-600 transition hover:bg-slate-100"
+          >
+            Contact Support
+          </a>
+        </div>
+
       </div>
     </main>
   );
