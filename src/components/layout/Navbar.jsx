@@ -53,6 +53,7 @@ export default function Navbar() {
   return (
     <>
       <header className="sticky top-0 z-50 border-b border-gray-200 bg-white">
+        {/* Top Bar */}
         <div className="hidden bg-slate-950 text-white md:block">
           <div className="container-main flex h-9 items-center justify-between text-xs">
             <p>Welcome to ComputerHub — your technology marketplace</p>
@@ -65,7 +66,9 @@ export default function Navbar() {
           </div>
         </div>
 
+        {/* Main Header */}
         <div className="container-main flex h-[72px] items-center gap-3 sm:gap-5">
+          {/* Mobile Menu Button */}
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
@@ -75,6 +78,7 @@ export default function Navbar() {
             <Menu size={24} />
           </button>
 
+          {/* Logo */}
           <Link
             href="/"
             className="flex shrink-0 items-center gap-2"
@@ -95,6 +99,7 @@ export default function Navbar() {
             </div>
           </Link>
 
+          {/* Search */}
           <div className="hidden flex-1 md:block">
             <form
               action="/search"
@@ -117,14 +122,19 @@ export default function Navbar() {
             </form>
           </div>
 
+          {/* User */}
           {user ? (
             <div className="hidden items-center gap-2 rounded-xl px-3 py-2 sm:flex">
               <User size={21} />
 
               <div className="hidden leading-tight xl:block">
                 <p className="text-[11px] text-gray-500">Welcome</p>
+
                 <p className="text-sm font-bold text-gray-900">
-                  {user.firstName || user.name || "User"}
+                  {user?.firstName ||
+                    user?.fullName?.split(" ")[0] ||
+                    user?.name?.split(" ")[0] ||
+                    "User"}
                 </p>
               </div>
 
@@ -150,6 +160,7 @@ export default function Navbar() {
             </Link>
           )}
 
+          {/* Cart */}
           <Link
             href="/cart"
             className="relative flex items-center gap-2 rounded-xl px-3 py-2 text-gray-700 transition hover:bg-gray-100"
@@ -166,6 +177,7 @@ export default function Navbar() {
           </Link>
         </div>
 
+        {/* Desktop Navigation */}
         <nav className="hidden border-t border-gray-100 lg:block">
           <div className="container-main flex h-12 items-center justify-between">
             <div className="flex h-full items-center gap-1">
@@ -236,6 +248,7 @@ export default function Navbar() {
           </div>
         </nav>
 
+        {/* Mobile Search */}
         <div className="border-t border-gray-100 px-4 py-3 md:hidden">
           <form
             action="/search"

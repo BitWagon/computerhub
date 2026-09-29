@@ -1,71 +1,70 @@
 import { NextResponse } from "next/server";
-import { jwtVerify } from "jose";
+import jwt from "jsonwebtoken";
 
-const SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "computerhub-secret-key"
-);
-
-async function verifyToken(token) {
-  try {
-    const { payload } = await jwtVerify(token, SECRET);
-    return payload;
-  } catch {
-    return null;
-  }
-}
-
-export async function middleware(request) {
+export function middleware(request) {
+  const token = request.cookies.get("token")?.value;
   const { pathname } = request.nextUrl;
 
   // Public routes
   const publicRoutes = [
     "/",
     "/login",
-    "/signup",
+    "/register",
     "/products",
-    "/categories",
-    "/cart",
+    "/search",
+    "/contact",
+    "/about",
+    "/faq",
+    "/privacy",
+    "/cookies",
+    "/terms",
   ];
 
-  if (publicRoutes.some((route) => pathname.startsWith(route))) {
+  if (publicRoutes.includes(pathname)) {
     return NextResponse.next();
   }
 
-  const token = request.cookies.get("token")?.value;
-
-  // No token → Login
+  // If user is not logged in
   if (!token) {
-    return NextResponse.redirect(new URL("/login", request.url));
-  }
-
-  const user = await verifyToken(token);
-
-  if (!user) {
-    return NextResponse.redirect(new URL("/login", request.url));
-  }
-
-  // Admin protection
-  if (pathname.startsWith("/admin")) {
-    if (user.role !== "admin") {
-      return NextResponse.redirect(new URL("/", request.url));
-    }
-  }
-
-  // Seller protection
-  if (pathname.startsWith("/seller")) {
-    if (!["seller", "admin"].includes(user.role)) {
-      return NextResponse.redirect(new URL("/", request.url));
-    }
-  }
-
-  // Customer protection
-  if (pathname.startsWith("/account")) {
-    if (!["customer", "seller", "admin"].includes(user.role)) {
+    if (
+      pathname.startsWith("/admin") ||
+      pathname.startsWith("/seller") ||
+      pathname.startsWith("/account") ||
+      pathname.startsWith("/orders")
+    ) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
+
+    return NextResponse.next();
   }
 
-  return NextResponse.next();
+  try {
+    const user = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Admin only
+    if (pathname.startsWith("/admin") && user.role !== "admin") {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+
+    // Seller only
+    if (pathname.startsWith("/seller") && user.role !== "seller") {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+
+    // Customer only
+    if (
+      (pathname.startsWith("/account") || pathname.startsWith("/orders")) &&
+      user.role !== "customer"
+    ) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+
+    return NextResponse.next();
+  } catch (error) {
+    console.error("Middleware JWT Error:", error);
+
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
 }
 
 export const config = {
@@ -74,6 +73,5 @@ export const config = {
     "/seller/:path*",
     "/account/:path*",
     "/orders/:path*",
-    "/checkout/:path*",
   ],
 };
