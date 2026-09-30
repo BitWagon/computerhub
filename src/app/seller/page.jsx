@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   Package,
   ShoppingBag,
-  Plus,
   ArrowRight,
   RefreshCw,
 } from "lucide-react";
@@ -223,7 +222,7 @@ export default function SellerDashboardPage() {
                 </h1>
 
                 <p className="mt-2 text-sm text-gray-500">
-                  Manage your products and customer orders.
+                   View your seller account and customer orders. Products are managed by ComputerHub administrators.
                 </p>
               </div>
 
@@ -264,63 +263,46 @@ export default function SellerDashboardPage() {
             />
 
             <div className="mt-6 grid gap-4 md:grid-cols-2">
-              <Link
-                href="/seller/products"
-                className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition hover:border-blue-200 hover:shadow-md"
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50">
-                      <Package
-                        size={22}
-                        className="text-blue-600"
-                      />
-                    </div>
+            <Link
+              href="/seller/orders"
+              className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition hover:border-blue-200 hover:shadow-md"
+            >
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50">
+                  <ShoppingBag size={22} className="text-blue-600" />
+                </div>
 
                     <h2 className="mt-4 text-lg font-bold text-gray-900">
-                      My Products
+                      My Orders
                     </h2>
 
                     <p className="mt-1 text-sm text-gray-500">
-                      View, edit, activate or deactivate your products.
+                      View and manage orders containing your products.
                     </p>
                   </div>
 
-                  <ArrowRight
-                    className="text-gray-400 transition group-hover:translate-x-1 group-hover:text-blue-600"
-                    size={20}
-                  />
-                </div>
-              </Link>
+                    <ArrowRight
+                      size={20}
+                      className="text-gray-400 transition group-hover:translate-x-1 group-hover:text-blue-600"
+                    />
+                  </div>
+                </Link>
 
-              <Link
-                href="/seller/products/add"
-                className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition hover:border-blue-200 hover:shadow-md"
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-green-50">
-                      <Plus
-                        size={22}
-                        className="text-green-600"
-                      />
+                  <div className="rounded-2xl border border-blue-100 bg-blue-50 p-6 shadow-sm">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white">
+                      <Package size={22} className="text-blue-600" />
                     </div>
 
                     <h2 className="mt-4 text-lg font-bold text-gray-900">
-                      Add Product
+                      Product Management
                     </h2>
 
-                    <p className="mt-1 text-sm text-gray-500">
-                      Add a new product to your ComputerHub store.
-                    </p>
-                  </div>
-
-                  <ArrowRight
-                    className="text-gray-400 transition group-hover:translate-x-1 group-hover:text-blue-600"
-                    size={20}
-                  />
-                </div>
-              </Link>
+                <p className="mt-1 text-sm text-gray-600">
+                  Products are managed by ComputerHub administrators. Sellers can view their
+                  orders but cannot add, edit, or delete products.
+                </p>
+              </div>
             </div>
 
             <div className="mt-8">

@@ -19,6 +19,17 @@ export default function AccountPage() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
+  useEffect(() => {
+  if (!user) return;
+
+  if (user.role === "admin") {
+    router.push("/admin");
+  }
+
+  if (user.role === "seller") {
+    router.push("/seller");
+  }
+}, [user, router]);
 
   useEffect(() => {
     async function loadUser() {
@@ -107,12 +118,12 @@ export default function AccountPage() {
             My Account
           </p>
 
-          <h1 className="mt-2 text-3xl font-bold text-gray-900">
-            Welcome, {user.firstName}
+          <h1 className="text-3xl font-bold text-gray-900">
+            Welcome, {user.firstName || user.name?.split(" ")[0] || "Customer"}
           </h1>
 
-          <p className="mt-2 text-gray-600">
-            Manage your ComputerHub account, orders and wishlist.
+          <p className="mt-2 text-gray-500">
+            Manage your orders, wishlist, and account securely.
           </p>
         </div>
 
@@ -163,8 +174,8 @@ export default function AccountPage() {
                   Email Address
                 </div>
 
-                <p className="font-semibold text-gray-900">
-                  {user.email}
+                <p className="font-semibold text-blue-600">
+                  Customer Account
                 </p>
               </div>
 
@@ -174,8 +185,8 @@ export default function AccountPage() {
                   Account Role
                 </div>
 
-                <p className="font-semibold capitalize text-gray-900">
-                  {user.role}
+                <p className="font-semibold capitalize text-blue-600">
+                  Customer
                 </p>
               </div>
 
@@ -198,7 +209,7 @@ export default function AccountPage() {
             </h2>
 
             <p className="mt-1 text-sm text-gray-500">
-              Manage your shopping account
+              Quick access to your shopping activity
             </p>
 
             <div className="mt-6 space-y-3">
@@ -211,7 +222,7 @@ export default function AccountPage() {
                 <div>
                   <p className="font-semibold text-gray-900">My Orders</p>
                   <p className="text-sm text-gray-500">
-                    View purchase history
+                    Track your orders and delivery status
                   </p>
                 </div>
               </button>
@@ -225,7 +236,7 @@ export default function AccountPage() {
                 <div>
                   <p className="font-semibold text-gray-900">Wishlist</p>
                   <p className="text-sm text-gray-500">
-                    Saved products
+                    View your saved products
                   </p>
                 </div>
               </button>

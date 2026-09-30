@@ -152,12 +152,13 @@ export async function POST(request) {
         message:
           "Account created successfully.",
         user: {
-          id: user._id.toString(),
-          firstName: user.firstName,
-          lastName: user.lastName,
-          email: user.email,
-          role: user.role,
-        },
+        id: user._id.toString(),
+        firstName: user.firstName,
+        lastName: user.lastName,
+        name: `${user.firstName} ${user.lastName}`,
+        email: user.email,
+        role: user.role,
+      },
       },
       { status: 201 }
     );

@@ -27,13 +27,21 @@ export default function Navbar() {
 
   useEffect(() => {
     const loadUser = () => {
-      try {
-        const saved = localStorage.getItem("user");
-        setUser(saved ? JSON.parse(saved) : null);
-      } catch {
-        setUser(null);
-      }
-    };
+  try {
+    const saved = localStorage.getItem("user");
+
+    if (!saved) {
+      setUser(null);
+      return;
+    }
+
+    const parsed = JSON.parse(saved);
+
+    setUser(parsed);
+  } catch {
+    setUser(null);
+  }
+};
 
     loadUser();
 
@@ -130,10 +138,12 @@ export default function Navbar() {
               <div className="hidden leading-tight xl:block">
                 <p className="text-[11px] text-gray-500">Welcome</p>
 
-                <p className="text-sm font-bold text-gray-900">
+                <p className="text-sm font-semibold text-gray-900">
                   {user?.firstName ||
+                    user?.lastName ||
                     user?.fullName?.split(" ")[0] ||
                     user?.name?.split(" ")[0] ||
+                    user?.email?.split("@")[0] ||
                     "User"}
                 </p>
               </div>

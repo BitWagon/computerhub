@@ -202,7 +202,7 @@ export default function OrdersPage() {
             <div>
 
               <p className="text-sm font-semibold uppercase tracking-wider text-blue-600">
-                Account
+                Order Center
               </p>
 
               <h1 className="mt-2 text-3xl font-bold text-gray-900 md:text-4xl">
@@ -210,8 +210,7 @@ export default function OrdersPage() {
               </h1>
 
               <p className="mt-2 max-w-2xl text-gray-500">
-                View and track all your
-                ComputerHub orders.
+                Track your purchases, payment status, and delivery updates in one place.
               </p>
 
             </div>
@@ -270,14 +269,11 @@ export default function OrdersPage() {
               </div>
 
               <h2 className="mt-6 text-2xl font-bold text-gray-900">
-                No Orders Yet
+                No Orders Found
               </h2>
 
               <p className="mx-auto mt-3 max-w-md text-gray-500">
-                You haven't placed an
-                order yet. Browse our
-                products and find
-                something you like.
+                Your orders will appear here after you complete your first ComputerHub purchase.
               </p>
 
               <Link
@@ -386,10 +382,7 @@ export default function OrdersPage() {
                           </p>
 
                           <p className="mt-1 text-2xl font-bold text-blue-600">
-                            $
-                            {formatMoney(
-                              order.total
-                            )}
+                            PKR {formatMoney(order.total)}
                           </p>
 
                         </div>

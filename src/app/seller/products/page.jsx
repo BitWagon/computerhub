@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   ArrowLeft,
   CheckCircle2,
-  Edit3,
   Eye,
   Package,
   Plus,
@@ -345,14 +344,7 @@ export default function SellerProductsPage() {
               View
             </Link>
 
-            {/* Edit */}
-            <Link
-              href={`/seller/products/edit/${product._id}`}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
-            >
-              <Edit3 size={16} />
-              Edit
-            </Link>
+            
 
             {/* Active Product */}
             {!inactive && (
@@ -387,24 +379,7 @@ export default function SellerProductsPage() {
                     : "Activate"}
                 </button>
 
-                {/* Delete */}
-                <button
-                  type="button"
-                  disabled={isProcessing}
-                  onClick={() =>
-                    deleteProduct(
-                      product._id,
-                      product.name
-                    )
-                  }
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <Trash2 size={16} />
-
-                  {isProcessing
-                    ? "Deleting..."
-                    : "Delete"}
-                </button>
+                
               </>
             )}
           </div>
@@ -446,13 +421,10 @@ export default function SellerProductsPage() {
               Refresh
             </button>
 
-            <Link
-              href="/seller/products/add"
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
-            >
-              <Plus size={18} />
-              Add Product
-            </Link>
+            <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+              Products are managed by ComputerHub administrators.
+            </div>
+
           </div>
         </div>
 
@@ -635,13 +607,9 @@ export default function SellerProductsPage() {
               </p>
 
               {!search && (
-                <Link
-                  href="/seller/products/add"
-                  className="mt-5 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700"
-                >
-                  <Plus size={17} />
-                  Add Your First Product
-                </Link>
+                <p className="mt-6 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-center text-sm text-blue-700">
+                  Products are managed by ComputerHub administrators.
+                </p>
               )}
             </div>
           ) : (

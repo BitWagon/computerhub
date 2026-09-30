@@ -43,21 +43,27 @@ export function middleware(request) {
 
     // Admin only
     if (pathname.startsWith("/admin") && user.role !== "admin") {
-      return NextResponse.redirect(new URL("/", request.url));
-    }
+  return NextResponse.redirect(
+    new URL(user.role === "seller" ? "/seller" : "/account", request.url)
+  );
+}
 
     // Seller only
     if (pathname.startsWith("/seller") && user.role !== "seller") {
-      return NextResponse.redirect(new URL("/", request.url));
-    }
+  return NextResponse.redirect(
+    new URL(user.role === "admin" ? "/admin" : "/account", request.url)
+  );
+}
 
     // Customer only
     if (
-      (pathname.startsWith("/account") || pathname.startsWith("/orders")) &&
-      user.role !== "customer"
-    ) {
-      return NextResponse.redirect(new URL("/", request.url));
-    }
+  (pathname.startsWith("/account") || pathname.startsWith("/orders")) &&
+  user.role !== "customer"
+) {
+  return NextResponse.redirect(
+    new URL(user.role === "admin" ? "/admin" : "/seller", request.url)
+  );
+}
 
     return NextResponse.next();
   } catch (error) {

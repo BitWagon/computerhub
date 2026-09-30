@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
-
+import Product from "@/models/Product";
 import { connectDB } from "@/lib/mongodb";
 import { getCurrentUserToken } from "@/lib/auth";
 import Category from "@/models/Category";
@@ -63,6 +63,7 @@ function serializeCategory(category) {
     isActive: category.isActive !== false,
     featured: Boolean(category.featured),
     sortOrder: Number(category.sortOrder || 0),
+    productCount: Number(category.productCount || 0),
     createdAt: category.createdAt,
     updatedAt: category.updatedAt,
   };
@@ -682,6 +683,22 @@ export async function DELETE(request) {
         }
       );
     }
+    // Prevent deleting categories that still have products
+const productCount = await Product.countDocuments({
+  category: category.name,
+});
+
+if (productCount > 0) {
+  return NextResponse.json(
+    {
+      success: false,
+      message: "Cannot delete a category that still contains products.",
+    },
+    {
+      status: 400,
+    }
+  );
+}
 
     await Category.findByIdAndDelete(id);
 

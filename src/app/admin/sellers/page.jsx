@@ -91,7 +91,7 @@ export default function AdminSellersPage() {
 
       setSellers((current) =>
         current.map((seller) =>
-          seller._id === userId
+          seller.id === userId
             ? {
                 ...seller,
                 isActive,
@@ -175,7 +175,12 @@ export default function AdminSellersPage() {
             onClick={loadSellers}
             className="rounded-xl border border-gray-300 bg-white px-5 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
           >
-            Refresh Sellers
+            <div className="flex items-center gap-2">
+              {isLoading && (
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+              )}
+              Refresh Sellers
+            </div>
           </button>
         </div>
 

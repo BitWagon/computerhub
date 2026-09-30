@@ -57,7 +57,7 @@ export async function GET(
     }
 
     const user =
-      getCurrentUserToken();
+  await getCurrentUserToken();
 
     let product = null;
 
@@ -260,6 +260,125 @@ export async function GET(
           process.env.NODE_ENV === "development"
             ? error.message
             : undefined,
+      },
+      { status: 500 }
+    );
+  }
+}
+// ============================================================
+// PATCH /api/products/[id]
+// Admin only - Update product
+// ============================================================
+
+export async function PATCH(request, { params }) {
+  try {
+    await connectDB();
+
+    const user = getCurrentUserToken();
+
+    if (!user || user.role !== "admin") {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Only admin can update products.",
+        },
+        { status: 403 }
+      );
+    }
+
+    const id = params.id;
+    const body = await request.json();
+
+    const updatedProduct = await Product.findByIdAndUpdate(
+      id,
+      body,
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!updatedProduct) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Product not found.",
+        },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Product updated successfully.",
+        product: updatedProduct,
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("PATCH /api/products/[id] error:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Failed to update product.",
+      },
+      { status: 500 }
+    );
+  }
+}
+// ============================================================
+// DELETE /api/products/[id]
+// Admin only - Delete product
+// ============================================================
+
+export async function DELETE(request, { params }) {
+  try {
+    await connectDB();
+
+    const user = await getCurrentUserToken();
+
+    if (!user || user.role !== "admin") {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Only administrators can delete products.",
+        },
+        { status: 403 }
+      );
+    }
+
+    const id = params.id;
+
+    const product = await Product.findById(id);
+
+    if (!product) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Product not found.",
+        },
+        { status: 404 }
+      );
+    }
+
+    await Product.findByIdAndDelete(id);
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Product deleted successfully.",
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("DELETE /api/products/[id] error:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Failed to delete product.",
       },
       { status: 500 }
     );

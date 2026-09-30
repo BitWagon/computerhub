@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   BarChart3,
@@ -12,7 +14,6 @@ import {
   ArrowRight,
   ShieldCheck,
 } from "lucide-react";
-
 const adminSections = [
   {
     title: "Orders",
@@ -51,6 +52,53 @@ const adminSections = [
     icon: MessageSquare,
   },
 ];
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function checkAdmin() {
+      try {
+        const response = await fetch("/api/auth/me", {
+          credentials: "include",
+          cache: "no-store",
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          router.push("/login");
+          return;
+        }
+
+        if (data.user.role !== "admin") {
+          if (data.user.role === "seller") {
+            router.push("/seller");
+          } else {
+            router.push("/account");
+          }
+          return;
+        }
+      } catch {
+        router.push("/login");
+        return;
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    checkAdmin();
+  }, [router]);
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600" />
+          <p className="mt-4 text-gray-600">Loading admin dashboard...</p>
+        </div>
+      </main>
+    );
+  }
 
 export default function AdminPage() {
   return (
@@ -69,8 +117,7 @@ export default function AdminPage() {
               </h1>
 
               <p className="mt-3 max-w-2xl text-gray-600">
-                Manage your ComputerHub marketplace, products, customers,
-                sellers, orders, categories, and reviews from one place.
+                Securely manage products, orders, users, categories, sellers, and marketplace activity from one centralized dashboard.
               </p>
             </div>
 
@@ -146,8 +193,7 @@ export default function AdminPage() {
                 </h3>
 
                 <p className="mt-1 text-sm text-gray-600">
-                  Only users with the admin role should be able to access
-                  these administration pages.
+                  This area is protected. Customers and sellers are automatically redirected to their own dashboards, and only administrators can access these management tools.
                 </p>
               </div>
             </div>

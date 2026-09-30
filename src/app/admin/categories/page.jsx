@@ -119,7 +119,7 @@ export default function AdminCategoriesPage() {
           credentials: "include",
           body: JSON.stringify({
             id: categoryId,
-            isActive: !category.isActive,
+           isActive: category.isActive === false,
           }),
         }
       );
@@ -144,11 +144,11 @@ export default function AdminCategoriesPage() {
         )
       );
 
-      toast.success(
-        category.isActive
-          ? "Category deactivated."
-          : "Category activated."
-      );
+     toast.success(
+      category.isActive !== false
+        ? "Category deactivated."
+        : "Category activated."
+    );
 
     } catch (err) {
       toast.error(

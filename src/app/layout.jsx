@@ -105,7 +105,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
   <meta name="theme-color" content="#2563eb" />
 
@@ -122,8 +122,8 @@ export default function RootLayout({ children }) {
   <link rel="manifest" href="/manifest.webmanifest" />
 </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+  className={`${geistSans.variable} ${geistMono.variable} bg-gray-50 text-gray-900 antialiased`}
+>
         <CartProvider>
   <WishlistProvider>
     <Navbar />
@@ -135,10 +135,12 @@ export default function RootLayout({ children }) {
     <PWARegister />
 
     <Toaster
-      position="top-right"
-      richColors
-      closeButton
-    />
+  position="top-right"
+  richColors
+  closeButton
+  expand
+  duration={3000}
+/>
   </WishlistProvider>
 </CartProvider>
       </body>

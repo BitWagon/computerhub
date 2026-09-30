@@ -12,7 +12,8 @@ import {
   Tag,
   User,
   ShoppingCart,
-  HardDrive,
+    HardDrive,
+  LayoutDashboard,
   LogOut,
 } from "lucide-react";
 
@@ -97,18 +98,119 @@ export default function MobileMenu({ open, onClose }) {
                   <p className="text-xs text-gray-300">Welcome back</p>
 
                   <p className="font-bold">
-                    {user.firstName || user.name || "User"}
+                    {user?.firstName ||
+                      user?.lastName ||
+                      user?.fullName?.split(" ")[0] ||
+                      user?.name?.split(" ")[0] ||
+                      user?.email?.split("@")[0] ||
+                      "User"}
                   </p>
                 </div>
               </div>
 
-              <button
-                onClick={logout}
-                className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-red-600 py-2 font-semibold text-white transition hover:bg-red-700"
-              >
-                <LogOut size={18} />
-                Logout
-              </button>
+              <div className="mt-4 space-y-2">
+
+                {user.role === "admin" && (
+                  <Link
+                    href="/admin"
+                    onClick={onClose}
+                    className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 font-semibold text-white hover:bg-blue-700"
+                  >
+                    <LayoutDashboard size={18} />
+                    Admin Dashboard
+                  </Link>
+                )}
+
+                {user.role === "seller" && (
+                  <Link
+                    href="/seller"
+                    onClick={onClose}
+                    className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 font-semibold text-white hover:bg-blue-700"
+                  >
+                    <LayoutDashboard size={18} />
+                    Seller Dashboard
+                  </Link>
+                )}
+
+                {user.role === "customer" && (
+                  <>
+                    <Link
+                      href="/account"
+                      onClick={onClose}
+                      className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 font-semibold text-gray-700 hover:bg-gray-100"
+                    >
+                      <User size={18} />
+                      My Account
+                    </Link>
+
+                    <Link
+                      href="/orders"
+                      onClick={onClose}
+                      className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 font-semibold text-gray-700 hover:bg-gray-100"
+                    >
+                      <ShoppingCart size={18} />
+                      My Orders
+                    </Link>
+                  </>
+                )}
+
+                <div className="mt-4 space-y-2">
+
+                {user.role === "admin" && (
+                  <Link
+                    href="/admin"
+                    onClick={onClose}
+                    className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 font-semibold text-white hover:bg-blue-700"
+                  >
+                    <LayoutDashboard size={18} />
+                    Admin Dashboard
+                  </Link>
+                )}
+
+                {user.role === "seller" && (
+                  <Link
+                    href="/seller"
+                    onClick={onClose}
+                    className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 font-semibold text-white hover:bg-blue-700"
+                  >
+                    <LayoutDashboard size={18} />
+                    Seller Dashboard
+                  </Link>
+                )}
+
+                {user.role === "customer" && (
+                  <>
+                    <Link
+                      href="/account"
+                      onClick={onClose}
+                      className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 font-semibold text-gray-700 hover:bg-gray-100"
+                    >
+                      <User size={18} />
+                      My Account
+                    </Link>
+
+                    <Link
+                      href="/orders"
+                      onClick={onClose}
+                      className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 font-semibold text-gray-700 hover:bg-gray-100"
+                    >
+                      <ShoppingCart size={18} />
+                      My Orders
+                    </Link>
+                  </>
+                )}
+
+                <button
+                  onClick={logout}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-red-600 py-2 font-semibold text-white hover:bg-red-700"
+                >
+                  <LogOut size={18} />
+                  Logout
+                </button>
+
+              </div>
+
+              </div>
             </div>
           ) : (
             <Link

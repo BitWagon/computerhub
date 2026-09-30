@@ -154,16 +154,13 @@ export async function POST(request) {
           message:
             "Admin login successful.",
           user: {
-            id: adminUser._id.toString(),
-            firstName:
-              adminUser.firstName,
-            lastName:
-              adminUser.lastName,
-            email:
-              adminUser.email,
-            role:
-              adminUser.role,
-          },
+          id: adminUser._id.toString(),
+          firstName: adminUser.firstName,
+          lastName: adminUser.lastName,
+          name: `${adminUser.firstName} ${adminUser.lastName}`,
+          email: adminUser.email,
+          role: adminUser.role,
+        },
         },
         { status: 200 }
       );
@@ -273,16 +270,13 @@ export async function POST(request) {
         success: true,
         message: "Login successful.",
         user: {
-          id: user._id.toString(),
-          firstName:
-            user.firstName,
-          lastName:
-            user.lastName,
-          email:
-            user.email,
-          role:
-            user.role,
-        },
+        id: user._id.toString(),
+        firstName: user.firstName,
+        lastName: user.lastName,
+        name: `${user.firstName} ${user.lastName}`,
+        email: user.email,
+        role: user.role,
+      },
       },
       { status: 200 }
     );
