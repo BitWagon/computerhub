@@ -70,7 +70,7 @@ export default function SellerOrderDetailsPage() {
   const params = useParams();
   const router = useRouter();
 
-  const orderId = params?.orderId;
+  const orderId = params?.id;
 
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);

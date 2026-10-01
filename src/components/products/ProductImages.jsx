@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 export default function ProductImages({ product, images, productName }) {
-  const imageList =
+  const imageList = useMemo(
+  () =>
     images ||
     product?.images ||
-    (product?.image ? [product.image] : []);
+    (product?.image ? [product.image] : []),
+  [images, product?.images, product?.image]
+);
 
   const title = productName || product?.name || "Product";
 

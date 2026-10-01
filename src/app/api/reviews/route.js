@@ -76,7 +76,7 @@ export async function GET(request) {
 
     if (includeAll) {
       const token =
-        getCurrentUserToken();
+  await getCurrentUserToken();
 
       if (!token) {
         return NextResponse.json(
@@ -242,7 +242,7 @@ export async function POST(request) {
     await connectDB();
 
     const token =
-      getCurrentUserToken();
+  await getCurrentUserToken();
 
     if (!token) {
       return NextResponse.json(
@@ -492,7 +492,7 @@ export async function PATCH(request) {
     await connectDB();
 
     const token =
-      getCurrentUserToken();
+  await getCurrentUserToken();
 
     if (!token) {
       return NextResponse.json(
@@ -624,7 +624,7 @@ export async function DELETE(request) {
     await connectDB();
 
     const token =
-      getCurrentUserToken();
+  await getCurrentUserToken();
 
     if (!token) {
       return NextResponse.json(

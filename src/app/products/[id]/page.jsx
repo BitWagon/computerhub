@@ -305,7 +305,7 @@ export default function ProductDetailsPage() {
         </div>
 
         {/* PRODUCT DESCRIPTION */}
-                {/* PRODUCT DESCRIPTION */}
+                
 
         <div className="mt-8 rounded-xl border border-gray-200 bg-white p-6">
           <h2 className="text-xl font-bold text-gray-900">

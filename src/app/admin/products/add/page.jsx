@@ -25,7 +25,7 @@ export default function AdminAddProductPage() {
     description: "",
     price: "",
     originalPrice: "",
-    category: "",
+    categoryId: "",
     brand: "",
     stock: "",
     image: "",
@@ -187,7 +187,7 @@ export default function AdminAddProductPage() {
       return;
     }
 
-    if (!formData.category.trim()) {
+    if (!formData.categoryId.trim()) {
       toast.error(
         "Please select a category."
       );
@@ -242,8 +242,8 @@ export default function AdminAddProductPage() {
              */
             originalPrice,
 
-            category:
-              formData.category.trim(),
+            categoryId:
+              formData.categoryId.trim(),
 
             brand:
               formData.brand.trim(),
@@ -469,9 +469,9 @@ export default function AdminAddProductPage() {
                     </label>
 
                     <select
-                      name="category"
+                      name="categoryId"
                       value={
-                        formData.category
+                        formData.categoryId
                       }
                       onChange={handleChange}
                       disabled={
@@ -493,10 +493,7 @@ export default function AdminAddProductPage() {
                               category.id ||
                               category.slug
                             }
-                            value={
-                              category.name ||
-                              category.slug
-                            }
+                            value={category._id || category.id}
                           >
                             {category.name}
                           </option>

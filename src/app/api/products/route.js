@@ -181,26 +181,62 @@ export async function PATCH(request) {
         .replace(/-+/g, "-");
     }
 
-    if (body.description !== undefined)
-      product.description = body.description;
+    if (body.shortDescription !== undefined)
+  product.shortDescription = body.shortDescription;
 
-    if (body.price !== undefined)
-      product.price = Number(body.price);
+if (body.description !== undefined)
+  product.description = body.description;
 
-    if (body.oldPrice !== undefined)
-      product.oldPrice = Number(body.oldPrice);
+if (body.price !== undefined)
+  product.price = Number(body.price);
 
-    if (body.stock !== undefined)
-      product.stock = Number(body.stock);
+if (body.oldPrice !== undefined)
+  product.oldPrice = Number(body.oldPrice);
 
-    if (body.brand !== undefined)
-      product.brand = body.brand;
+if (body.originalPrice !== undefined)
+  product.originalPrice = Number(body.originalPrice);
 
-    if (body.images !== undefined)
-      product.images = body.images;
+if (body.sku !== undefined)
+  product.sku = body.sku;
 
-    if (body.isActive !== undefined)
-      product.isActive = Boolean(body.isActive);
+if (body.brand !== undefined)
+  product.brand = body.brand;
+
+if (body.subcategory !== undefined)
+  product.subcategory = body.subcategory;
+
+if (body.processor !== undefined)
+  product.processor = body.processor;
+
+if (body.ram !== undefined)
+  product.ram = body.ram;
+
+if (body.storage !== undefined)
+  product.storage = body.storage;
+
+if (body.graphics !== undefined)
+  product.graphics = body.graphics;
+
+if (body.screenSize !== undefined)
+  product.screenSize = body.screenSize;
+
+if (body.stock !== undefined)
+  product.stock = Number(body.stock);
+
+if (body.images !== undefined)
+  product.images = body.images;
+
+if (body.image !== undefined)
+  product.image = body.image;
+
+if (body.featured !== undefined)
+  product.featured = Boolean(body.featured);
+
+if (body.freeDelivery !== undefined)
+  product.freeDelivery = Boolean(body.freeDelivery);
+
+if (body.isActive !== undefined)
+  product.isActive = Boolean(body.isActive);
 
     if (body.categoryId !== undefined) {
       const category = await Category.findById(body.categoryId);

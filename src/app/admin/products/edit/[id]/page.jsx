@@ -288,29 +288,51 @@ export default function AdminEditProductPage() {
     loadCategories();
   }, []);
 
-  /*
-  |--------------------------------------------------------------------------
-  | NORMAL INPUT CHANGE
-  |--------------------------------------------------------------------------
-  */
+/*
+|--------------------------------------------------------------------------
+| NORMAL INPUT CHANGE
+|--------------------------------------------------------------------------
+*/
 
-  function handleChange(event) {
-    const {
-      name,
-      value,
-      type,
-      checked,
-    } = event.target;
+function handleChange(event) {
+  const { name, value, type, checked } =
+    event.target;
 
-    setFormData((previous) => ({
-      ...previous,
+  setFormData((previous) => ({
+    ...previous,
+    [name]:
+      type === "checkbox"
+        ? checked
+        : value,
+  }));
+}
 
-      [name]:
-        type === "checkbox"
-          ? checked
-          : value,
-    }));
-  }
+function handleCategoryChange(event) {
+  const selectedCategoryId =
+    event.target.value;
+
+  const selectedCategory =
+    categories.find(
+      (category) =>
+        String(
+          category?._id ||
+            category?.id ||
+            ""
+        ) === selectedCategoryId
+    );
+
+  setFormData((previous) => ({
+    ...previous,
+
+    categoryId:
+      selectedCategoryId,
+
+    category:
+      selectedCategory?.name ||
+      selectedCategory?.slug ||
+      "",
+  }));
+}
 
   /*
   |--------------------------------------------------------------------------
@@ -344,46 +366,7 @@ export default function AdminEditProductPage() {
     formData.oldPrice,
   ]);
 
-  /*
-  |--------------------------------------------------------------------------
-  | CATEGORY CHANGE
-  |--------------------------------------------------------------------------
-  */
 
-  function handleCategoryChange(event) {
-    const selectedValue =
-      event.target.value;
-
-    const selectedCategory =
-      categories.find(
-        (category) =>
-          String(
-            category?.name || ""
-          ) === selectedValue ||
-          String(
-            category?.slug || ""
-          ) === selectedValue
-      );
-
-    const selectedCategoryId =
-      selectedCategory?._id ||
-      selectedCategory?.id ||
-      "";
-
-    setFormData((previous) => ({
-      ...previous,
-
-      category:
-        selectedValue,
-
-      categoryId:
-        selectedCategoryId
-          ? String(
-              selectedCategoryId
-            )
-          : "",
-    }));
-  }
 
   /*
   |--------------------------------------------------------------------------
@@ -415,7 +398,7 @@ export default function AdminEditProductPage() {
       return;
     }
 
-    if (!formData.category.trim()) {
+   if (!formData.categoryId.trim()) {
       toast.error(
         "Please select a category."
       );
@@ -552,9 +535,6 @@ export default function AdminEditProductPage() {
 
               brand:
                 formData.brand.trim(),
-
-              category:
-                formData.category.trim(),
 
               /*
                * IMPORTANT:
@@ -879,9 +859,9 @@ export default function AdminEditProductPage() {
                   </label>
 
                   <select
-                    name="category"
-                    value={
-                      formData.category
+                      name="categoryId"
+                      value={
+                        formData.categoryId
                     }
                     onChange={
                       handleCategoryChange
@@ -907,8 +887,8 @@ export default function AdminEditProductPage() {
                             category.slug
                           }
                           value={
-                            category.name ||
-                            category.slug
+                            category._id ||
+                            category.id
                           }
                         >
                           {category.name}

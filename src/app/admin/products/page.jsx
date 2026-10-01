@@ -209,7 +209,7 @@ export default function AdminProductsPage() {
           .toLowerCase()
           .includes(query) ||
         String(
-          product.category || ""
+          product.categoryId?.name || ""
         )
           .toLowerCase()
           .includes(query) ||
@@ -546,8 +546,7 @@ export default function AdminProductsPage() {
 
                           {/* CATEGORY */}
                           <td className="px-5 py-4 text-sm text-gray-600">
-                            {product.category ||
-                              "—"}
+                            {product.categoryId?.name || "—"}
                           </td>
 
                           {/* PRICE */}

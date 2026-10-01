@@ -178,7 +178,7 @@ export default function ProductInfo({ product }) {
       <div className="border-y border-slate-200 py-5">
         <div className="flex flex-wrap items-end gap-3">
           <span className="text-3xl font-bold text-slate-900">
-            ${price.toLocaleString()}
+            Rs. {oldPrice.toLocaleString()}
           </span>
 
           {oldPrice > price && (
@@ -196,8 +196,7 @@ export default function ProductInfo({ product }) {
 
         {oldPrice > price && (
           <p className="mt-2 text-sm font-medium text-green-600">
-            You save $
-            {(oldPrice - price).toLocaleString()}
+           You save Rs. {(oldPrice - price).toLocaleString()}
           </p>
         )}
 
