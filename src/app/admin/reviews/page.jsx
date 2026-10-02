@@ -193,9 +193,9 @@ export default function AdminReviewsPage() {
       String(review.userName || "")
         .toLowerCase()
         .includes(keyword) ||
-      String(review.productName || "")
+      String(review.productId?.name || "")
         .toLowerCase()
-        .includes(keyword) ||
+  .includes(keyword) ||
       String(review.comment || "")
         .toLowerCase()
         .includes(keyword);
@@ -431,7 +431,7 @@ export default function AdminReviewsPage() {
                         <td className="px-5 py-4">
                           <div>
                             <p className="font-semibold text-gray-900">
-                              {review.productName}
+                              {review.productId?.name || "Product"}
                             </p>
 
                             <p className="text-xs text-gray-500 max-w-xs truncate">
@@ -480,7 +480,7 @@ export default function AdminReviewsPage() {
                           <div className="flex justify-end gap-2">
 
                             <Link
-                              href={`/products/${review.productId}`}
+                              href={`/products/${review.productId?._id || review.productId?.id || ""}`}
                               target="_blank"
                               className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
                             >
