@@ -11,17 +11,15 @@ const ALLOWED_ROLES = [
 ];
 
 async function getAdminUser() {
-  const token =
-    getCurrentUserToken();
+  const token = await getCurrentUserToken();
 
-  if (!token?.userId) {
+  const userId = token?.userId || token?.id;
+
+  if (!userId) {
     return null;
   }
 
-  const user =
-    await User.findById(
-      token.userId
-    );
+  const user = await User.findById(userId);
 
   if (
     !user ||

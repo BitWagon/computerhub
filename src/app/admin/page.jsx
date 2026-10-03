@@ -14,44 +14,53 @@ import {
   ArrowRight,
   ShieldCheck,
 } from "lucide-react";
+
 const adminSections = [
   {
     title: "Orders",
-    description: "View and manage customer orders, payment status, and order status.",
+    description:
+      "View and manage customer orders, payment status, and order status.",
     href: "/admin/orders",
     icon: Package,
   },
   {
     title: "Products",
-    description: "Manage ComputerHub products, prices, stock, and product information.",
+    description:
+      "Manage ComputerHub products, prices, stock, and product information.",
     href: "/admin/products",
     icon: ShoppingCart,
   },
   {
     title: "Users",
-    description: "View and manage registered ComputerHub customers.",
+    description:
+      "View and manage registered ComputerHub customers.",
     href: "/admin/users",
     icon: Users,
   },
   {
     title: "Sellers",
-    description: "Manage sellers and review seller information.",
+    description:
+      "Manage sellers and review seller information.",
     href: "/admin/sellers",
     icon: Store,
   },
   {
     title: "Categories",
-    description: "Manage product categories and organize the marketplace.",
+    description:
+      "Manage product categories and organize the marketplace.",
     href: "/admin/categories",
     icon: FolderTree,
   },
   {
     title: "Reviews",
-    description: "Review customer product reviews and feedback.",
+    description:
+      "Review customer product reviews and feedback.",
     href: "/admin/reviews",
     icon: MessageSquare,
   },
 ];
+
+export default function AdminPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
 
@@ -76,6 +85,7 @@ const adminSections = [
           } else {
             router.push("/account");
           }
+
           return;
         }
       } catch {
@@ -94,13 +104,15 @@ const adminSections = [
       <main className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600" />
-          <p className="mt-4 text-gray-600">Loading admin dashboard...</p>
+
+          <p className="mt-4 text-gray-600">
+            Loading admin dashboard...
+          </p>
         </div>
       </main>
     );
   }
 
-export default function AdminPage() {
   return (
     <main className="min-h-screen bg-gray-50">
       <section className="border-b border-gray-200 bg-white">
@@ -117,7 +129,9 @@ export default function AdminPage() {
               </h1>
 
               <p className="mt-3 max-w-2xl text-gray-600">
-                Securely manage products, orders, users, categories, sellers, and marketplace activity from one centralized dashboard.
+                Securely manage products, orders, users, categories,
+                sellers, and marketplace activity from one centralized
+                dashboard.
               </p>
             </div>
 
@@ -193,7 +207,9 @@ export default function AdminPage() {
                 </h3>
 
                 <p className="mt-1 text-sm text-gray-600">
-                  This area is protected. Customers and sellers are automatically redirected to their own dashboards, and only administrators can access these management tools.
+                  This area is protected. Customers and sellers are
+                  automatically redirected to their own dashboards, and only
+                  administrators can access these management tools.
                 </p>
               </div>
             </div>

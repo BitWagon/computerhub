@@ -4,13 +4,14 @@ import { cookies } from "next/headers";
 const COOKIE_NAME = "computerhub_token";
 
 export function signToken(user) {
-  return jwt.sign(
-    {
-      id: user._id.toString(),
-      email: user.email,
-      role: user.role,
-    },
-    process.env.JWT_SECRET,
+ return jwt.sign(
+  {
+    id: user._id.toString(),
+    userId: user._id.toString(),
+    email: user.email,
+    role: user.role,
+  },
+   process.env.JWT_SECRET,
     {
       expiresIn: "7d",
     }

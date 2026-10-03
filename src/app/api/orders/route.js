@@ -14,7 +14,7 @@ export async function POST(request) {
   try {
     await connectDB();
 
-    const tokenData = getCurrentUserToken();
+   const tokenData = await getCurrentUserToken();
 
     if (!tokenData) {
       return NextResponse.json(
@@ -494,7 +494,7 @@ export async function GET() {
     await connectDB();
 
     const tokenData =
-      getCurrentUserToken();
+  await getCurrentUserToken();
 
     if (!tokenData) {
       return NextResponse.json(
@@ -708,7 +708,7 @@ export async function PATCH(request) {
     await connectDB();
 
     const tokenData =
-      getCurrentUserToken();
+  await getCurrentUserToken();
 
     if (!tokenData) {
       return NextResponse.json(
