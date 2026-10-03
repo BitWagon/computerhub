@@ -73,7 +73,7 @@ export default function OrderSummary({
                 </p>
 
                 <p className="mt-2 font-bold text-gray-900">
-                  $
+                  Rs.{" "}
                   {(
                     Number(item.price || 0) *
                     Number(item.quantity || 0)
@@ -92,7 +92,7 @@ export default function OrderSummary({
           </span>
 
           <span className="font-semibold text-gray-900">
-            ${subtotal.toLocaleString()}
+            Rs. {subtotal.toLocaleString()}
           </span>
         </div>
 
@@ -104,8 +104,8 @@ export default function OrderSummary({
 
           <span className="font-semibold text-gray-900">
             {delivery === 0
-              ? "FREE"
-              : `$${delivery.toLocaleString()}`}
+            ? "FREE"
+            : `Rs. ${delivery.toLocaleString()}`}
           </span>
         </div>
 
@@ -115,7 +115,7 @@ export default function OrderSummary({
           </span>
 
           <span className="text-2xl font-bold text-blue-600">
-            ${total.toLocaleString()}
+            Rs. {total.toLocaleString()}
           </span>
         </div>
       </div>

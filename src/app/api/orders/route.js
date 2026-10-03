@@ -441,10 +441,8 @@ export async function POST(request) {
           deliveryFee:
             order.deliveryFee,
 
-          total:
-            order.total,
-                      total:
-            order.total,
+            total:
+          order.total,
 
           paymentMethod:
             order.paymentMethod,

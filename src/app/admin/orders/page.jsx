@@ -250,23 +250,23 @@ const [statusFilter, setStatusFilter] = useState("all");
 
                       <td className="px-4 py-4">
                         <span
-                        className={`rounded-full px-3 py-1 text-sm font-medium ${
-                          (order.orderstatus || "pending")
-                            ? "bg-yellow-100 text-yellow-700"
-                           : (order.status || "pending") === "confirmed"
-                            ? "bg-cyan-100 text-cyan-700"
-                            : (order.status || "pending") === "processing"
-                            ? "bg-blue-100 text-blue-700"
-                            : (order.status || "pending") === "shipped"
-                            ? "bg-purple-100 text-purple-700"
-                            : (order.status || "pending") === "delivered"
-                            ? "bg-green-100 text-green-700"
-                            : "bg-red-100 text-red-700"
-                        }`}
-                      >
-                        {order.status || "pending"}
-                      </span>
-                      </td>
+                          className={`rounded-full px-3 py-1 text-sm font-medium ${
+                            (order.orderStatus || "pending") === "pending"
+                              ? "bg-yellow-100 text-yellow-700"
+                              : (order.orderStatus || "pending") === "confirmed"
+                              ? "bg-cyan-100 text-cyan-700"
+                              : (order.orderStatus || "pending") === "processing"
+                              ? "bg-blue-100 text-blue-700"
+                              : (order.orderStatus || "pending") === "shipped"
+                              ? "bg-purple-100 text-purple-700"
+                              : (order.orderStatus || "pending") === "delivered"
+                              ? "bg-green-100 text-green-700"
+                              : "bg-red-100 text-red-700"
+                          }`}
+                        >
+                          {order.orderStatus || "pending"}
+                        </span>
+                                              </td>
 
                       <td className="px-4 py-4 text-gray-600">
                         {order.paymentStatus || "pending"}

@@ -99,7 +99,7 @@ const category = await Category.findById(body.categoryId);
 const product = await Product.create({
   ...body,
   slug,
-  createdBy: user.id,
+  sellerId: user.id,
 });
 
     return NextResponse.json({
@@ -226,8 +226,6 @@ if (body.stock !== undefined)
 if (body.images !== undefined)
   product.images = body.images;
 
-if (body.image !== undefined)
-  product.image = body.image;
 
 if (body.featured !== undefined)
   product.featured = Boolean(body.featured);

@@ -30,7 +30,7 @@ export default function CartSummary() {
             </span>
 
             <span className="font-medium text-gray-900">
-              ${subtotal.toLocaleString()}
+              Rs. {subtotal.toLocaleString()}
             </span>
           </div>
 
@@ -48,7 +48,7 @@ export default function CartSummary() {
             >
               {delivery === 0
                 ? "FREE"
-                : `$${delivery.toLocaleString()}`}
+               : `Rs. ${delivery.toLocaleString()}`}
             </span>
           </div>
         </div>
@@ -60,7 +60,7 @@ export default function CartSummary() {
           </span>
 
           <span className="text-2xl font-bold text-gray-900">
-            ${total.toLocaleString()}
+            Rs. {total.toLocaleString()}
           </span>
         </div>
 

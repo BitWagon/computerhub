@@ -16,10 +16,9 @@ import { useWishlist } from "@/context/WishlistContext";
 
 export default function CartItem({ item }) {
   const {
-    increaseQuantity,
-    decreaseQuantity,
-    removeFromCart,
-  } = useCart();
+  updateQuantity,
+  removeFromCart,
+} = useCart();
 
   const {
     isInWishlist,
@@ -97,8 +96,8 @@ export default function CartItem({ item }) {
       : false;
 
   const canIncrease =
-    stock <= 0 ||
-    quantity < stock;
+  stock > 0 &&
+  quantity < stock;
 
   function handleWishlist() {
     if (!productId) {
@@ -202,14 +201,12 @@ export default function CartItem({ item }) {
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <span className="text-lg font-bold text-gray-900">
-              $
-              {price.toLocaleString()}
+              Rs. {price.toLocaleString()}
             </span>
 
             {oldPrice > price && (
               <span className="text-sm text-gray-400 line-through">
-                $
-                {oldPrice.toLocaleString()}
+                Rs. {oldPrice.toLocaleString()}
               </span>
             )}
 
@@ -224,8 +221,7 @@ export default function CartItem({ item }) {
 
           {totalSavings > 0 && (
             <p className="mt-1 text-xs font-semibold text-green-600">
-              You save $
-              {totalSavings.toLocaleString()}
+              You save Rs. {totalSavings.toLocaleString()}
             </p>
           )}
 
@@ -308,8 +304,9 @@ export default function CartItem({ item }) {
             <button
               type="button"
               onClick={() =>
-                decreaseQuantity(
-                  productId
+                updateQuantity(
+                  productId,
+                  quantity - 1
                 )
               }
               disabled={
@@ -328,8 +325,9 @@ export default function CartItem({ item }) {
             <button
               type="button"
               onClick={() =>
-                increaseQuantity(
-                  productId
+                updateQuantity(
+                  productId,
+                  quantity + 1
                 )
               }
               disabled={
@@ -350,8 +348,7 @@ export default function CartItem({ item }) {
             </p>
 
             <p className="font-bold text-gray-900">
-              $
-              {itemTotal.toLocaleString()}
+             Rs. {itemTotal.toLocaleString()}
             </p>
           </div>
         </div>

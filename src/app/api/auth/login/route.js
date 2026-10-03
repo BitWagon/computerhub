@@ -127,10 +127,7 @@ export async function POST(request) {
       const token =
         createToken(adminUser);
 
-      setAuthCookie(
-        token,
-        remember !== false
-      );
+      await setAuthCookie(token);
 
       console.log("====================================");
       console.log("✅ ADMIN LOGIN SUCCESS");
@@ -244,10 +241,7 @@ export async function POST(request) {
     const token =
       createToken(user);
 
-    setAuthCookie(
-      token,
-      remember !== false
-    );
+    await setAuthCookie(token);
 
     console.log("====================================");
     console.log("✅ LOGIN SUCCESS");

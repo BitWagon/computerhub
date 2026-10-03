@@ -140,17 +140,15 @@ export default function CheckoutPage() {
     try {
       setIsPlacingOrder(true);
 
-      const customer = {
-        fullName: `${address.firstName} ${address.lastName}`.trim(),
-        email: address.email.trim().toLowerCase(),
-        phone: address.phone.trim(),
-        country: address.country.trim(),
-        city: address.city.trim(),
-        state: address.state.trim(),
-        postalCode: address.postalCode.trim(),
-        address: address.address.trim(),
-        notes: address.notes.trim(),
-      };
+     const customer = {
+      firstName: address.firstName.trim(),
+      lastName: address.lastName.trim(),
+      email: address.email.trim().toLowerCase(),
+      phone: address.phone.trim(),
+      address: address.address.trim(),
+      city: address.city.trim(),
+      postalCode: address.postalCode.trim(),
+    };
 
       const items = cartItems.map((item) => {
         const price = Number(item?.price) || 0;
@@ -191,7 +189,7 @@ export default function CheckoutPage() {
           customer,
           items,
           subtotal,
-          delivery,
+          deliveryFee: delivery,
           total,
           paymentMethod,
         }),

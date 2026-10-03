@@ -45,35 +45,49 @@ export function CartProvider({ children }) {
     } catch {}
   }, [cartItems, isLoaded]);
 
-  const addToCart = (product, quantity = 1) => {
-    if (!product || !product.id) return;
+ const addToCart = (product, quantity = 1) => {
+  if (!product || !product.id) return;
 
-    setCartItems((currentItems) => {
-      const existingItem = currentItems.find(
-        (item) =>
-          String(item.id) === String(product.id)
+  const stock = Number(product.stock || 0);
+
+  if (stock <= 0) return;
+
+  const requestedQuantity = Math.max(
+    1,
+    Math.min(Number(quantity) || 1, stock)
+  );
+
+  setCartItems((currentItems) => {
+    const existingItem = currentItems.find(
+      (item) =>
+        String(item.id) === String(product.id)
+    );
+
+    if (existingItem) {
+      const newQuantity = Math.min(
+        existingItem.quantity + requestedQuantity,
+        stock
       );
 
-      if (existingItem) {
-        return currentItems.map((item) =>
-          String(item.id) === String(product.id)
-            ? {
-                ...item,
-                quantity: item.quantity + quantity,
-              }
-            : item
-        );
-      }
+      return currentItems.map((item) =>
+        String(item.id) === String(product.id)
+          ? {
+              ...item,
+              quantity: newQuantity,
+            }
+          : item
+      );
+    }
 
-      return [
-        ...currentItems,
-        {
-          ...product,
-          quantity,
-        },
-      ];
-    });
-  };
+    return [
+      ...currentItems,
+      {
+        ...product,
+        quantity: requestedQuantity,
+      },
+    ];
+  });
+};
 
   const removeFromCart = (productId) => {
     setCartItems((currentItems) =>
@@ -85,22 +99,30 @@ export function CartProvider({ children }) {
   };
 
   const updateQuantity = (productId, quantity) => {
-    if (quantity <= 0) {
-      removeFromCart(productId);
-      return;
-    }
+  if (quantity <= 0) {
+    removeFromCart(productId);
+    return;
+  }
 
-    setCartItems((currentItems) =>
-      currentItems.map((item) =>
-        String(item.id) === String(productId)
-          ? {
-              ...item,
-              quantity,
-            }
-          : item
-      )
-    );
-  };
+  setCartItems((currentItems) =>
+    currentItems.map((item) => {
+      if (String(item.id) !== String(productId)) {
+        return item;
+      }
+
+      const stock = Number(item.stock || 0);
+
+      if (stock <= 0) {
+        return item;
+      }
+
+      return {
+        ...item,
+        quantity: Math.min(quantity, stock),
+      };
+    })
+  );
+};
 
   const clearCart = () => {
     setCartItems([]);
