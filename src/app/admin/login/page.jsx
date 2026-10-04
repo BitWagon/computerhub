@@ -51,6 +51,10 @@ function AdminLoginForm() {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
+    if (loading) {
+      return;
+    }
+
     setError("");
 
     if (!formData.email.trim()) {
@@ -66,26 +70,24 @@ function AdminLoginForm() {
     setLoading(true);
 
     try {
-      const response = await fetch(
-        "/api/auth/login",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify({
-            email: formData.email
-              .trim()
-              .toLowerCase(),
-            password: formData.password,
-          }),
-        }
-      );
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        cache: "no-store",
+        body: JSON.stringify({
+          email: formData.email.trim().toLowerCase(),
+          password: formData.password,
+        }),
+      });
 
       const data = await response.json();
 
-      if (!response.ok) {
+      console.log("ADMIN LOGIN RESPONSE:", data);
+
+      if (!response.ok || !data.success) {
         throw new Error(
           data.message ||
             "Invalid email or password."
@@ -94,28 +96,33 @@ function AdminLoginForm() {
 
       if (!data.user) {
         throw new Error(
-          "Login was successful, but user information was not returned."
+          "Login succeeded, but no user information was returned."
         );
       }
 
       if (data.user.role !== "admin") {
-        setError(
-          "Access denied. This account does not have administrator permissions."
+        throw new Error(
+          "Access denied. This account is not an administrator."
         );
-
-        toast.error(
-          "Only admin accounts can access the admin panel."
-        );
-
-        return;
       }
 
-      toast.success(
-        "Admin login successful!"
+      toast.success("Admin login successful!");
+
+      /*
+       * Give the browser a moment to process the
+       * Set-Cookie response before navigating.
+       */
+      await new Promise((resolve) =>
+        setTimeout(resolve, 150)
       );
 
-      router.replace(redirect);
-      router.refresh();
+      /*
+       * Use a hard navigation instead of only
+       * router.replace(). This guarantees that
+       * Next.js requests /admin again with the
+       * newly-created authentication cookie.
+       */
+      window.location.replace(redirect);
     } catch (error) {
       console.error(
         "Admin login error:",
@@ -129,7 +136,7 @@ function AdminLoginForm() {
 
       setError(message);
       toast.error(message);
-    } finally {
+
       setLoading(false);
     }
   };
@@ -301,10 +308,6 @@ function AdminLoginForm() {
               </Link>
             </div>
           </div>
-
-          <p className="mt-6 text-center text-xs text-gray-400">
-            ComputerHub Admin Panel
-          </p>
         </div>
       </div>
     </main>
@@ -316,9 +319,7 @@ export default function AdminLoginPage() {
     <Suspense
       fallback={
         <main className="flex min-h-screen items-center justify-center bg-gray-50">
-          <div className="text-sm text-gray-500">
-            Loading admin login...
-          </div>
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600" />
         </main>
       }
     >

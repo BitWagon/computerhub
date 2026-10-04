@@ -131,9 +131,9 @@ export async function POST(request) {
       isActive: true,
     });
 
-    const token = createToken(user);
+   const token = createToken(user);
 
-    setAuthCookie(token, true);
+    await setAuthCookie(token);
 
     console.log("====================================");
     console.log("✅ NEW COMPUTERHUB USER");

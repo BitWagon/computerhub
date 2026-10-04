@@ -2,13 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function LoginForm() {
-  const router = useRouter();
-
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -27,15 +24,27 @@ export default function LoginForm() {
       [name]: type === "checkbox" ? checked : value,
     }));
 
-    if (error) setError("");
+    if (error) {
+      setError("");
+    }
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
 
+    if (isLoading) {
+      return;
+    }
+
     setError("");
 
-    if (!formData.email.trim()) {
+    // ============================================================
+    // VALIDATION
+    // ============================================================
+
+    const email = formData.email.trim().toLowerCase();
+
+    if (!email) {
       const message = "Please enter your email address.";
       setError(message);
       toast.error(message);
@@ -49,58 +58,174 @@ export default function LoginForm() {
       return;
     }
 
+    // ============================================================
+    // LOGIN
+    // ============================================================
+
     try {
       setIsLoading(true);
 
       const response = await fetch("/api/auth/login", {
         method: "POST",
+
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+
+        /*
+         * Make sure browser cookies are included and
+         * the authentication cookie returned by the API
+         * is accepted by the browser.
+         */
+        credentials: "include",
+
+        cache: "no-store",
+
+        body: JSON.stringify({
+          email,
+          password: formData.password,
+          remember: formData.remember,
+        }),
       });
 
-      const data = await response.json();
+      let data = null;
 
-      if (!response.ok || !data.success) {
-        throw new Error(data.message || "Unable to login.");
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error(
+          "The server returned an invalid login response."
+        );
       }
 
-      if (data.user) {
-        localStorage.setItem("user", JSON.stringify(data.user));
-        window.dispatchEvent(new Event("storage"));
+      console.log("====================================");
+      console.log("LOGIN FORM RESPONSE");
+      console.log("Status:", response.status);
+      console.log("Success:", data?.success);
+      console.log("User:", data?.user);
+      console.log("Role:", data?.user?.role);
+      console.log("====================================");
+
+      // ==========================================================
+      // LOGIN FAILED
+      // ==========================================================
+
+      if (!response.ok || !data?.success) {
+        throw new Error(
+          data?.message || "Unable to login."
+        );
+      }
+
+      // ==========================================================
+      // USER DATA CHECK
+      // ==========================================================
+
+      if (!data.user) {
+        throw new Error(
+          "Login succeeded, but the server did not return user information."
+        );
+      }
+
+      const user = data.user;
+
+      // ==========================================================
+      // SAVE USER FOR CLIENT UI
+      // ==========================================================
+
+      try {
+        localStorage.setItem(
+          "user",
+          JSON.stringify(user)
+        );
+
+        window.dispatchEvent(
+          new Event("storage")
+        );
+      } catch (storageError) {
+        console.warn(
+          "Could not update localStorage:",
+          storageError
+        );
       }
 
       toast.success("Login successful!");
 
-      if (data.user?.role === "admin") {
-        router.push("/admin");
-      } else if (data.user?.role === "seller") {
-        router.push("/seller");
+      // ==========================================================
+      // DETERMINE DESTINATION
+      // ==========================================================
+
+      let destination = "/account";
+
+      if (user.role === "admin") {
+        destination = "/admin";
+      } else if (user.role === "seller") {
+        destination = "/seller";
       } else {
-        router.push("/account");
+        destination = "/account";
       }
 
-      router.refresh();
+      console.log(
+        "LOGIN REDIRECT:",
+        destination
+      );
+
+      // ==========================================================
+      // IMPORTANT:
+      //
+      // Use full browser navigation instead of router.push().
+      //
+      // This makes the browser request /admin again after the
+      // authentication cookie has been received from the login
+      // response.
+      // ==========================================================
+
+      await new Promise((resolve) =>
+        setTimeout(resolve, 150)
+      );
+
+      window.location.href = destination;
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to login.";
+      console.error(
+        "LOGIN FORM ERROR:",
+        error
+      );
+
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Unable to login.";
+
       setError(message);
       toast.error(message);
-    } finally {
+
       setIsLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-5"
+    >
+      {/* ======================================================
+          ERROR
+      ======================================================= */}
+
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
         </div>
       )}
 
+      {/* ======================================================
+          EMAIL
+      ======================================================= */}
+
       <div>
-        <label htmlFor="email" className="mb-2 block text-sm font-medium text-slate-700">
+        <label
+          htmlFor="email"
+          className="mb-2 block text-sm font-medium text-slate-700"
+        >
           Email address
         </label>
 
@@ -117,13 +242,23 @@ export default function LoginForm() {
         />
       </div>
 
+      {/* ======================================================
+          PASSWORD
+      ======================================================= */}
+
       <div>
         <div className="mb-2 flex items-center justify-between">
-          <label htmlFor="password" className="block text-sm font-medium text-slate-700">
+          <label
+            htmlFor="password"
+            className="block text-sm font-medium text-slate-700"
+          >
             Password
           </label>
 
-          <Link href="#" className="text-sm font-medium text-blue-600 hover:text-blue-700">
+          <Link
+            href="#"
+            className="text-sm font-medium text-blue-600 hover:text-blue-700"
+          >
             Forgot password?
           </Link>
         </div>
@@ -132,7 +267,11 @@ export default function LoginForm() {
           <input
             id="password"
             name="password"
-            type={showPassword ? "text" : "password"}
+            type={
+              showPassword
+                ? "text"
+                : "password"
+            }
             value={formData.password}
             onChange={handleChange}
             placeholder="Enter your password"
@@ -143,14 +282,31 @@ export default function LoginForm() {
 
           <button
             type="button"
-            onClick={() => setShowPassword((current) => !current)}
+            onClick={() =>
+              setShowPassword(
+                (current) => !current
+              )
+            }
             disabled={isLoading}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700"
+            aria-label={
+              showPassword
+                ? "Hide password"
+                : "Show password"
+            }
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 disabled:cursor-not-allowed"
           >
-            {showPassword ? <EyeOff size={19} /> : <Eye size={19} />}
+            {showPassword ? (
+              <EyeOff size={19} />
+            ) : (
+              <Eye size={19} />
+            )}
           </button>
         </div>
       </div>
+
+      {/* ======================================================
+          REMEMBER ME
+      ======================================================= */}
 
       <label className="flex items-center gap-3 text-sm text-slate-600">
         <input
@@ -165,18 +321,38 @@ export default function LoginForm() {
         Remember me
       </label>
 
+      {/* ======================================================
+          SUBMIT
+      ======================================================= */}
+
       <button
         type="submit"
         disabled={isLoading}
         className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3.5 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {isLoading && <Loader2 size={19} className="animate-spin" />}
-        {isLoading ? "Signing in..." : "Sign In"}
+        {isLoading && (
+          <Loader2
+            size={19}
+            className="animate-spin"
+          />
+        )}
+
+        {isLoading
+          ? "Signing in..."
+          : "Sign In"}
       </button>
+
+      {/* ======================================================
+          REGISTER
+      ======================================================= */}
 
       <p className="text-center text-sm text-slate-600">
         Don't have an account?{" "}
-        <Link href="/register" className="font-semibold text-blue-600 hover:text-blue-700">
+
+        <Link
+          href="/register"
+          className="font-semibold text-blue-600 hover:text-blue-700"
+        >
           Create an account
         </Link>
       </p>
