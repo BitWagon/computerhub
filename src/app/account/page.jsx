@@ -3,13 +3,15 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  User,
-  Mail,
-  ShieldCheck,
-  LogOut,
-  Package,
+  ArrowRight,
   Heart,
   Loader2,
+  LogOut,
+  Mail,
+  Package,
+  ShieldCheck,
+  ShoppingBag,
+  User,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -19,17 +21,19 @@ export default function AccountPage() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
+
   useEffect(() => {
-  if (!user) return;
+    if (!user) return;
 
-  if (user.role === "admin") {
-    router.push("/admin");
-  }
+    if (user.role === "admin") {
+      router.push("/admin");
+      return;
+    }
 
-  if (user.role === "seller") {
-    router.push("/seller");
-  }
-}, [user, router]);
+    if (user.role === "seller") {
+      router.push("/seller");
+    }
+  }, [user, router]);
 
   useEffect(() => {
     async function loadUser() {
@@ -49,11 +53,31 @@ export default function AccountPage() {
 
         setUser(data.user);
 
-        // Sync Navbar and MobileMenu immediately
-        localStorage.setItem("user", JSON.stringify(data.user));
-        window.dispatchEvent(new Event("storage"));
+        try {
+          localStorage.setItem(
+            "user",
+            JSON.stringify(data.user)
+          );
+
+          window.dispatchEvent(
+            new Event("storage")
+          );
+        } catch (storageError) {
+          console.warn(
+            "Could not sync account data:",
+            storageError
+          );
+        }
       } catch (error) {
-        toast.error("Unable to load your account.");
+        console.error(
+          "Account loading error:",
+          error
+        );
+
+        toast.error(
+          "Unable to load your account."
+        );
+
         router.push("/login");
       } finally {
         setLoading(false);
@@ -67,28 +91,39 @@ export default function AccountPage() {
     try {
       setLoggingOut(true);
 
-      const response = await fetch("/api/auth/logout", {
-        method: "POST",
-        credentials: "include",
-      });
+      const response = await fetch(
+        "/api/auth/logout",
+        {
+          method: "POST",
+          credentials: "include",
+        }
+      );
 
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(data.message || "Unable to logout.");
+        throw new Error(
+          data.message || "Unable to logout."
+        );
       }
 
-      // Clear local sync for Navbar
       localStorage.removeItem("user");
-      window.dispatchEvent(new Event("storage"));
 
-      toast.success("Logged out successfully.");
+      window.dispatchEvent(
+        new Event("storage")
+      );
+
+      toast.success(
+        "Logged out successfully."
+      );
 
       router.push("/login");
       router.refresh();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Unable to logout."
+        error instanceof Error
+          ? error.message
+          : "Unable to logout."
       );
     } finally {
       setLoggingOut(false);
@@ -97,11 +132,14 @@ export default function AccountPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-gray-50">
+      <main className="min-h-screen bg-slate-50">
         <div className="mx-auto flex min-h-[70vh] max-w-7xl items-center justify-center px-4">
-          <div className="flex items-center gap-3 text-gray-600">
-            <Loader2 className="h-6 w-6 animate-spin" />
-            <span>Loading your account...</span>
+          <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-6 py-4 text-sm font-medium text-slate-600 shadow-sm">
+            <Loader2
+              size={20}
+              className="animate-spin text-blue-600"
+            />
+            Loading your account...
           </div>
         </div>
       </main>
@@ -110,160 +148,284 @@ export default function AccountPage() {
 
   if (!user) return null;
 
+  const firstName =
+    user.firstName ||
+    user.name?.split(" ")[0] ||
+    "Customer";
+
+  const fullName =
+    user.name ||
+    `${user.firstName || ""} ${
+      user.lastName || ""
+    }`.trim() ||
+    firstName;
+
   return (
-    <main className="min-h-screen bg-gray-50 py-10">
+    <main className="min-h-screen bg-slate-50 py-10 sm:py-14">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        {/* HEADER */}
+
         <div className="mb-8">
-          <p className="text-sm font-semibold uppercase tracking-wide text-blue-600">
-            My Account
-          </p>
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-blue-700">
+                <User size={14} />
+                My Account
+              </div>
 
-          <h1 className="text-3xl font-bold text-gray-900">
-            Welcome, {user.firstName || user.name?.split(" ")[0] || "Customer"}
-          </h1>
+              <h1 className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
+                Welcome, {firstName}
+              </h1>
 
-          <p className="mt-2 text-gray-500">
-            Manage your orders, wishlist, and account securely.
-          </p>
+              <p className="mt-2 text-sm leading-6 text-slate-500">
+                Manage your profile, orders, and saved products.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() =>
+                router.push("/products")
+              }
+              className="inline-flex w-fit items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700"
+            >
+              Continue Shopping
+              <ArrowRight size={17} />
+            </button>
+          </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm lg:col-span-2">
-            <div className="mb-6 flex items-center justify-between">
+        {/* ACCOUNT GRID */}
+
+        <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
+          {/* PROFILE */}
+
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-6">
               <div>
-                <h2 className="text-xl font-bold text-gray-900">
+                <h2 className="text-xl font-black text-slate-950">
                   Profile Information
                 </h2>
 
-                <p className="mt-1 text-sm text-gray-500">
+                <p className="mt-1 text-sm text-slate-500">
                   Your account details
                 </p>
               </div>
 
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-50">
-                <User className="h-6 w-6 text-blue-600" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+                <User size={22} />
               </div>
             </div>
 
-            <div className="grid gap-5 sm:grid-cols-2">
-              <div className="rounded-xl border border-gray-200 p-4">
-                <div className="mb-2 flex items-center gap-2 text-sm text-gray-500">
-                  <User className="h-4 w-4" />
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400">
+                  <User size={14} />
                   First Name
                 </div>
 
-                <p className="font-semibold text-gray-900">
-                  {user.firstName}
+                <p className="font-bold text-slate-900">
+                  {user.firstName || "—"}
                 </p>
               </div>
 
-              <div className="rounded-xl border border-gray-200 p-4">
-                <div className="mb-2 flex items-center gap-2 text-sm text-gray-500">
-                  <User className="h-4 w-4" />
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400">
+                  <User size={14} />
                   Last Name
                 </div>
 
-                <p className="font-semibold text-gray-900">
-                  {user.lastName}
+                <p className="font-bold text-slate-900">
+                  {user.lastName || "—"}
                 </p>
               </div>
 
-              <div className="rounded-xl border border-gray-200 p-4 sm:col-span-2">
-                <div className="mb-2 flex items-center gap-2 text-sm text-gray-500">
-                  <Mail className="h-4 w-4" />
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 sm:col-span-2">
+                <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400">
+                  <Mail size={14} />
                   Email Address
                 </div>
 
-                <p className="font-semibold text-blue-600">
-                  Customer Account
+                <p className="break-all font-bold text-slate-900">
+                  {user.email || "—"}
                 </p>
               </div>
 
-              <div className="rounded-xl border border-gray-200 p-4">
-                <div className="mb-2 flex items-center gap-2 text-sm text-gray-500">
-                  <ShieldCheck className="h-4 w-4" />
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400">
+                  <ShieldCheck size={14} />
                   Account Role
                 </div>
 
-                <p className="font-semibold capitalize text-blue-600">
-                  Customer
+                <p className="font-bold capitalize text-blue-600">
+                  {user.role || "customer"}
                 </p>
               </div>
 
-              <div className="rounded-xl border border-gray-200 p-4">
-                <div className="mb-2 flex items-center gap-2 text-sm text-gray-500">
-                  <ShieldCheck className="h-4 w-4" />
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400">
+                  <ShieldCheck size={14} />
                   Account Status
                 </div>
 
-                <p className="font-semibold text-green-600">
-                  {user.isActive ? "Active" : "Disabled"}
+                <p
+                  className={`font-bold ${
+                    user.isActive
+                      ? "text-emerald-600"
+                      : "text-red-600"
+                  }`}
+                >
+                  {user.isActive
+                    ? "Active"
+                    : "Disabled"}
                 </p>
               </div>
             </div>
           </section>
 
-          <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-            <h2 className="text-xl font-bold text-gray-900">
-              Quick Actions
-            </h2>
+          {/* QUICK ACTIONS */}
 
-            <p className="mt-1 text-sm text-gray-500">
-              Quick access to your shopping activity
-            </p>
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+            <div>
+              <h2 className="text-xl font-black text-slate-950">
+                Quick Actions
+              </h2>
+
+              <p className="mt-1 text-sm text-slate-500">
+                Access your shopping activity.
+              </p>
+            </div>
 
             <div className="mt-6 space-y-3">
               <button
                 type="button"
-                onClick={() => router.push("/orders")}
-                className="flex w-full items-center gap-3 rounded-xl border border-gray-200 px-4 py-3 text-left transition hover:border-blue-300 hover:bg-blue-50"
+                onClick={() =>
+                  router.push("/orders")
+                }
+                className="group flex w-full items-center gap-4 rounded-2xl border border-slate-200 p-4 text-left transition hover:border-blue-200 hover:bg-blue-50"
               >
-                <Package className="h-5 w-5 text-blue-600" />
-                <div>
-                  <p className="font-semibold text-gray-900">My Orders</p>
-                  <p className="text-sm text-gray-500">
-                    Track your orders and delivery status
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 transition group-hover:bg-blue-600 group-hover:text-white">
+                  <Package size={20} />
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <p className="font-bold text-slate-900">
+                    My Orders
+                  </p>
+
+                  <p className="mt-1 text-xs text-slate-500">
+                    Track your orders and delivery.
                   </p>
                 </div>
+
+                <ArrowRight
+                  size={17}
+                  className="text-slate-300 transition group-hover:translate-x-1 group-hover:text-blue-600"
+                />
               </button>
 
               <button
                 type="button"
-                onClick={() => router.push("/wishlist")}
-                className="flex w-full items-center gap-3 rounded-xl border border-gray-200 px-4 py-3 text-left transition hover:border-pink-300 hover:bg-pink-50"
+                onClick={() =>
+                  router.push("/wishlist")
+                }
+                className="group flex w-full items-center gap-4 rounded-2xl border border-slate-200 p-4 text-left transition hover:border-pink-200 hover:bg-pink-50"
               >
-                <Heart className="h-5 w-5 text-pink-600" />
-                <div>
-                  <p className="font-semibold text-gray-900">Wishlist</p>
-                  <p className="text-sm text-gray-500">
-                    View your saved products
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-pink-50 text-pink-600 transition group-hover:bg-pink-600 group-hover:text-white">
+                  <Heart size={20} />
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <p className="font-bold text-slate-900">
+                    Wishlist
+                  </p>
+
+                  <p className="mt-1 text-xs text-slate-500">
+                    View your saved products.
                   </p>
                 </div>
+
+                <ArrowRight
+                  size={17}
+                  className="text-slate-300 transition group-hover:translate-x-1 group-hover:text-pink-600"
+                />
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  router.push("/products")
+                }
+                className="group flex w-full items-center gap-4 rounded-2xl border border-slate-200 p-4 text-left transition hover:border-slate-300 hover:bg-slate-50"
+              >
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+                  <ShoppingBag size={20} />
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <p className="font-bold text-slate-900">
+                    Browse Products
+                  </p>
+
+                  <p className="mt-1 text-xs text-slate-500">
+                    Explore the latest technology.
+                  </p>
+                </div>
+
+                <ArrowRight
+                  size={17}
+                  className="text-slate-300 transition group-hover:translate-x-1 group-hover:text-slate-600"
+                />
               </button>
 
               <button
                 type="button"
                 onClick={handleLogout}
                 disabled={loggingOut}
-                className="flex w-full items-center gap-3 rounded-xl border border-red-200 px-4 py-3 text-left transition hover:bg-red-50 disabled:opacity-60"
+                className="group mt-4 flex w-full items-center gap-4 rounded-2xl border border-red-200 p-4 text-left transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {loggingOut ? (
-                  <Loader2 className="h-5 w-5 animate-spin text-red-600" />
-                ) : (
-                  <LogOut className="h-5 w-5 text-red-600" />
-                )}
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600">
+                  {loggingOut ? (
+                    <Loader2
+                      size={20}
+                      className="animate-spin"
+                    />
+                  ) : (
+                    <LogOut size={20} />
+                  )}
+                </div>
 
-                <div>
-                  <p className="font-semibold text-red-600">
-                    {loggingOut ? "Logging out..." : "Logout"}
+                <div className="min-w-0 flex-1">
+                  <p className="font-bold text-red-600">
+                    {loggingOut
+                      ? "Logging out..."
+                      : "Logout"}
                   </p>
-                  <p className="text-sm text-gray-500">
-                    Sign out of your account
+
+                  <p className="mt-1 text-xs text-slate-500">
+                    Sign out of your account.
                   </p>
                 </div>
               </button>
             </div>
           </section>
+        </div>
+
+        {/* ACCOUNT FOOTER INFO */}
+
+        <div className="mt-6 flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-500 shadow-sm">
+          <ShieldCheck
+            size={18}
+            className="shrink-0 text-emerald-600"
+          />
+
+          <span>
+            Signed in as{" "}
+            <strong className="text-slate-700">
+              {fullName}
+            </strong>
+            .
+          </span>
         </div>
       </div>
     </main>
