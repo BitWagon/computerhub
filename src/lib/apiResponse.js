@@ -1,62 +1,67 @@
-export function successResponse(data = {}, message = "Success", status = 200) {
-  return Response.json(
+import { NextResponse } from "next/server";
+
+export function successResponse(
+  data = {},
+  status = 200
+) {
+  return NextResponse.json(
     {
       success: true,
-      message,
       ...data,
     },
     { status }
   );
 }
 
-export function errorResponse(message = "Something went wrong", status = 500, extra = {}) {
-  return Response.json(
+export function errorResponse(
+  message,
+  status = 500,
+  extra = {}
+) {
+  return NextResponse.json(
     {
       success: false,
-      message,
+      message:
+        message ||
+        "Something went wrong.",
       ...extra,
     },
     { status }
   );
 }
 
-export function validationError(errors = {}) {
-  return Response.json(
-    {
-      success: false,
-      message: "Validation failed",
-      errors,
-    },
-    { status: 400 }
+export function unauthorizedResponse(
+  message = "You must be logged in."
+) {
+  return errorResponse(
+    message,
+    401
   );
 }
 
-export function unauthorizedResponse() {
-  return Response.json(
-    {
-      success: false,
-      message: "Unauthorized",
-    },
-    { status: 401 }
+export function forbiddenResponse(
+  message = "You do not have permission to perform this action."
+) {
+  return errorResponse(
+    message,
+    403
   );
 }
 
-export function forbiddenResponse() {
-  return Response.json(
-    {
-      success: false,
-      message: "Forbidden",
-    },
-    { status: 403 }
+export function notFoundResponse(
+  message = "Resource not found."
+) {
+  return errorResponse(
+    message,
+    404
   );
 }
 
-export function notFoundResponse(message = "Not found") {
-  return Response.json(
-    {
-      success: false,
-      message,
-    },
-    { status: 404 }
+export function badRequestResponse(
+  message = "Invalid request."
+) {
+  return errorResponse(
+    message,
+    400
   );
 }

@@ -6,53 +6,106 @@ import User from "@/models/User";
 import {
   createToken,
   setAuthCookie,
+  sanitizeUser,
 } from "@/lib/auth";
 
-export async function POST(request) {
+import {
+  normalizeEmail,
+  isValidEmail,
+  cleanString,
+} from "@/lib/validators";
+
+export async function POST(
+  request
+) {
   try {
     await connectDB();
 
-    const body = await request.json();
+    let body;
 
-    const {
-      firstName,
-      lastName,
-      email,
-      password,
-      confirmPassword,
-      terms,
-    } = body;
-
-    console.log("====================================");
-    console.log("📝 NEW REGISTRATION REQUEST");
-    console.log("Email:", email);
-    console.log("====================================");
-
-    if (!firstName?.trim()) {
+    try {
+      body =
+        await request.json();
+    } catch {
       return NextResponse.json(
         {
           success: false,
-          message: "First name is required.",
+          message:
+            "Invalid request data.",
         },
         { status: 400 }
       );
     }
 
-    if (!lastName?.trim()) {
+    const firstName =
+      cleanString(
+        body.firstName
+      );
+
+    const lastName =
+      cleanString(
+        body.lastName
+      );
+
+    const email =
+      normalizeEmail(
+        body.email
+      );
+
+    const password =
+      typeof body.password ===
+      "string"
+        ? body.password
+        : "";
+
+    const confirmPassword =
+      typeof body.confirmPassword ===
+      "string"
+        ? body.confirmPassword
+        : "";
+
+    const terms =
+      body.terms === true;
+
+    if (!firstName) {
       return NextResponse.json(
         {
           success: false,
-          message: "Last name is required.",
+          message:
+            "First name is required.",
         },
         { status: 400 }
       );
     }
 
-    if (!email?.trim()) {
+    if (!lastName) {
       return NextResponse.json(
         {
           success: false,
-          message: "Email address is required.",
+          message:
+            "Last name is required.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (!email) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Email address is required.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (!isValidEmail(email)) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Please enter a valid email address.",
         },
         { status: 400 }
       );
@@ -62,7 +115,8 @@ export async function POST(request) {
       return NextResponse.json(
         {
           success: false,
-          message: "Password is required.",
+          message:
+            "Password is required.",
         },
         { status: 400 }
       );
@@ -79,11 +133,15 @@ export async function POST(request) {
       );
     }
 
-    if (password !== confirmPassword) {
+    if (
+      password !==
+      confirmPassword
+    ) {
       return NextResponse.json(
         {
           success: false,
-          message: "Passwords do not match.",
+          message:
+            "Passwords do not match.",
         },
         { status: 400 }
       );
@@ -100,13 +158,12 @@ export async function POST(request) {
       );
     }
 
-    const normalizedEmail =
-      email.trim().toLowerCase();
-
     const existingUser =
       await User.findOne({
-        email: normalizedEmail,
-      });
+        email,
+      })
+        .select("_id")
+        .lean();
 
     if (existingUser) {
       return NextResponse.json(
@@ -120,60 +177,67 @@ export async function POST(request) {
     }
 
     const hashedPassword =
-      await bcrypt.hash(password, 12);
+      await bcrypt.hash(
+        password,
+        12
+      );
 
-    const user = await User.create({
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      email: normalizedEmail,
-      password: hashedPassword,
-      role: "customer",
-      isActive: true,
-    });
+    const user =
+      await User.create({
+        firstName,
+        lastName,
+        email,
+        password:
+          hashedPassword,
+        role: "customer",
+        isActive: true,
+      });
 
-   const token = createToken(user);
+    const token =
+      createToken(user, true);
 
-    await setAuthCookie(token);
-
-    console.log("====================================");
-    console.log("✅ NEW COMPUTERHUB USER");
-    console.log("User ID:", user._id.toString());
-    console.log(
-      "Name:",
-      `${user.firstName} ${user.lastName}`
+    await setAuthCookie(
+      token,
+      true
     );
-    console.log("Email:", user.email);
-    console.log("Role:", user.role);
-    console.log("====================================");
 
     return NextResponse.json(
       {
         success: true,
+
         message:
           "Account created successfully.",
-        user: {
-        id: user._id.toString(),
-        firstName: user.firstName,
-        lastName: user.lastName,
-        name: `${user.firstName} ${user.lastName}`,
-        email: user.email,
-        role: user.role,
-      },
+
+        user:
+          sanitizeUser(user),
       },
       { status: 201 }
     );
   } catch (error) {
     console.error(
-      "❌ REGISTER ERROR:"
+      "POST /api/auth/register:",
+      error
     );
-    console.error(error);
+
+    if (
+      error?.code ===
+      11000
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "An account with this email already exists.",
+        },
+        { status: 409 }
+      );
+    }
 
     return NextResponse.json(
       {
         success: false,
         message:
-          error.message ||
-          "Unable to create account.",
+          "Unable to create account. Please try again.",
       },
       { status: 500 }
     );

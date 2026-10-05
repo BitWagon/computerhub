@@ -19,8 +19,7 @@ function AdminLoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const redirect =
-    searchParams.get("redirect") || "/admin";
+  const redirect = "/admin";
 
   const [formData, setFormData] = useState({
     email: "",

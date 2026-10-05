@@ -1,197 +1,138 @@
 import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 
-const COOKIE_NAME = "computerhub_token";
+const COOKIE_NAME =
+  "computerhub_token";
 
-export function middleware(request) {
-  const { pathname } = request.nextUrl;
+function redirectToLogin(
+  request
+) {
+  const loginUrl =
+    new URL(
+      "/admin/login",
+      request.url
+    );
 
-  // ============================================================
-  // PUBLIC ROUTES
-  // ============================================================
+  loginUrl.searchParams.set(
+    "redirect",
+    request.nextUrl.pathname
+  );
 
-  const publicRoutes = [
-    "/",
-    "/login",
-    "/register",
-    "/products",
-    "/search",
-    "/contact",
-    "/about",
-    "/faq",
-    "/privacy",
-    "/cookies",
-    "/terms",
+  return NextResponse.redirect(
+    loginUrl
+  );
+}
 
-    // IMPORTANT:
-    // Admin login must be accessible BEFORE authentication.
-    "/admin/login",
-  ];
+export function middleware(
+  request
+) {
+  const { pathname } =
+    request.nextUrl;
 
-  if (publicRoutes.includes(pathname)) {
+  /*
+   * Admin login must remain public.
+   */
+
+  if (
+    pathname ===
+      "/admin/login" ||
+    pathname.startsWith(
+      "/admin/login/"
+    )
+  ) {
     return NextResponse.next();
   }
 
-  // ============================================================
-  // READ AUTHENTICATION COOKIE
-  // ============================================================
+  /*
+   * Only admin pages are handled here.
+   *
+   * The API performs its own authorization
+   * checks as well.
+   */
 
-  const token = request.cookies.get(COOKIE_NAME)?.value;
+  const isAdminRoute =
+    pathname.startsWith(
+      "/admin"
+    );
 
-  // ============================================================
-  // PROTECTED ROUTES
-  // ============================================================
-
-  const isAdminRoute = pathname.startsWith("/admin");
-  const isSellerRoute = pathname.startsWith("/seller");
-  const isAccountRoute = pathname.startsWith("/account");
-  const isOrdersRoute = pathname.startsWith("/orders");
-
-  const isProtectedRoute =
-    isAdminRoute ||
-    isSellerRoute ||
-    isAccountRoute ||
-    isOrdersRoute;
-
-  if (!isProtectedRoute) {
+  if (!isAdminRoute) {
     return NextResponse.next();
   }
 
-  // ============================================================
-  // USER IS NOT LOGGED IN
-  // ============================================================
+  const token =
+    request.cookies.get(
+      COOKIE_NAME
+    )?.value;
 
   if (!token) {
-    return NextResponse.redirect(
-      new URL("/login", request.url)
+    return redirectToLogin(
+      request
     );
   }
 
-  // ============================================================
-  // VERIFY JWT
-  // ============================================================
+  const secret =
+    process.env.JWT_SECRET;
 
-  try {
-    if (!process.env.JWT_SECRET) {
-      console.error(
-        "Middleware Error: JWT_SECRET is not configured."
-      );
-
-      return NextResponse.redirect(
-        new URL("/login", request.url)
-      );
-    }
-
-    const user = jwt.verify(
-      token,
-      process.env.JWT_SECRET
+  if (!secret) {
+    console.error(
+      "JWT_SECRET is not configured."
     );
 
-    // ==========================================================
-    // INVALID USER DATA
-    // ==========================================================
+    return redirectToLogin(
+      request
+    );
+  }
+
+  try {
+    const decoded =
+      jwt.verify(
+        token,
+        secret
+      );
 
     if (
-      !user ||
-      typeof user !== "object" ||
-      !user.role
+      !decoded ||
+      typeof decoded !==
+        "object"
     ) {
-      return NextResponse.redirect(
-        new URL("/login", request.url)
+      return redirectToLogin(
+        request
       );
     }
 
-    // ==========================================================
-    // ADMIN ROUTES
-    // ==========================================================
-
-    if (isAdminRoute) {
-      if (user.role !== "admin") {
-        if (user.role === "seller") {
-          return NextResponse.redirect(
-            new URL("/seller", request.url)
-          );
-        }
-
-        return NextResponse.redirect(
-          new URL("/account", request.url)
-        );
-      }
-
-      return NextResponse.next();
-    }
-
-    // ==========================================================
-    // SELLER ROUTES
-    // ==========================================================
-
-    if (isSellerRoute) {
-      if (user.role !== "seller") {
-        if (user.role === "admin") {
-          return NextResponse.redirect(
-            new URL("/admin", request.url)
-          );
-        }
-
-        return NextResponse.redirect(
-          new URL("/account", request.url)
-        );
-      }
-
-      return NextResponse.next();
-    }
-
-    // ==========================================================
-    // CUSTOMER ACCOUNT / ORDERS ROUTES
-    // ==========================================================
-
     if (
-      isAccountRoute ||
-      isOrdersRoute
+      decoded.role !==
+      "admin"
     ) {
-      if (user.role !== "customer") {
-        if (user.role === "admin") {
-          return NextResponse.redirect(
-            new URL("/admin", request.url)
-          );
-        }
+      const destination =
+        decoded.role ===
+        "seller"
+          ? "/seller"
+          : "/account";
 
-        if (user.role === "seller") {
-          return NextResponse.redirect(
-            new URL("/seller", request.url)
-          );
-        }
-
-        return NextResponse.redirect(
-          new URL("/login", request.url)
-        );
-      }
-
-      return NextResponse.next();
+      return NextResponse.redirect(
+        new URL(
+          destination,
+          request.url
+        )
+      );
     }
 
     return NextResponse.next();
   } catch (error) {
     console.error(
-      "Middleware JWT Error:",
+      "Admin middleware authentication error:",
       error
     );
 
-    return NextResponse.redirect(
-      new URL("/login", request.url)
+    return redirectToLogin(
+      request
     );
   }
 }
 
-// ============================================================
-// MIDDLEWARE CONFIG
-// ============================================================
-
 export const config = {
   matcher: [
     "/admin/:path*",
-    "/seller/:path*",
-    "/account/:path*",
-    "/orders/:path*",
   ],
 };

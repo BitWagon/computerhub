@@ -1,63 +1,108 @@
 import { NextResponse } from "next/server";
+
 import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
-import { getCurrentUserToken } from "@/lib/auth";
+
+import {
+  getCurrentUserToken,
+  sanitizeUser,
+} from "@/lib/auth";
 
 export async function GET() {
   try {
     await connectDB();
 
-    const tokenData = await getCurrentUserToken();
+    const token =
+      await getCurrentUserToken();
 
-    if (!tokenData) {
+    if (!token) {
       return NextResponse.json(
         {
           success: false,
-          message: "Unauthorized",
+          message:
+            "Unauthorized.",
         },
-        { status: 401 }
+        {
+          status: 401,
+        }
       );
     }
 
-    const user = await User.findById(tokenData.id || tokenData.userId)
-      .select("-password")
-      .lean();
+    const userId =
+      token.userId ||
+      token.id;
+
+    if (!userId) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Invalid authentication token.",
+        },
+        {
+          status: 401,
+        }
+      );
+    }
+
+    const user =
+      await User.findById(
+        userId
+      ).select("-password");
 
     if (!user) {
       return NextResponse.json(
         {
           success: false,
-          message: "User not found.",
+          message:
+            "User account not found.",
         },
-        { status: 404 }
+        {
+          status: 401,
+        }
+      );
+    }
+
+    if (
+      user.isActive === false
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Your account has been disabled.",
+        },
+        {
+          status: 403,
+        }
       );
     }
 
     return NextResponse.json(
       {
         success: true,
-        user: {
-          id: user._id.toString(),
-          firstName: user.firstName || "",
-          lastName: user.lastName || "",
-          name:
-            user.name ||
-            `${user.firstName || ""} ${user.lastName || ""}`.trim(),
-          email: user.email,
-          role: user.role,
-        },
+        user:
+          sanitizeUser(user),
       },
-      { status: 200 }
+      {
+        status: 200,
+      }
     );
   } catch (error) {
-    console.error("GET /api/auth/me error:", error);
+    console.error(
+      "GET /api/auth/me:",
+      error
+    );
 
     return NextResponse.json(
       {
         success: false,
-        message: "Failed to load user.",
+        message:
+          "Unable to load your account.",
       },
-      { status: 500 }
+      {
+        status: 500,
+      }
     );
   }
 }

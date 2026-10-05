@@ -3,39 +3,71 @@ import bcrypt from "bcryptjs";
 
 import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
+
 import {
   createToken,
   setAuthCookie,
+  sanitizeUser,
 } from "@/lib/auth";
 
-export async function POST(request) {
+function normalizeEmail(
+  value
+) {
+  return String(
+    value || ""
+  )
+    .trim()
+    .toLowerCase();
+}
+
+export async function POST(
+  request
+) {
   try {
     await connectDB();
 
-    const body = await request.json();
+    let body;
 
-    const {
-      email,
-      password,
-      remember,
-    } = body;
-
-    console.log("====================================");
-    console.log("🔐 LOGIN REQUEST");
-    console.log("Email:", email);
-    console.log("====================================");
-
-    // ==========================================
-    // VALIDATE INPUT
-    // ==========================================
-
-    if (!email?.trim()) {
+    try {
+      body =
+        await request.json();
+    } catch {
       return NextResponse.json(
         {
           success: false,
-          message: "Email address is required.",
+          message:
+            "Invalid request data.",
         },
-        { status: 400 }
+        {
+          status: 400,
+        }
+      );
+    }
+
+    const email =
+      normalizeEmail(
+        body.email
+      );
+
+    const password =
+      typeof body.password ===
+      "string"
+        ? body.password
+        : "";
+
+    const remember =
+      body.remember !== false;
+
+    if (!email) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Email address is required.",
+        },
+        {
+          status: 400,
+        }
       );
     }
 
@@ -43,252 +75,203 @@ export async function POST(request) {
       return NextResponse.json(
         {
           success: false,
-          message: "Password is required.",
+          message:
+            "Password is required.",
         },
-        { status: 400 }
+        {
+          status: 400,
+        }
       );
     }
 
-    const normalizedEmail =
-      email.trim().toLowerCase();
-
-    // ==========================================
-    // ENV ADMIN SETTINGS
-    // ==========================================
+    /*
+     * Optional environment-based admin bootstrap.
+     *
+     * ADMIN_EMAIL and ADMIN_PASSWORD are used only
+     * to create/update the admin account when an admin
+     * logs in with those exact credentials.
+     */
 
     const adminEmail =
-      process.env.ADMIN_EMAIL
-        ?.trim()
-        .toLowerCase();
+      normalizeEmail(
+        process.env.ADMIN_EMAIL
+      );
 
     const adminPassword =
       process.env.ADMIN_PASSWORD;
 
-    // ==========================================
-    // ENV ADMIN LOGIN
-    // ==========================================
-    //
-    // If the entered email/password exactly
-    // match ADMIN_EMAIL and ADMIN_PASSWORD,
-    // automatically create/update that user
-    // as an admin in MongoDB.
-    //
-    // The password is NEVER stored as plain text.
-    // It is stored using bcrypt.
-    // ==========================================
-
     if (
       adminEmail &&
       adminPassword &&
-      normalizedEmail === adminEmail &&
+      email === adminEmail &&
       password === adminPassword
     ) {
-      console.log("🔐 ENV ADMIN CREDENTIALS MATCHED");
-
-      let adminUser =
+      let admin =
         await User.findOne({
           email: adminEmail,
         });
 
-      const hashedPassword =
+      const passwordHash =
         await bcrypt.hash(
           adminPassword,
           12
         );
 
-      if (!adminUser) {
-        adminUser =
+      if (!admin) {
+        admin =
           await User.create({
-            firstName: "ComputerHub",
-            lastName: "Admin",
-            email: adminEmail,
-            password: hashedPassword,
+            firstName:
+              "ComputerHub",
+
+            lastName:
+              "Admin",
+
+            email:
+              adminEmail,
+
+            password:
+              passwordHash,
+
             role: "admin",
+
             isActive: true,
           });
-
-        console.log(
-          "✅ ADMIN USER CREATED FROM .env.local"
-        );
       } else {
-        adminUser.password =
-          hashedPassword;
+        admin.password =
+          passwordHash;
 
-        adminUser.role = "admin";
-        adminUser.isActive = true;
+        admin.role =
+          "admin";
 
-        await adminUser.save();
+        admin.isActive =
+          true;
 
-        console.log(
-          "✅ ADMIN USER UPDATED FROM .env.local"
-        );
+        await admin.save();
       }
 
       const token =
-        createToken(adminUser);
+        createToken(
+          admin,
+          remember
+        );
 
-      await setAuthCookie(token);
-
-      console.log("====================================");
-      console.log("✅ ADMIN LOGIN SUCCESS");
-      console.log(
-        "User:",
-        `${adminUser.firstName} ${adminUser.lastName}`
+      await setAuthCookie(
+        token,
+        remember
       );
-      console.log(
-        "Email:",
-        adminUser.email
-      );
-      console.log(
-        "Role:",
-        adminUser.role
-      );
-      console.log("====================================");
 
       return NextResponse.json(
         {
           success: true,
+
           message:
             "Admin login successful.",
-          user: {
-          id: adminUser._id.toString(),
-          firstName: adminUser.firstName,
-          lastName: adminUser.lastName,
-          name: `${adminUser.firstName} ${adminUser.lastName}`,
-          email: adminUser.email,
-          role: adminUser.role,
+
+          user:
+            sanitizeUser(admin),
         },
-        },
-        { status: 200 }
+        {
+          status: 200,
+        }
       );
     }
 
-    // ==========================================
-    // NORMAL USER LOGIN
-    // ==========================================
-
     const user =
       await User.findOne({
-        email: normalizedEmail,
+        email,
       });
 
     if (!user) {
-      console.log(
-        "❌ USER NOT FOUND:",
-        normalizedEmail
-      );
-
       return NextResponse.json(
         {
           success: false,
           message:
             "Invalid email or password.",
         },
-        { status: 401 }
+        {
+          status: 401,
+        }
       );
     }
 
-    // ==========================================
-    // CHECK ACCOUNT STATUS
-    // ==========================================
-
-    if (!user.isActive) {
-      console.log(
-        "❌ ACCOUNT DISABLED:",
-        user.email
-      );
-
+    if (
+      user.isActive === false
+    ) {
       return NextResponse.json(
         {
           success: false,
           message:
             "Your account has been disabled.",
         },
-        { status: 403 }
+        {
+          status: 403,
+        }
       );
     }
 
-    // ==========================================
-    // CHECK PASSWORD
-    // ==========================================
-
-    const passwordMatches =
+    const validPassword =
       await bcrypt.compare(
         password,
         user.password
       );
 
-    if (!passwordMatches) {
-      console.log(
-        "❌ PASSWORD DOES NOT MATCH:",
-        user.email
-      );
-
+    if (!validPassword) {
       return NextResponse.json(
         {
           success: false,
           message:
             "Invalid email or password.",
         },
-        { status: 401 }
+        {
+          status: 401,
+        }
       );
     }
 
-    // ==========================================
-    // CREATE NORMAL LOGIN TOKEN
-    // ==========================================
-
     const token =
-      createToken(user);
+      createToken(
+        user,
+        remember
+      );
 
-    await setAuthCookie(token);
-
-    console.log("====================================");
-    console.log("✅ LOGIN SUCCESS");
-    console.log(
-      "User:",
-      `${user.firstName} ${user.lastName}`
+    await setAuthCookie(
+      token,
+      remember
     );
-    console.log(
-      "Email:",
-      user.email
-    );
-    console.log(
-      "Role:",
-      user.role
-    );
-    console.log("====================================");
 
     return NextResponse.json(
       {
         success: true,
-        message: "Login successful.",
-        user: {
-        id: user._id.toString(),
-        firstName: user.firstName,
-        lastName: user.lastName,
-        name: `${user.firstName} ${user.lastName}`,
-        email: user.email,
-        role: user.role,
+
+        message:
+          user.role === "admin"
+            ? "Admin login successful."
+            : "Login successful.",
+
+        user:
+          sanitizeUser(user),
       },
-      },
-      { status: 200 }
+      {
+        status: 200,
+      }
     );
   } catch (error) {
     console.error(
-      "❌ LOGIN ERROR:"
+      "POST /api/auth/login:",
+      error
     );
-
-    console.error(error);
 
     return NextResponse.json(
       {
         success: false,
+
         message:
-          error.message ||
+          error?.message ||
           "Unable to login.",
       },
-      { status: 500 }
+      {
+        status: 500,
+      }
     );
   }
 }

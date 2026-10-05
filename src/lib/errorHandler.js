@@ -1,51 +1,77 @@
-import { errorResponse } from "./apiResponse";
+import mongoose from "mongoose";
+import {
+  errorResponse,
+} from "@/lib/apiResponse";
 
-export function handleApiError(error, defaultMessage = "Internal Server Error") {
-  if (error instanceof Error) {
-    return errorResponse(error.message, 500);
+export function handleApiError(
+  error,
+  context = "API"
+) {
+  console.error(
+    `${context} error:`,
+    error
+  );
+
+  if (
+    error instanceof mongoose.Error.ValidationError
+  ) {
+    const messages =
+      Object.values(error.errors)
+        .map(
+          (item) => item.message
+        )
+        .filter(Boolean);
+
+    return errorResponse(
+      messages.join(", ") ||
+        "Validation failed.",
+      400
+    );
   }
 
-  return errorResponse(defaultMessage, 500);
-}
+  if (
+    error?.code === 11000
+  ) {
+    const fields =
+      Object.keys(
+        error.keyPattern || {}
+      );
 
-export function handleValidation(condition, message) {
-  if (!condition) {
-    throw new Error(message);
-  }
-}
-
-export async function asyncHandler(callback, defaultMessage = "Internal Server Error") {
-  try {
-    return await callback();
-  } catch (error) {
-    return handleApiError(error, defaultMessage);
-  }
-}
-
-export function requireFields(body, fields = []) {
-  const missing = [];
-
-  for (const field of fields) {
-    if (
-      body[field] === undefined ||
-      body[field] === null ||
-      body[field] === ""
-    ) {
-      missing.push(field);
-    }
+    return errorResponse(
+      fields.length
+        ? `${fields.join(
+            ", "
+          )} already exists.`
+        : "A record with the same value already exists.",
+      409
+    );
   }
 
-  if (missing.length) {
-    throw new Error(`Missing required fields: ${missing.join(", ")}`);
+  if (
+    error instanceof mongoose.Error.CastError
+  ) {
+    return errorResponse(
+      "Invalid ID.",
+      400
+    );
   }
-}
 
-export function safeNumber(value, fallback = 0) {
-  const number = Number(value);
-  return Number.isFinite(number) ? number : fallback;
-}
+  if (
+    error?.name ===
+    "JsonWebTokenError"
+  ) {
+    return errorResponse(
+      "Invalid authentication token.",
+      401
+    );
+  }
 
-export function safeBoolean(value, fallback = false) {
-  if (typeof value === "boolean") return value;
-  return fallback;
+  return errorResponse(
+    process.env.NODE_ENV ===
+      "development"
+      ? error?.message ||
+          "Internal server error."
+      : "Internal server error.",
+    500
+  );
 }

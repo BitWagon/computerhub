@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 
 import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
-import { getCurrentUserToken } from "@/lib/auth";
+
+import {
+  requireAdmin,
+  serializeAdminUser,
+} from "@/lib/adminAuth";
 
 const ALLOWED_ROLES = [
   "customer",
@@ -10,77 +14,23 @@ const ALLOWED_ROLES = [
   "admin",
 ];
 
-async function getAdminUser() {
-  const token = await getCurrentUserToken();
-
-  const userId = token?.userId || token?.id;
-
-  if (!userId) {
-    return null;
-  }
-
-  const user = await User.findById(userId);
-
-  if (
-    !user ||
-    user.role !== "admin" ||
-    user.isActive === false
-  ) {
-    return null;
-  }
-
-  return user;
-}
-
-function formatUser(user) {
-  return {
-    id: user._id.toString(),
-    _id: user._id.toString(),
-
-    firstName:
-      user.firstName,
-
-    lastName:
-      user.lastName,
-
-    email:
-      user.email,
-
-    role:
-      user.role,
-
-    isActive:
-      user.isActive !== false,
-
-    createdAt:
-      user.createdAt,
-
-    updatedAt:
-      user.updatedAt,
-  };
-}
-
-/*
-|--------------------------------------------------------------------------
-| GET /api/admin/users
-|--------------------------------------------------------------------------
-*/
-
 export async function GET() {
   try {
     await connectDB();
 
-    const adminUser =
-      await getAdminUser();
+    const auth =
+      await requireAdmin();
 
-    if (!adminUser) {
+    if (!auth.authorized) {
       return NextResponse.json(
         {
           success: false,
           message:
             "Admin authorization required.",
         },
-        { status: 401 }
+        {
+          status: 403,
+        }
       );
     }
 
@@ -97,13 +47,19 @@ export async function GET() {
     return NextResponse.json(
       {
         success: true,
-        users: users.map(formatUser),
+
+        users:
+          users.map(
+            serializeAdminUser
+          ),
       },
-      { status: 200 }
+      {
+        status: 200,
+      }
     );
   } catch (error) {
     console.error(
-      "ADMIN USERS GET ERROR:",
+      "GET /api/admin/users:",
       error
     );
 
@@ -113,49 +69,52 @@ export async function GET() {
         message:
           "Unable to load users.",
       },
-      { status: 500 }
+      {
+        status: 500,
+      }
     );
   }
 }
 
-/*
-|--------------------------------------------------------------------------
-| PATCH /api/admin/users
-|--------------------------------------------------------------------------
-|
-| Supports:
-|
-| 1. { userId, role }
-| 2. { userId, isActive }
-|
-*/
-
-export async function PATCH(request) {
+export async function PATCH(
+  request
+) {
   try {
     await connectDB();
 
-    const adminUser =
-      await getAdminUser();
+    const auth =
+      await requireAdmin();
 
-    if (!adminUser) {
+    if (!auth.authorized) {
       return NextResponse.json(
         {
           success: false,
           message:
             "Admin authorization required.",
         },
-        { status: 401 }
+        {
+          status: 403,
+        }
       );
     }
 
     const body =
       await request.json();
 
-    const {
-      userId,
-      role,
-      isActive,
-    } = body;
+    const userId =
+      String(
+        body.userId || ""
+      ).trim();
+
+    const role =
+      body.role;
+
+    const hasRole =
+      role !== undefined;
+
+    const hasActive =
+      body.isActive !==
+      undefined;
 
     if (!userId) {
       return NextResponse.json(
@@ -164,12 +123,67 @@ export async function PATCH(request) {
           message:
             "User ID is required.",
         },
-        { status: 400 }
+        {
+          status: 400,
+        }
+      );
+    }
+
+    if (
+      !hasRole &&
+      !hasActive
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Nothing to update.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    if (
+      hasRole &&
+      !ALLOWED_ROLES.includes(
+        role
+      )
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Invalid user role.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    if (
+      hasActive &&
+      typeof body.isActive !==
+        "boolean"
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "isActive must be true or false.",
+        },
+        {
+          status: 400,
+        }
       );
     }
 
     const user =
-      await User.findById(userId);
+      await User.findById(
+        userId
+      );
 
     if (!user) {
       return NextResponse.json(
@@ -178,95 +192,39 @@ export async function PATCH(request) {
           message:
             "User not found.",
         },
-        { status: 404 }
+        {
+          status: 404,
+        }
       );
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | ROLE UPDATE
-    |--------------------------------------------------------------------------
-    */
-
-    if (role !== undefined) {
-      if (
-        !ALLOWED_ROLES.includes(role)
-      ) {
-        return NextResponse.json(
-          {
-            success: false,
-            message:
-              "Invalid role. Allowed roles are customer, seller, and admin.",
-          },
-          { status: 400 }
-        );
-      }
-
-      if (
-        adminUser._id.toString() ===
-        userId
-      ) {
-        return NextResponse.json(
-          {
-            success: false,
-            message:
-              "You cannot change your own role.",
-          },
-          { status: 403 }
-        );
-      }
-
-      if (
-        user.role === "admin" &&
-        role !== "admin"
-      ) {
-        const adminCount =
-          await User.countDocuments({
-            role: "admin",
-            isActive: true,
-          });
-
-        if (adminCount <= 1) {
-          return NextResponse.json(
-            {
-              success: false,
-              message:
-                "You cannot remove the last active administrator.",
-            },
-            { status: 403 }
-          );
-        }
-      }
-
-      user.role = role;
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | ACTIVE / INACTIVE UPDATE
-    |--------------------------------------------------------------------------
-    */
+    const adminId =
+      auth.user._id.toString();
 
     if (
-      isActive !== undefined
+      user._id.toString() ===
+      adminId
     ) {
       if (
-        typeof isActive !== "boolean"
+        hasRole &&
+        role !== "admin"
       ) {
         return NextResponse.json(
           {
             success: false,
             message:
-              "isActive must be true or false.",
+              "You cannot remove your own administrator role.",
           },
-          { status: 400 }
+          {
+            status: 403,
+          }
         );
       }
 
       if (
-        adminUser._id.toString() ===
-        userId &&
-        isActive === false
+        hasActive &&
+        body.isActive ===
+          false
       ) {
         return NextResponse.json(
           {
@@ -274,48 +232,61 @@ export async function PATCH(request) {
             message:
               "You cannot deactivate your own account.",
           },
-          { status: 403 }
+          {
+            status: 403,
+          }
         );
       }
-
-      if (
-        user.role === "admin" &&
-        isActive === false
-      ) {
-        const activeAdminCount =
-          await User.countDocuments({
-            role: "admin",
-            isActive: true,
-          });
-
-        if (activeAdminCount <= 1) {
-          return NextResponse.json(
-            {
-              success: false,
-              message:
-                "You cannot deactivate the last active administrator.",
-            },
-            { status: 403 }
-          );
-        }
-      }
-
-      user.isActive =
-        isActive;
     }
 
+    /*
+     * Never allow the last active admin
+     * to be removed.
+     */
+
     if (
-      role === undefined &&
-      isActive === undefined
+      user.role === "admin" &&
+      (
+        (
+          hasRole &&
+          role !== "admin"
+        ) ||
+        (
+          hasActive &&
+          body.isActive ===
+            false
+        )
+      )
     ) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "Nothing to update.",
-        },
-        { status: 400 }
-      );
+      const activeAdmins =
+        await User.countDocuments({
+          role: "admin",
+          isActive: true,
+        });
+
+      if (
+        activeAdmins <= 1
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "The last active administrator cannot be removed or deactivated.",
+          },
+          {
+            status: 403,
+          }
+        );
+      }
+    }
+
+    if (hasRole) {
+      user.role = role;
+    }
+
+    if (hasActive) {
+      user.isActive =
+        body.isActive;
     }
 
     await user.save();
@@ -323,15 +294,22 @@ export async function PATCH(request) {
     return NextResponse.json(
       {
         success: true,
+
         message:
           "User updated successfully.",
-        user: formatUser(user),
+
+        user:
+          serializeAdminUser(
+            user
+          ),
       },
-      { status: 200 }
+      {
+        status: 200,
+      }
     );
   } catch (error) {
     console.error(
-      "ADMIN USERS PATCH ERROR:",
+      "PATCH /api/admin/users:",
       error
     );
 
@@ -341,7 +319,9 @@ export async function PATCH(request) {
         message:
           "Unable to update user.",
       },
-      { status: 500 }
+      {
+        status: 500,
+      }
     );
   }
 }

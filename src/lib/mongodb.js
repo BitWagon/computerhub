@@ -4,14 +4,14 @@ const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
   throw new Error(
-    "Please define MONGODB_URI inside .env.local"
+    "MONGODB_URI is not defined. Add MONGODB_URI to your environment variables."
   );
 }
 
-let cached = global.mongoose;
+let cached = globalThis.__computerhub_mongoose;
 
 if (!cached) {
-  cached = global.mongoose = {
+  cached = globalThis.__computerhub_mongoose = {
     conn: null,
     promise: null,
   };
@@ -26,24 +26,30 @@ export async function connectDB() {
     cached.promise = mongoose
       .connect(MONGODB_URI, {
         bufferCommands: false,
+        maxPoolSize: 10,
+        serverSelectionTimeoutMS: 10000,
       })
-      .then((mongooseInstance) => {
-        console.log("✅ MongoDB connected successfully");
-        return mongooseInstance;
-      })
-      .catch((error) => {
-        cached.promise = null;
-
-        console.error(
-          "❌ MongoDB connection failed:",
-          error
-        );
-
-        throw error;
-      });
+      .then((mongooseInstance) => mongooseInstance);
   }
 
-  cached.conn = await cached.promise;
+  try {
+    cached.conn = await cached.promise;
+  } catch (error) {
+    cached.promise = null;
+
+    console.error("MongoDB connection failed:", error);
+
+    throw new Error("Unable to connect to the database.");
+  }
 
   return cached.conn;
+}
+
+export async function disconnectDB() {
+  if (cached.conn) {
+    await mongoose.disconnect();
+
+    cached.conn = null;
+    cached.promise = null;
+  }
 }

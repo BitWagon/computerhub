@@ -1,138 +1,169 @@
-// ================================
-// ComputerHub Shared Validators
-// src/lib/validators.js
-// ================================
+export function cleanString(
+  value,
+  fallback = ""
+) {
+  if (
+    value === null ||
+    value === undefined
+  ) {
+    return fallback;
+  }
 
-export function validateEmail(email) {
-  if (!email) return false;
+  return String(value).trim();
+}
 
+export function normalizeEmail(
+  email
+) {
+  return cleanString(email)
+    .toLowerCase();
+}
+
+export function isValidEmail(
+  email
+) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-    String(email).trim()
+    normalizeEmail(email)
   );
 }
 
-export function validatePassword(password) {
-  if (!password) {
-    return {
-      valid: false,
-      message: "Password is required.",
-    };
-  }
-
-  if (password.length < 8) {
-    return {
-      valid: false,
-      message: "Password must be at least 8 characters.",
-    };
-  }
-
-  return {
-    valid: true,
-    message: "",
-  };
-}
-
-export function validateName(name) {
-  return (
-    typeof name === "string" &&
-    name.trim().length >= 2
+export function isValidObjectId(
+  value
+) {
+  return /^[a-f\d]{24}$/i.test(
+    String(value || "")
   );
 }
 
-export function validatePrice(price) {
-  const value = Number(price);
-
-  return Number.isFinite(value) && value >= 0;
-}
-
-export function validateStock(stock) {
-  const value = Number(stock);
-
-  return Number.isInteger(value) && value >= 0;
-}
-
-export function validateSlug(slug) {
-  if (!slug) return false;
-
-  return /^[a-z0-9-]+$/.test(slug);
-}
-
-export function validateProduct(data) {
-  const errors = {};
-
-  if (!validateName(data.name))
-    errors.name = "Product name is required.";
-
-  if (!validatePrice(data.price))
-    errors.price = "Invalid price.";
-
-  if (!validateStock(data.stock))
-    errors.stock = "Invalid stock.";
-
-  if (!data.category)
-    errors.category = "Category is required.";
-
-  return {
-    valid: Object.keys(errors).length === 0,
-    errors,
-  };
-}
-
-export function validateCategory(data) {
-  const errors = {};
-
-  if (!validateName(data.name))
-    errors.name = "Category name is required.";
+export function positiveNumber(
+  value,
+  fallback = 0
+) {
+  const number =
+    Number(value);
 
   if (
-    data.slug &&
-    !validateSlug(data.slug)
+    !Number.isFinite(number) ||
+    number < 0
   ) {
-    errors.slug =
-      "Slug can only contain lowercase letters, numbers and hyphens.";
+    return fallback;
   }
 
-  return {
-    valid: Object.keys(errors).length === 0,
-    errors,
-  };
+  return number;
 }
 
-export function validateSignup(data) {
-  const errors = {};
+export function positiveInteger(
+  value,
+  fallback = 0
+) {
+  const number =
+    Number(value);
 
-  if (!validateName(data.firstName))
-    errors.firstName = "First name is required.";
+  if (
+    !Number.isInteger(number) ||
+    number < 0
+  ) {
+    return fallback;
+  }
 
-  if (!validateName(data.lastName))
-    errors.lastName = "Last name is required.";
-
-  if (!validateEmail(data.email))
-    errors.email = "Invalid email.";
-
-  const password =
-    validatePassword(data.password);
-
-  if (!password.valid)
-    errors.password = password.message;
-
-  return {
-    valid: Object.keys(errors).length === 0,
-    errors,
-  };
+  return number;
 }
 
-export function validateLogin(data) {
-  const errors = {};
+export function createSlug(
+  value
+) {
+  return cleanString(value)
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
 
-  if (!validateEmail(data.email))
-    errors.email = "Invalid email.";
+export function normalizeImages(
+  images
+) {
+  if (!Array.isArray(images)) {
+    if (
+      typeof images ===
+      "string"
+    ) {
+      return images
+        .split(",")
+        .map((item) =>
+          item.trim()
+        )
+        .filter(Boolean);
+    }
 
-  if (!data.password)
-    errors.password = "Password is required.";
+    return [];
+  }
+
+  return images
+    .map((item) =>
+      typeof item ===
+      "string"
+        ? item.trim()
+        : ""
+    )
+    .filter(Boolean);
+}
+
+export function calculateDiscount(
+  price,
+  oldPrice
+) {
+  const current =
+    Number(price) || 0;
+
+  const previous =
+    Number(oldPrice) || 0;
+
+  if (
+    previous <= 0 ||
+    current >= previous
+  ) {
+    return 0;
+  }
+
+  return Math.round(
+    ((previous - current) /
+      previous) *
+      100
+  );
+}
+
+export function sanitizePagination(
+  searchParams
+) {
+  const pageValue =
+    Number(
+      searchParams.get("page")
+    );
+
+  const limitValue =
+    Number(
+      searchParams.get("limit")
+    );
+
+  const page =
+    Number.isInteger(pageValue) &&
+    pageValue > 0
+      ? pageValue
+      : 1;
+
+  const limit =
+    Number.isInteger(limitValue) &&
+    limitValue > 0
+      ? Math.min(
+          limitValue,
+          100
+        )
+      : 24;
 
   return {
-    valid: Object.keys(errors).length === 0,
-    errors,
+    page,
+    limit,
+    skip:
+      (page - 1) * limit,
   };
 }
