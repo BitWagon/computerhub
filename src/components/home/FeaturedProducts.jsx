@@ -1,194 +1,206 @@
 "use client";
 
-import Link from "next/link";
-import { motion } from "framer-motion";
 import {
-  Heart,
-  ShoppingCart,
-  Star,
+  useEffect,
+  useState,
+} from "react";
+
+import Link from "next/link";
+
+import {
   ArrowRight,
+  Loader2,
+  Sparkles,
 } from "lucide-react";
 
-const products = [
-  {
-    id: 101,
-    name: "Business Pro Laptop 15",
-    description: "15.6″ Full HD • 16GB • 512GB SSD",
-    price: "$749",
-    oldPrice: "$849",
-    rating: "4.8",
-    reviews: "124",
-    badge: "Best Seller",
-    image: "💻",
-    background: "from-blue-100 to-blue-200",
-  },
-  {
-    id: 102,
-    name: "Creator Laptop X14",
-    description: "14″ Display • 16GB • 1TB SSD",
-    price: "$1,099",
-    oldPrice: "$1,249",
-    rating: "4.9",
-    reviews: "87",
-    badge: "Top Rated",
-    image: "💻",
-    background: "from-purple-100 to-violet-200",
-  },
-  {
-    id: 103,
-    name: "UltraBook Air 14",
-    description: "14″ • 16GB RAM • 512GB SSD",
-    price: "$899",
-    oldPrice: "$999",
-    rating: "4.7",
-    reviews: "203",
-    badge: "Popular",
-    image: "💻",
-    background: "from-cyan-100 to-sky-200",
-  },
-  {
-    id: 104,
-    name: "Gaming Laptop RTX",
-    description: "15.6″ 144Hz • 16GB • RTX Graphics",
-    price: "$1,299",
-    oldPrice: "$1,499",
-    rating: "4.9",
-    reviews: "156",
-    badge: "Gaming",
-    image: "🎮",
-    background: "from-red-100 to-orange-200",
-  },
-];
+import ProductCard from "@/components/products/ProductCard";
 
 export default function FeaturedProducts() {
-  return (
-    <section className="bg-white py-16">
-      <div className="container-main">
-        <div className="mb-8 flex items-end justify-between gap-4">
-          <div>
-            <p className="mb-2 text-sm font-bold uppercase tracking-[0.18em] text-blue-600">
-              Recommended For You
-            </p>
+  const [
+    products,
+    setProducts,
+  ] = useState([]);
 
-            <h2 className="text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">
-              Featured Laptops
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadProducts() {
+      try {
+        const response =
+          await fetch(
+            "/api/products",
+            {
+              method: "GET",
+              credentials:
+                "include",
+              cache: "no-store",
+            }
+          );
+
+        const data =
+          await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data?.message ||
+              "Unable to load products."
+          );
+        }
+
+        let list = [];
+
+        if (
+          Array.isArray(data)
+        ) {
+          list = data;
+        } else if (
+          Array.isArray(
+            data?.products
+          )
+        ) {
+          list =
+            data.products;
+        } else if (
+          Array.isArray(
+            data?.data
+          )
+        ) {
+          list =
+            data.data;
+        }
+
+        const featured =
+          list
+            .filter(
+              (product) =>
+                product?.featured ===
+                true
+            )
+            .slice(0, 4);
+
+        const finalProducts =
+          featured.length > 0
+            ? featured
+            : list.slice(0, 4);
+
+        if (!cancelled) {
+          setProducts(
+            finalProducts
+          );
+        }
+      } catch (error) {
+        console.error(
+          "Featured products loading error:",
+          error
+        );
+
+        if (!cancelled) {
+          setProducts([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadProducts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <section className="bg-white py-16 sm:py-20">
+      <div className="container-main">
+
+        <div className="mb-9 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+
+          <div>
+            <div className="flex items-center gap-2">
+              <Sparkles
+                size={17}
+                className="text-blue-600"
+              />
+
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-600">
+                Featured
+              </p>
+            </div>
+
+            <h2 className="mt-2 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
+              Products Selected for You
             </h2>
 
-            <p className="mt-2 text-gray-500">
-              Popular laptops selected for performance, reliability and value.
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">
+              Explore products selected from the ComputerHub marketplace.
             </p>
           </div>
 
           <Link
-            href="/category/laptops"
-            className="hidden items-center gap-2 text-sm font-bold text-blue-600 sm:flex"
+            href="/products"
+            className="inline-flex items-center gap-2 text-sm font-bold text-blue-600 transition hover:text-blue-700"
           >
-            See all laptops
+            View all products
             <ArrowRight size={17} />
           </Link>
+
         </div>
 
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {products.map((product, index) => (
-            <motion.article
-              key={product.id}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{
-                duration: 0.45,
-                delay: index * 0.05,
-              }}
-              className="group overflow-hidden rounded-2xl border border-gray-200 bg-white transition hover:-translate-y-1 hover:shadow-xl"
+        {loading ? (
+          <div className="flex min-h-[220px] items-center justify-center rounded-2xl border border-slate-200 bg-slate-50">
+            <div className="flex items-center gap-3 text-sm font-semibold text-slate-500">
+              <Loader2
+                size={20}
+                className="animate-spin"
+              />
+
+              Loading products...
+            </div>
+          </div>
+        ) : products.length > 0 ? (
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {products.map(
+              (product) => (
+                <ProductCard
+                  key={
+                    product?._id?.toString?.() ||
+                    product?.id
+                  }
+                  product={
+                    product
+                  }
+                />
+              )
+            )}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-10 text-center">
+            <h3 className="text-lg font-black text-slate-900">
+              Products will appear here
+            </h3>
+
+            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
+              Add products through your marketplace dashboard to feature them
+              on the homepage.
+            </p>
+
+            <Link
+              href="/products"
+              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-700"
             >
-              <div className="relative">
-                <Link href={`/product/${product.id}`}>
-                  <div
-                    className={`flex aspect-square items-center justify-center bg-gradient-to-br ${product.background}`}
-                  >
-                    <div className="text-center transition duration-300 group-hover:scale-105">
-                      <div className="text-7xl">
-                        {product.image}
-                      </div>
+              Browse Marketplace
+              <ArrowRight size={16} />
+            </Link>
+          </div>
+        )}
 
-                      <p className="mt-3 text-xs font-bold uppercase tracking-widest text-slate-600/60">
-                        ComputerHub
-                      </p>
-                    </div>
-                  </div>
-                </Link>
-
-                <span className="absolute left-3 top-3 rounded-lg bg-slate-900 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-white">
-                  {product.badge}
-                </span>
-
-                <button
-                  type="button"
-                  aria-label="Add to wishlist"
-                  className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white text-gray-600 shadow-md transition hover:bg-red-50 hover:text-red-500"
-                >
-                  <Heart size={17} />
-                </button>
-              </div>
-
-              <div className="p-4">
-                <Link href={`/product/${product.id}`}>
-                  <h3 className="min-h-[48px] text-sm font-bold leading-6 text-slate-900 transition group-hover:text-blue-600">
-                    {product.name}
-                  </h3>
-                </Link>
-
-                <p className="mt-1 text-xs text-gray-500">
-                  {product.description}
-                </p>
-
-                <div className="mt-3 flex items-center gap-1">
-                  <Star
-                    size={14}
-                    fill="currentColor"
-                    className="text-yellow-400"
-                  />
-
-                  <span className="text-xs font-bold text-gray-800">
-                    {product.rating}
-                  </span>
-
-                  <span className="text-xs text-gray-400">
-                    ({product.reviews})
-                  </span>
-                </div>
-
-                <div className="mt-3 flex items-end gap-2">
-                  <span className="text-xl font-black text-slate-900">
-                    {product.price}
-                  </span>
-
-                  <span className="text-xs text-gray-400 line-through">
-                    {product.oldPrice}
-                  </span>
-                </div>
-
-                <button
-                  type="button"
-                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-blue-600 py-2.5 text-sm font-bold text-blue-600 transition hover:bg-blue-600 hover:text-white"
-                >
-                  <ShoppingCart size={16} />
-                  Add to Cart
-                </button>
-              </div>
-            </motion.article>
-          ))}
-        </div>
-
-        <div className="mt-7 text-center sm:hidden">
-          <Link
-            href="/category/laptops"
-            className="inline-flex items-center gap-2 text-sm font-bold text-blue-600"
-          >
-            See all laptops
-            <ArrowRight size={17} />
-          </Link>
-        </div>
       </div>
     </section>
   );

@@ -1,163 +1,214 @@
 "use client";
 
-import Link from "next/link";
-import { motion } from "framer-motion";
 import {
-  Laptop,
-  Monitor,
-  Cpu,
-  HardDrive,
-  Keyboard,
-  Mouse,
-  Gamepad2,
-  ArrowUpRight,
+  useEffect,
+  useState,
+} from "react";
+
+import Link from "next/link";
+
+import {
+  ArrowRight,
+  Flame,
+  Loader2,
 } from "lucide-react";
 
-const categories = [
-  {
-    title: "Laptops",
-    description: "Work, study & everyday computing",
-    href: "/category/laptops",
-    icon: Laptop,
-    gradient: "from-blue-50 to-blue-100",
-    iconBg: "bg-blue-600",
-  },
-  {
-    title: "Desktop PCs",
-    description: "Powerful setups for every need",
-    href: "/category/desktops",
-    icon: Monitor,
-    gradient: "from-violet-50 to-violet-100",
-    iconBg: "bg-violet-600",
-  },
-  {
-    title: "PC Components",
-    description: "Build and upgrade your PC",
-    href: "/category/components",
-    icon: Cpu,
-    gradient: "from-emerald-50 to-emerald-100",
-    iconBg: "bg-emerald-600",
-  },
-  {
-    title: "Monitors",
-    description: "Gaming, office & professional",
-    href: "/category/monitors",
-    icon: Monitor,
-    gradient: "from-cyan-50 to-cyan-100",
-    iconBg: "bg-cyan-600",
-  },
-  {
-    title: "Storage",
-    description: "SSD, HDD & external storage",
-    href: "/category/storage",
-    icon: HardDrive,
-    gradient: "from-amber-50 to-amber-100",
-    iconBg: "bg-amber-600",
-  },
-  {
-    title: "Keyboards",
-    description: "Mechanical & everyday keyboards",
-    href: "/category/keyboards",
-    icon: Keyboard,
-    gradient: "from-pink-50 to-pink-100",
-    iconBg: "bg-pink-600",
-  },
-  {
-    title: "Mice",
-    description: "Precision for work & gaming",
-    href: "/category/mice",
-    icon: Mouse,
-    gradient: "from-sky-50 to-sky-100",
-    iconBg: "bg-sky-600",
-  },
-  {
-    title: "Gaming",
-    description: "Gear up for your next level",
-    href: "/category/gaming",
-    icon: Gamepad2,
-    gradient: "from-red-50 to-red-100",
-    iconBg: "bg-red-600",
-  },
-];
+import ProductCard from "@/components/products/ProductCard";
 
-export default function CategorySection() {
+export default function FlashDeals() {
+  const [
+    products,
+    setProducts,
+  ] = useState([]);
+
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadProducts() {
+      try {
+        const response =
+          await fetch(
+            "/api/products",
+            {
+              method: "GET",
+              credentials:
+                "include",
+              cache: "no-store",
+            }
+          );
+
+        const data =
+          await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data?.message ||
+              "Unable to load products."
+          );
+        }
+
+        let list = [];
+
+        if (
+          Array.isArray(data)
+        ) {
+          list = data;
+        } else if (
+          Array.isArray(
+            data?.products
+          )
+        ) {
+          list =
+            data.products;
+        } else if (
+          Array.isArray(
+            data?.data
+          )
+        ) {
+          list =
+            data.data;
+        }
+
+        const saleProducts =
+          list
+            .filter(
+              (product) => {
+                const price =
+                  Number(
+                    product?.price
+                  ) || 0;
+
+                const oldPrice =
+                  Number(
+                    product?.oldPrice
+                  ) || 0;
+
+                return (
+                  oldPrice >
+                    price &&
+                  price > 0
+                );
+              }
+            )
+            .slice(0, 4);
+
+        if (!cancelled) {
+          setProducts(
+            saleProducts
+          );
+        }
+      } catch (error) {
+        console.error(
+          "Flash deals loading error:",
+          error
+        );
+
+        if (!cancelled) {
+          setProducts([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadProducts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
-    <section className="bg-white py-16">
+    <section className="bg-slate-50 py-16 sm:py-20">
       <div className="container-main">
-        <div className="mb-9 flex items-end justify-between gap-4">
-          <div>
-            <p className="mb-2 text-sm font-bold uppercase tracking-[0.18em] text-blue-600">
-              Explore ComputerHub
-            </p>
 
-            <h2 className="text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">
-              Shop by Category
+        <div className="mb-9 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+
+          <div>
+            <div className="flex items-center gap-2">
+              <Flame
+                size={18}
+                className="text-orange-500"
+              />
+
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-orange-500">
+                Limited Offers
+              </p>
+            </div>
+
+            <h2 className="mt-2 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
+              Deals Worth Checking
             </h2>
 
-            <p className="mt-2 max-w-2xl text-gray-500">
-              Find exactly what you need for work, gaming, study or your
-              personal setup.
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">
+              Discover current price drops and selected technology deals.
             </p>
           </div>
 
           <Link
             href="/products"
-            className="hidden items-center gap-1 text-sm font-bold text-blue-600 sm:flex"
+            className="inline-flex items-center gap-2 text-sm font-bold text-blue-600 transition hover:text-blue-700"
           >
-            View all
-            <ArrowUpRight size={17} />
+            Shop all deals
+            <ArrowRight size={17} />
           </Link>
+
         </div>
 
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
-          {categories.map((category, index) => {
-            const Icon = category.icon;
+        {loading ? (
+          <div className="flex min-h-[220px] items-center justify-center rounded-2xl border border-slate-200 bg-white">
+            <div className="flex items-center gap-3 text-sm font-semibold text-slate-500">
+              <Loader2
+                size={20}
+                className="animate-spin"
+              />
 
-            return (
-              <motion.div
-                key={category.title}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.2 }}
-                transition={{
-                  duration: 0.45,
-                  delay: index * 0.04,
-                }}
-              >
-                <Link
-                  href={category.href}
-                  className={`group relative block overflow-hidden rounded-2xl bg-gradient-to-br ${category.gradient} p-5 transition duration-300 hover:-translate-y-1 hover:shadow-xl`}
-                >
-                  <div
-                    className={`mb-7 flex h-12 w-12 items-center justify-center rounded-xl ${category.iconBg} text-white shadow-lg`}
-                  >
-                    <Icon size={24} />
-                  </div>
+              Loading offers...
+            </div>
+          </div>
+        ) : products.length > 0 ? (
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {products.map(
+              (product) => (
+                <ProductCard
+                  key={
+                    product?._id?.toString?.() ||
+                    product?.id
+                  }
+                  product={
+                    product
+                  }
+                />
+              )
+            )}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center">
+            <h3 className="text-lg font-black text-slate-900">
+              New offers are coming soon
+            </h3>
 
-                  <h3 className="text-lg font-black text-slate-900">
-                    {category.title}
-                  </h3>
+            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
+              Browse the complete marketplace to discover the latest products.
+            </p>
 
-                  <p className="mt-1 text-xs leading-5 text-gray-500">
-                    {category.description}
-                  </p>
+            <Link
+              href="/products"
+              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-700"
+            >
+              Browse Products
+              <ArrowRight size={16} />
+            </Link>
+          </div>
+        )}
 
-                  <div className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-white/70 text-gray-500 opacity-0 transition group-hover:opacity-100">
-                    <ArrowUpRight size={15} />
-                  </div>
-                </Link>
-              </motion.div>
-            );
-          })}
-        </div>
-
-        <Link
-          href="/products"
-          className="mt-5 flex items-center justify-center gap-1 text-sm font-bold text-blue-600 sm:hidden"
-        >
-          View all products
-          <ArrowUpRight size={17} />
-        </Link>
       </div>
     </section>
   );
