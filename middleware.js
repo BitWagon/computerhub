@@ -1,61 +1,56 @@
 import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 
-const COOKIE_NAME =
-  "computerhub_token";
+const COOKIE_NAME = "computerhub_token";
 
-function redirectToLogin(
-  request
-) {
-  const loginUrl =
-    new URL(
-      "/admin/login",
-      request.url
-    );
+function redirectToAdminLogin(request, reason = null) {
+  const loginUrl = new URL(
+    "/admin/login",
+    request.url
+  );
+
+  const redirectPath =
+    request.nextUrl.pathname +
+    (request.nextUrl.search || "");
 
   loginUrl.searchParams.set(
     "redirect",
-    request.nextUrl.pathname
+    redirectPath
   );
+
+  if (reason) {
+    loginUrl.searchParams.set(
+      "reason",
+      reason
+    );
+  }
 
   return NextResponse.redirect(
     loginUrl
   );
 }
 
-export function middleware(
-  request
-) {
+export function middleware(request) {
   const { pathname } =
     request.nextUrl;
 
   /*
-   * Admin login must remain public.
+   * Admin login is public.
    */
-
   if (
-    pathname ===
-      "/admin/login" ||
-    pathname.startsWith(
-      "/admin/login/"
-    )
+    pathname === "/admin/login" ||
+    pathname.startsWith("/admin/login/")
   ) {
     return NextResponse.next();
   }
 
   /*
-   * Only admin pages are handled here.
+   * Middleware only protects /admin.
    *
-   * The API performs its own authorization
-   * checks as well.
+   * Customer and seller pages are handled by their
+   * own page/API authorization.
    */
-
-  const isAdminRoute =
-    pathname.startsWith(
-      "/admin"
-    );
-
-  if (!isAdminRoute) {
+  if (!pathname.startsWith("/admin")) {
     return NextResponse.next();
   }
 
@@ -65,7 +60,7 @@ export function middleware(
     )?.value;
 
   if (!token) {
-    return redirectToLogin(
+    return redirectToAdminLogin(
       request
     );
   }
@@ -78,7 +73,7 @@ export function middleware(
       "JWT_SECRET is not configured."
     );
 
-    return redirectToLogin(
+    return redirectToAdminLogin(
       request
     );
   }
@@ -90,31 +85,24 @@ export function middleware(
         secret
       );
 
+    /*
+     * Only a JWT containing role === "admin"
+     * can enter /admin.
+     *
+     * IMPORTANT:
+     * We do NOT send customers/sellers to /account
+     * or /seller from middleware anymore.
+     *
+     * They go back to the admin login page instead.
+     */
     if (
       !decoded ||
-      typeof decoded !==
-        "object"
+      typeof decoded !== "object" ||
+      decoded.role !== "admin"
     ) {
-      return redirectToLogin(
-        request
-      );
-    }
-
-    if (
-      decoded.role !==
-      "admin"
-    ) {
-      const destination =
-        decoded.role ===
-        "seller"
-          ? "/seller"
-          : "/account";
-
-      return NextResponse.redirect(
-        new URL(
-          destination,
-          request.url
-        )
+      return redirectToAdminLogin(
+        request,
+        "forbidden"
       );
     }
 
@@ -125,7 +113,7 @@ export function middleware(
       error
     );
 
-    return redirectToLogin(
+    return redirectToAdminLogin(
       request
     );
   }

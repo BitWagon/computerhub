@@ -1,7 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useState,
+} from "react";
+
 import Link from "next/link";
+
 import {
   Search,
   ShoppingCart,
@@ -17,88 +22,172 @@ import {
 } from "lucide-react";
 
 import MobileMenu from "./MobileMenu";
-import { useCart } from "@/context/CartContext";
+
+import {
+  useCart,
+} from "@/context/CartContext";
 
 export default function Navbar() {
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [user, setUser] = useState(null);
+  const [
+    mobileOpen,
+    setMobileOpen,
+  ] = useState(false);
 
-  const { itemCount } = useCart();
+  const [
+    user,
+    setUser,
+  ] = useState(null);
+
+  const {
+    itemCount,
+  } = useCart();
 
   useEffect(() => {
-    const loadUser = () => {
-  try {
-    const saved = localStorage.getItem("user");
+    const loadUser =
+      () => {
+        try {
+          const saved =
+            localStorage.getItem(
+              "user"
+            );
 
-    if (!saved) {
-      setUser(null);
-      return;
-    }
+          if (!saved) {
+            setUser(null);
+            return;
+          }
 
-    const parsed = JSON.parse(saved);
+          const parsed =
+            JSON.parse(
+              saved
+            );
 
-    setUser(parsed);
-  } catch {
-    setUser(null);
-  }
-};
+          setUser(parsed);
+        } catch {
+          setUser(null);
+        }
+      };
 
     loadUser();
 
-    window.addEventListener("storage", loadUser);
+    window.addEventListener(
+      "storage",
+      loadUser
+    );
 
     return () => {
-      window.removeEventListener("storage", loadUser);
+      window.removeEventListener(
+        "storage",
+        loadUser
+      );
     };
   }, []);
 
-  const logout = () => {
-    localStorage.removeItem("user");
-    window.dispatchEvent(new Event("storage"));
-    window.location.href = "/";
-  };
+  const logout =
+    async () => {
+      try {
+        await fetch(
+          "/api/auth/logout",
+          {
+            method: "POST",
+            credentials:
+              "include",
+            cache:
+              "no-store",
+          }
+        );
+      } catch (error) {
+        console.error(
+          "Logout error:",
+          error
+        );
+      } finally {
+        /*
+         * Clear the client UI state.
+         */
+        localStorage.removeItem(
+          "user"
+        );
+
+        setUser(null);
+
+        window.dispatchEvent(
+          new Event("storage")
+        );
+
+        /*
+         * The server cookie has also been
+         * cleared by /api/auth/logout.
+         */
+        window.location.href =
+          "/";
+      }
+    };
 
   return (
     <>
       <header className="sticky top-0 z-50 border-b border-gray-200 bg-white">
-        {/* Top Bar */}
+
         <div className="hidden bg-slate-950 text-white md:block">
           <div className="container-main flex h-9 items-center justify-between text-xs">
-            <p>Welcome to ComputerHub — your technology marketplace</p>
+
+            <p>
+              Welcome to ComputerHub — your technology marketplace
+            </p>
 
             <div className="flex items-center gap-5 text-gray-300">
-              <span>Fast Delivery</span>
-              <span>Secure Payments</span>
-              <span>Genuine Products</span>
+              <span>
+                Fast Delivery
+              </span>
+
+              <span>
+                Secure Payments
+              </span>
+
+              <span>
+                Genuine Products
+              </span>
             </div>
+
           </div>
         </div>
 
-        {/* Main Header */}
         <div className="container-main flex h-[72px] items-center gap-3 sm:gap-5">
-          {/* Mobile Menu Button */}
+
           <button
             type="button"
-            onClick={() => setMobileOpen(true)}
+            onClick={() =>
+              setMobileOpen(
+                true
+              )
+            }
             className="rounded-lg p-2 text-gray-700 transition hover:bg-gray-100 lg:hidden"
             aria-label="Open menu"
           >
             <Menu size={24} />
           </button>
 
-          {/* Logo */}
           <Link
             href="/"
             className="flex shrink-0 items-center gap-2"
-            onClick={() => setMobileOpen(false)}
+            onClick={() =>
+              setMobileOpen(
+                false
+              )
+            }
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/20">
-              <Laptop size={22} strokeWidth={2.3} />
+              <Laptop
+                size={22}
+                strokeWidth={2.3}
+              />
             </div>
 
             <div className="leading-none">
               <div className="text-xl font-black tracking-tight text-slate-900">
-                Computer<span className="text-blue-600">Hub</span>
+                Computer
+                <span className="text-blue-600">
+                  Hub
+                </span>
               </div>
 
               <div className="mt-1 hidden text-[9px] font-bold uppercase tracking-[0.16em] text-gray-400 sm:block">
@@ -107,7 +196,6 @@ export default function Navbar() {
             </div>
           </Link>
 
-          {/* Search */}
           <div className="hidden flex-1 md:block">
             <form
               action="/search"
@@ -130,31 +218,45 @@ export default function Navbar() {
             </form>
           </div>
 
-          {/* User */}
           {user ? (
             <div className="hidden items-center gap-2 rounded-xl px-3 py-2 sm:flex">
+
               <User size={21} />
 
               <div className="hidden leading-tight xl:block">
-                <p className="text-[11px] text-gray-500">Welcome</p>
+
+                <p className="text-[11px] text-gray-500">
+                  Welcome
+                </p>
 
                 <p className="text-sm font-semibold text-gray-900">
                   {user?.firstName ||
                     user?.lastName ||
-                    user?.fullName?.split(" ")[0] ||
-                    user?.name?.split(" ")[0] ||
-                    user?.email?.split("@")[0] ||
+                    user?.fullName?.split(
+                      " "
+                    )[0] ||
+                    user?.name?.split(
+                      " "
+                    )[0] ||
+                    user?.email?.split(
+                      "@"
+                    )[0] ||
                     "User"}
                 </p>
+
               </div>
 
               <button
-                onClick={logout}
+                type="button"
+                onClick={
+                  logout
+                }
                 className="rounded-lg p-1 text-red-600 hover:bg-red-50"
                 title="Logout"
               >
                 <LogOut size={18} />
               </button>
+
             </div>
           ) : (
             <Link
@@ -163,128 +265,106 @@ export default function Navbar() {
             >
               <User size={21} />
 
-              <div className="hidden leading-tight xl:block">
-                <p className="text-[11px] text-gray-500">Welcome</p>
-                <p className="text-sm font-bold text-gray-900">Sign In</p>
-              </div>
+              <span className="text-sm font-semibold">
+                Login
+              </span>
             </Link>
           )}
 
-          {/* Cart */}
           <Link
             href="/cart"
-            className="relative flex items-center gap-2 rounded-xl px-3 py-2 text-gray-700 transition hover:bg-gray-100"
+            className="relative flex h-11 w-11 items-center justify-center rounded-xl text-gray-700 transition hover:bg-gray-100"
+            aria-label="Shopping cart"
           >
-            <div className="relative">
-              <ShoppingCart size={23} />
+            <ShoppingCart size={22} />
 
-              <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-bold text-white">
+            {itemCount > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-bold text-white">
                 {itemCount}
               </span>
-            </div>
-
-            <span className="hidden text-sm font-bold xl:block">Cart</span>
+            )}
           </Link>
+
         </div>
 
-        {/* Desktop Navigation */}
         <nav className="hidden border-t border-gray-100 lg:block">
-          <div className="container-main flex h-12 items-center justify-between">
-            <div className="flex h-full items-center gap-1">
-              <Link
-                href="/products"
-                className="flex h-full items-center gap-2 rounded-lg px-4 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 hover:text-blue-600"
-              >
-                <Tag size={16} />
-                All Products
-              </Link>
-
-              <Link
-                href="/category/laptops"
-                className="flex h-full items-center gap-2 rounded-lg px-4 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 hover:text-blue-600"
-              >
-                <Laptop size={16} />
-                Laptops
-              </Link>
-
-              <Link
-                href="/category/desktops"
-                className="flex h-full items-center gap-2 rounded-lg px-4 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 hover:text-blue-600"
-              >
-                <Monitor size={16} />
-                Desktops
-              </Link>
-
-              <Link
-                href="/category/components"
-                className="flex h-full items-center gap-2 rounded-lg px-4 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 hover:text-blue-600"
-              >
-                <Cpu size={16} />
-                Components
-              </Link>
-
-              <Link
-                href="/category/gaming"
-                className="flex h-full items-center gap-2 rounded-lg px-4 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 hover:text-blue-600"
-              >
-                <Gamepad2 size={16} />
-                Gaming
-              </Link>
-
-              <Link
-                href="/category/monitors"
-                className="flex h-full items-center gap-2 rounded-lg px-4 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 hover:text-blue-600"
-              >
-                <Monitor size={16} />
-                Monitors
-              </Link>
-
-              <Link
-                href="/category/accessories"
-                className="flex h-full items-center gap-2 rounded-lg px-4 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 hover:text-blue-600"
-              >
-                <Headphones size={16} />
-                Accessories
-              </Link>
-            </div>
+          <div className="container-main flex h-12 items-center gap-6 text-sm font-medium text-gray-600">
 
             <Link
-              href="/products?deal=true"
-              className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold text-red-600 transition hover:bg-red-50"
+              href="/products"
+              className="transition hover:text-blue-600"
+            >
+              All Products
+            </Link>
+
+            <Link
+              href="/category/laptops"
+              className="flex items-center gap-2 transition hover:text-blue-600"
+            >
+              <Laptop size={16} />
+              Laptops
+            </Link>
+
+            <Link
+              href="/category/desktops"
+              className="flex items-center gap-2 transition hover:text-blue-600"
+            >
+              <Monitor size={16} />
+              Desktop PCs
+            </Link>
+
+            <Link
+              href="/category/components"
+              className="flex items-center gap-2 transition hover:text-blue-600"
+            >
+              <Cpu size={16} />
+              Components
+            </Link>
+
+            <Link
+              href="/category/gaming"
+              className="flex items-center gap-2 transition hover:text-blue-600"
+            >
+              <Gamepad2 size={16} />
+              Gaming
+            </Link>
+
+            <Link
+              href="/category/monitors"
+              className="flex items-center gap-2 transition hover:text-blue-600"
+            >
+              <Monitor size={16} />
+              Monitors
+            </Link>
+
+            <Link
+              href="/category/accessories"
+              className="flex items-center gap-2 transition hover:text-blue-600"
+            >
+              <Headphones size={16} />
+              Accessories
+            </Link>
+
+            <Link
+              href="/category/storage"
+              className="flex items-center gap-2 transition hover:text-blue-600"
             >
               <Tag size={16} />
-              Today's Deals
+              Storage
             </Link>
+
           </div>
         </nav>
 
-        {/* Mobile Search */}
-        <div className="border-t border-gray-100 px-4 py-3 md:hidden">
-          <form
-            action="/search"
-            className="flex h-11 overflow-hidden rounded-xl border border-gray-300 bg-gray-50"
-          >
-            <input
-              type="text"
-              name="q"
-              placeholder="Search technology..."
-              className="min-w-0 flex-1 bg-transparent px-3 text-sm outline-none"
-            />
-
-            <button
-              type="submit"
-              className="flex w-12 items-center justify-center bg-blue-600 text-white"
-              aria-label="Search"
-            >
-              <Search size={19} />
-            </button>
-          </form>
-        </div>
       </header>
 
       <MobileMenu
         open={mobileOpen}
-        onClose={() => setMobileOpen(false)}
+        onClose={() =>
+          setMobileOpen(
+            false
+          )
+        }
       />
     </>
   );

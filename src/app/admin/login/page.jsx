@@ -1,8 +1,16 @@
 "use client";
 
-import { Suspense, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import {
+  Suspense,
+  useState,
+} from "react";
+
+import {
+  useSearchParams,
+} from "next/navigation";
+
 import Link from "next/link";
+
 import {
   ShieldCheck,
   Mail,
@@ -13,18 +21,18 @@ import {
   Loader2,
   AlertCircle,
 } from "lucide-react";
-import toast from "react-hot-toast";
+
+import { toast } from "sonner";
 
 function AdminLoginForm() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const searchParams =
+    useSearchParams();
 
-  const redirect = "/admin";
-
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
+  const [formData, setFormData] =
+    useState({
+      email: "",
+      password: "",
+    });
 
   const [showPassword, setShowPassword] =
     useState(false);
@@ -32,113 +40,183 @@ function AdminLoginForm() {
   const [loading, setLoading] =
     useState(false);
 
-  const [error, setError] = useState("");
+  const [error, setError] =
+    useState("");
 
-  const handleChange = (event) => {
-    const { name, value } = event.target;
+  const handleChange = (
+    event
+  ) => {
+    const {
+      name,
+      value,
+    } = event.target;
 
-    setFormData((previous) => ({
-      ...previous,
-      [name]: value,
-    }));
+    setFormData(
+      (previous) => ({
+        ...previous,
+        [name]: value,
+      })
+    );
 
     if (error) {
       setError("");
     }
   };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
+  const handleSubmit =
+    async (event) => {
+      event.preventDefault();
 
-    if (loading) {
-      return;
-    }
-
-    setError("");
-
-    if (!formData.email.trim()) {
-      setError("Please enter your email address.");
-      return;
-    }
-
-    if (!formData.password) {
-      setError("Please enter your password.");
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        cache: "no-store",
-        body: JSON.stringify({
-          email: formData.email.trim().toLowerCase(),
-          password: formData.password,
-        }),
-      });
-
-      const data = await response.json();
-
-      console.log("ADMIN LOGIN RESPONSE:", data);
-
-      if (!response.ok || !data.success) {
-        throw new Error(
-          data.message ||
-            "Invalid email or password."
-        );
+      if (loading) {
+        return;
       }
 
-      if (!data.user) {
-        throw new Error(
-          "Login succeeded, but no user information was returned."
+      setError("");
+
+      const email =
+        formData.email
+          .trim()
+          .toLowerCase();
+
+      if (!email) {
+        setError(
+          "Please enter your admin email address."
         );
+
+        return;
       }
 
-      if (data.user.role !== "admin") {
-        throw new Error(
-          "Access denied. This account is not an administrator."
+      if (!formData.password) {
+        setError(
+          "Please enter your admin password."
         );
+
+        return;
       }
 
-      toast.success("Admin login successful!");
+      setLoading(true);
 
-      /*
-       * Give the browser a moment to process the
-       * Set-Cookie response before navigating.
-       */
-      await new Promise((resolve) =>
-        setTimeout(resolve, 150)
-      );
+      try {
+        const response =
+          await fetch(
+            "/api/auth/admin-login",
+            {
+              method: "POST",
 
-      /*
-       * Use a hard navigation instead of only
-       * router.replace(). This guarantees that
-       * Next.js requests /admin again with the
-       * newly-created authentication cookie.
-       */
-      window.location.replace(redirect);
-    } catch (error) {
-      console.error(
-        "Admin login error:",
-        error
-      );
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
 
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Something went wrong. Please try again.";
+              credentials:
+                "include",
 
-      setError(message);
-      toast.error(message);
+              cache:
+                "no-store",
 
-      setLoading(false);
-    }
-  };
+              body: JSON.stringify({
+                email,
+                password:
+                  formData.password,
+              }),
+            }
+          );
+
+        const data =
+          await response.json();
+
+        console.log(
+          "ADMIN LOGIN RESPONSE:",
+          data
+        );
+
+        if (
+          !response.ok ||
+          !data.success
+        ) {
+          throw new Error(
+            data.message ||
+              "Unable to sign in as administrator."
+          );
+        }
+
+        if (
+          !data.user ||
+          data.user.role !==
+            "admin"
+        ) {
+          throw new Error(
+            "The server did not confirm an administrator account."
+          );
+        }
+
+        /*
+         * Synchronize client-side UI state.
+         */
+        localStorage.setItem(
+          "user",
+          JSON.stringify(
+            data.user
+          )
+        );
+
+        window.dispatchEvent(
+          new Event("storage")
+        );
+
+        toast.success(
+          "Admin login successful."
+        );
+
+        /*
+         * If middleware sent us here because
+         * the user originally requested a protected
+         * admin page, preserve that admin URL.
+         *
+         * Never allow /account or /seller.
+         */
+        const requestedRedirect =
+          searchParams.get(
+            "redirect"
+          );
+
+        const destination =
+          requestedRedirect &&
+          requestedRedirect.startsWith(
+            "/admin"
+          )
+            ? requestedRedirect
+            : "/admin";
+
+        /*
+         * Full browser navigation.
+         *
+         * The newly-created authentication
+         * cookie is then sent with the /admin request.
+         */
+        window.location.replace(
+          destination
+        );
+      } catch (error) {
+        console.error(
+          "Admin login error:",
+          error
+        );
+
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Unable to sign in as administrator.";
+
+        setError(message);
+
+        toast.error(
+          message
+        );
+
+        setLoading(false);
+      }
+    };
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -172,7 +250,7 @@ function AdminLoginForm() {
                 </p>
 
                 <p className="mt-0.5 text-xs text-gray-600">
-                  Admin access is restricted to authorized accounts.
+                  Only administrator accounts can enter this area.
                 </p>
               </div>
             </div>
@@ -191,15 +269,18 @@ function AdminLoginForm() {
             )}
 
             <form
-              onSubmit={handleSubmit}
+              onSubmit={
+                handleSubmit
+              }
               className="space-y-5"
             >
+
               <div>
                 <label
                   htmlFor="email"
                   className="mb-2 block text-sm font-semibold text-gray-700"
                 >
-                  Email Address
+                  Admin Email Address
                 </label>
 
                 <div className="relative">
@@ -212,10 +293,14 @@ function AdminLoginForm() {
                     id="email"
                     name="email"
                     type="email"
-                    value={formData.email}
-                    onChange={handleChange}
+                    value={
+                      formData.email
+                    }
+                    onChange={
+                      handleChange
+                    }
                     placeholder="admin@example.com"
-                    autoComplete="email"
+                    autoComplete="username"
                     disabled={loading}
                     className="w-full rounded-xl border border-gray-300 bg-white py-3 pl-10 pr-4 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-gray-100"
                   />
@@ -227,7 +312,7 @@ function AdminLoginForm() {
                   htmlFor="password"
                   className="mb-2 block text-sm font-semibold text-gray-700"
                 >
-                  Password
+                  Admin Password
                 </label>
 
                 <div className="relative">
@@ -244,9 +329,13 @@ function AdminLoginForm() {
                         ? "text"
                         : "password"
                     }
-                    value={formData.password}
-                    onChange={handleChange}
-                    placeholder="Enter your password"
+                    value={
+                      formData.password
+                    }
+                    onChange={
+                      handleChange
+                    }
+                    placeholder="Enter your admin password"
                     autoComplete="current-password"
                     disabled={loading}
                     className="w-full rounded-xl border border-gray-300 bg-white py-3 pl-10 pr-12 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-gray-100"
@@ -256,7 +345,8 @@ function AdminLoginForm() {
                     type="button"
                     onClick={() =>
                       setShowPassword(
-                        (previous) => !previous
+                        (previous) =>
+                          !previous
                       )
                     }
                     disabled={loading}
@@ -292,7 +382,9 @@ function AdminLoginForm() {
                 ) : (
                   <>
                     Sign In to Admin
-                    <ArrowRight size={19} />
+                    <ArrowRight
+                      size={19}
+                    />
                   </>
                 )}
               </button>
@@ -306,6 +398,7 @@ function AdminLoginForm() {
                 ← Back to ComputerHub
               </Link>
             </div>
+
           </div>
         </div>
       </div>
