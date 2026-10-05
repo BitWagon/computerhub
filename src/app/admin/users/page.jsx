@@ -1,109 +1,47 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import {
-  ArrowLeft,
-  Users,
-  ShieldCheck,
-  Store,
-  UserRound,
   RefreshCw,
-  Save,
-  Loader2,
-  AlertCircle,
+  Search,
+  ShieldCheck,
+  UserCheck,
+  UserX,
+  Users,
 } from "lucide-react";
-
-const ROLE_OPTIONS = [
-  {
-    value: "customer",
-    label: "Customer",
-  },
-  {
-    value: "seller",
-    label: "Seller",
-  },
-  {
-    value: "admin",
-    label: "Admin",
-  },
-];
-
-function formatDate(date) {
-  if (!date) {
-    return "—";
-  }
-
-  return new Date(date).toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-function getRoleClasses(role) {
-  if (role === "admin") {
-    return "bg-purple-100 text-purple-700";
-  }
-
-  if (role === "seller") {
-    return "bg-blue-100 text-blue-700";
-  }
-
-  return "bg-gray-100 text-gray-700";
-}
-
-function getRoleLabel(role) {
-  if (!role) {
-    return "Customer";
-  }
-
-  return role.charAt(0).toUpperCase() + role.slice(1);
-}
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState([]);
-  const [selectedRoles, setSelectedRoles] = useState({});
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [savingId, setSavingId] = useState("");
   const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
 
-  async function loadUsers(showRefresh = false) {
+  async function loadUsers() {
     try {
-      if (showRefresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
-
+      setLoading(true);
       setError("");
 
       const response = await fetch("/api/admin/users", {
-        method: "GET",
         credentials: "include",
         cache: "no-store",
       });
 
       const data = await response.json();
 
-      if (!response.ok || !data.success) {
+      if (!response.ok) {
         throw new Error(
-          data.message || "Unable to load users."
+          data?.message || "Unable to load users."
         );
       }
 
-      setUsers(data.users || []);
-
-      const roles = {};
-
-      (data.users || []).forEach((user) => {
-        roles[user.id] = user.role;
-      });
-
-      setSelectedRoles(roles);
-
+      setUsers(
+        Array.isArray(data?.users)
+          ? data.users
+          : []
+      );
     } catch (err) {
+      console.error("Admin users error:", err);
+
       setError(
         err instanceof Error
           ? err.message
@@ -111,7 +49,6 @@ export default function AdminUsersPage() {
       );
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   }
 
@@ -119,411 +56,378 @@ export default function AdminUsersPage() {
     loadUsers();
   }, []);
 
-  function handleRoleChange(userId, role) {
-    setSelectedRoles((current) => ({
-      ...current,
-      [userId]: role,
-    }));
-  }
+  const filteredUsers = useMemo(() => {
+    const value = search.trim().toLowerCase();
 
-  async function updateRole(userId) {
-    const role = selectedRoles[userId];
-
-    if (!role) {
-      return;
+    if (!value) {
+      return users;
     }
 
-    try {
-      setSavingId(userId);
-      setError("");
+    return users.filter((user) => {
+      const name =
+        user?.name ||
+        `${user?.firstName || ""} ${
+          user?.lastName || ""
+        }`;
 
-      const response = await fetch(
-        "/api/admin/users",
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify({
-            userId,
-            role,
-          }),
-        }
+      return [
+        name,
+        user?.email,
+        user?.role,
+        user?._id,
+      ].some((field) =>
+        String(field || "")
+          .toLowerCase()
+          .includes(value)
       );
+    });
+  }, [users, search]);
 
-      const data = await response.json();
+  const stats = useMemo(() => {
+    return {
+      total: users.length,
 
-      if (!response.ok || !data.success) {
-        throw new Error(
-          data.message || "Unable to update role."
-        );
-      }
+      customers: users.filter(
+        (user) => user?.role === "customer"
+      ).length,
 
-      setUsers((currentUsers) =>
-        currentUsers.map((user) =>
-          user.id === userId
-            ? {
-                ...user,
-                role: data.user.role,
-              }
-            : user
-        )
-      );
-            setSelectedRoles((current) => ({
-        ...current,
-        [userId]: data.user.role,
-      }));
+      sellers: users.filter(
+        (user) => user?.role === "seller"
+      ).length,
 
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Unable to update role."
-      );
-    } finally {
-      setSavingId("");
+      admins: users.filter(
+        (user) => user?.role === "admin"
+      ).length,
+    };
+  }, [users]);
+
+  function getUserName(user) {
+    if (user?.name) {
+      return user.name;
     }
+
+    const fullName =
+      `${user?.firstName || ""} ${
+        user?.lastName || ""
+      }`.trim();
+
+    return fullName || "User";
   }
 
-  const totalUsers = users.length;
-  const totalCustomers = users.filter(
-    (user) => user.role === "customer"
-  ).length;
+  function getInitials(user) {
+    const name = getUserName(user);
 
-  const totalSellers = users.filter(
-    (user) => user.role === "seller"
-  ).length;
+    return name
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part.charAt(0).toUpperCase())
+      .join("");
+  }
 
-  const totalAdmins = users.filter(
-    (user) => user.role === "admin"
-  ).length;
+  function getRoleClasses(role) {
+    switch (role) {
+      case "admin":
+        return "border-purple-200 bg-purple-50 text-purple-700";
+
+      case "seller":
+        return "border-blue-200 bg-blue-50 text-blue-700";
+
+      default:
+        return "border-slate-200 bg-slate-100 text-slate-700";
+    }
+  }
 
   return (
-    <main className="min-h-screen bg-gray-50 px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl">
+    <main className="min-h-screen bg-slate-50">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
 
         {/* HEADER */}
-        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-
+        <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <Link
-              href="/admin"
-              className="mb-3 inline-flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-blue-600"
-            >
-              <ArrowLeft size={17} />
-              Back to Admin
-            </Link>
+            <div className="mb-3 flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-950 text-white">
+                <Users size={21} />
+              </div>
 
-            <h1 className="text-3xl font-bold text-gray-900">
-              Users
+              <span className="text-sm font-semibold uppercase tracking-wider text-slate-500">
+                Administration
+              </span>
+            </div>
+
+            <h1 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
+              User Management
             </h1>
 
-            <p className="mt-1 text-gray-500">
-              Manage all ComputerHub users and roles.
+            <p className="mt-2 max-w-2xl text-sm text-slate-500 sm:text-base">
+              View registered ComputerHub accounts and
+              monitor marketplace user roles.
             </p>
           </div>
 
           <button
             type="button"
-            onClick={() => loadUsers(true)}
-            disabled={refreshing}
-            className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            onClick={loadUsers}
+            disabled={loading}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <RefreshCw
-              size={18}
+              size={17}
               className={
-                refreshing ? "animate-spin" : ""
+                loading ? "animate-spin" : ""
               }
             />
-            Refresh
+            Refresh Users
           </button>
-
         </div>
 
         {/* ERROR */}
         {error && (
-          <div className="mb-6 flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-
-            <AlertCircle size={18} />
-
-            <span>{error}</span>
-
+          <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-4 text-sm font-medium text-red-700">
+            {error}
           </div>
         )}
 
         {/* STATS */}
-        <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-7 grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <StatCard
+            label="Total Users"
+            value={stats.total}
+            icon={<Users size={19} />}
+          />
 
-          <div className="rounded-2xl border bg-white p-5 shadow-sm">
-            <div className="flex items-center gap-3">
+          <StatCard
+            label="Customers"
+            value={stats.customers}
+            icon={<UserCheck size={19} />}
+          />
 
-              <Users className="text-blue-600" />
+          <StatCard
+            label="Sellers"
+            value={stats.sellers}
+            icon={<ShieldCheck size={19} />}
+          />
 
-              <div>
-                <p className="text-sm text-gray-500">
-                  Total Users
-                </p>
-
-                <p className="mt-1 text-3xl font-bold text-gray-900">
-                  {totalUsers}
-                </p>
-              </div>
-
-            </div>
-          </div>
-
-          <div className="rounded-2xl border bg-white p-5 shadow-sm">
-            <div className="flex items-center gap-3">
-
-              <UserRound className="text-gray-600" />
-
-              <div>
-                <p className="text-sm text-gray-500">
-                  Customers
-                </p>
-
-                <p className="mt-1 text-3xl font-bold text-gray-900">
-                  {totalCustomers}
-                </p>
-              </div>
-
-            </div>
-          </div>
-
-          <div className="rounded-2xl border bg-white p-5 shadow-sm">
-            <div className="flex items-center gap-3">
-
-              <Store className="text-blue-600" />
-
-              <div>
-                <p className="text-sm text-gray-500">
-                  Sellers
-                </p>
-
-                <p className="mt-1 text-3xl font-bold text-gray-900">
-                  {totalSellers}
-                </p>
-              </div>
-
-            </div>
-          </div>
-
-          <div className="rounded-2xl border bg-white p-5 shadow-sm">
-            <div className="flex items-center gap-3">
-
-              <ShieldCheck className="text-purple-600" />
-
-              <div>
-                <p className="text-sm text-gray-500">
-                  Admins
-                </p>
-
-                <p className="mt-1 text-3xl font-bold text-gray-900">
-                  {totalAdmins}
-                </p>
-              </div>
-
-            </div>
-          </div>
-
+          <StatCard
+            label="Admins"
+            value={stats.admins}
+            icon={<ShieldCheck size={19} />}
+          />
         </div>
 
-        {/* USERS TABLE */}
-        <div className="overflow-hidden rounded-2xl border bg-white shadow-sm">
+        {/* SEARCH */}
+        <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="relative">
+            <Search
+              size={18}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+            />
 
-          {loading ? (
-            <div className="flex min-h-[320px] items-center justify-center">
+            <input
+              type="text"
+              value={search}
+              onChange={(event) =>
+                setSearch(event.target.value)
+              }
+              placeholder="Search by name, email, role, or user ID..."
+              className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:bg-white"
+            />
+          </div>
 
-              <div className="text-center">
+          <div className="mt-4 flex items-center justify-between">
+            <p className="text-sm text-slate-500">
+              Showing{" "}
+              <span className="font-semibold text-slate-800">
+                {filteredUsers.length}
+              </span>{" "}
+              of{" "}
+              <span className="font-semibold text-slate-800">
+                {users.length}
+              </span>{" "}
+              users
+            </p>
 
-                <Loader2
-                  size={34}
-                  className="mx-auto animate-spin text-blue-600"
-                />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="text-sm font-semibold text-slate-700 hover:text-slate-950"
+              >
+                Clear search
+              </button>
+            )}
+          </div>
+        </div>
 
-                <p className="mt-3 text-sm text-gray-500">
-                  Loading users...
-                </p>
+        {/* USERS */}
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-100 px-5 py-5">
+            <h2 className="text-lg font-bold text-slate-950">
+              Registered Users
+            </h2>
 
-              </div>
+            <p className="mt-1 text-sm text-slate-500">
+              ComputerHub accounts currently available to
+              the administration system.
+            </p>
+          </div>
 
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
+          <div className="overflow-x-auto">
+            <table className="min-w-[800px] w-full">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50">
+                  <th className="px-5 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
+                    User
+                  </th>
 
-              <table className="w-full min-w-[900px]">
+                  <th className="px-5 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Email
+                  </th>
 
-                <thead className="bg-gray-50">
+                  <th className="px-5 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Role
+                  </th>
+
+                  <th className="px-5 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Account
+                  </th>
+
+                  <th className="px-5 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
+                    User ID
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody className="divide-y divide-slate-100">
+                {loading ? (
                   <tr>
+                    <td
+                      colSpan={5}
+                      className="px-5 py-14 text-center"
+                    >
+                      <RefreshCw
+                        size={24}
+                        className="mx-auto animate-spin text-slate-400"
+                      />
 
-                    <th className="px-5 py-4 text-left text-xs font-bold uppercase tracking-wide text-gray-500">
-                      User
-                    </th>
-                                        <th className="px-5 py-4 text-left text-xs font-bold uppercase tracking-wide text-gray-500">
-                      Email
-                    </th>
-
-                    <th className="px-5 py-4 text-left text-xs font-bold uppercase tracking-wide text-gray-500">
-                      Joined
-                    </th>
-
-                    <th className="px-5 py-4 text-left text-xs font-bold uppercase tracking-wide text-gray-500">
-                      Role
-                    </th>
-
-                    <th className="px-5 py-4 text-right text-xs font-bold uppercase tracking-wide text-gray-500">
-                      Action
-                    </th>
-
+                      <p className="mt-3 text-sm text-slate-500">
+                        Loading users...
+                      </p>
+                    </td>
                   </tr>
-                </thead>
+                ) : filteredUsers.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="px-5 py-14 text-center"
+                    >
+                      <div className="flex flex-col items-center">
+                        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100">
+                          <UserX
+                            size={24}
+                            className="text-slate-400"
+                          />
+                        </div>
 
-                <tbody className="divide-y divide-gray-100">
+                        <h3 className="font-semibold text-slate-900">
+                          No users found
+                        </h3>
 
-                  {users.map((user) => {
-                    const busy = savingId === user.id;
+                        <p className="mt-1 text-sm text-slate-500">
+                          Try a different search.
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredUsers.map((user) => {
+                    const role =
+                      user?.role || "customer";
 
                     return (
                       <tr
-                        key={user.id}
-                        className="hover:bg-gray-50"
+                        key={user._id}
+                        className="transition hover:bg-slate-50/80"
                       >
-
-                        {/* USER */}
-                        <td className="px-5 py-4">
-
+                        <td className="px-5 py-5">
                           <div className="flex items-center gap-3">
-
-                            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-blue-100 text-blue-600 font-bold">
-                              {String(
-                                user.name ||
-                                  user.firstName ||
-                                  "U"
-                              )
-                                .charAt(0)
-                                .toUpperCase()}
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-700">
+                              {getInitials(user)}
                             </div>
 
                             <div>
-
-                              <p className="font-semibold text-gray-900">
-                                {user.name ||
-                                  `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
-                                  "User"}
+                              <p className="font-semibold text-slate-950">
+                                {getUserName(user)}
                               </p>
 
-                              <span
-                                className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${getRoleClasses(
-                                  user.role
-                                )}`}
-                              >
-                                {getRoleLabel(user.role)}
-                              </span>
-
+                              <p className="mt-1 text-xs text-slate-400">
+                                ComputerHub account
+                              </p>
                             </div>
-
                           </div>
-
                         </td>
 
-                        {/* EMAIL */}
-                        <td className="px-5 py-4 text-sm text-gray-600">
-                          {user.email}
+                        <td className="px-5 py-5">
+                          <span className="text-sm text-slate-600">
+                            {user?.email || "—"}
+                          </span>
                         </td>
 
-                        {/* JOINED */}
-                        <td className="px-5 py-4 text-sm text-gray-600">
-                          {formatDate(
-                            user.createdAt
-                          )}
-                        </td>
-
-                        {/* ROLE SELECT */}
-                        <td className="px-5 py-4">
-
-                          <select
-                            value={
-                              selectedRoles[user.id] ||
-                              user.role
-                            }
-                            onChange={(event) =>
-                              handleRoleChange(
-                                user.id,
-                                event.target.value
-                              )
-                            }
-                            disabled={busy}
-                            className="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 disabled:opacity-50"
+                        <td className="px-5 py-5">
+                          <span
+                            className={`inline-flex rounded-full border px-3 py-1.5 text-xs font-semibold capitalize ${getRoleClasses(
+                              role
+                            )}`}
                           >
-                            {ROLE_OPTIONS.map(
-                              (option) => (
-                                <option
-                                  key={option.value}
-                                  value={option.value}
-                                >
-                                  {option.label}
-                                </option>
-                              )
-                            )}
-                          </select>
-
+                            {role}
+                          </span>
                         </td>
 
-                        {/* ACTION */}
-                        <td className="px-5 py-4">
-
-                          <div className="flex justify-end">
-
-                            <button
-                              type="button"
-                              onClick={() =>
-                                updateRole(
-                                  user.id
-                                )
-                              }
-                              disabled={
-                                busy ||
-                                selectedRoles[
-                                  user.id
-                                ] === user.role
-                              }
-                              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
-                            >
-                              {busy ? (
-                                <>
-                                  <Loader2
-                                    size={16}
-                                    className="animate-spin"
-                                  />
-                                  Saving...
-                                </>
-                              ) : (
-                                <>
-                                  <Save size={16} />
-                                  Save
-                                </>
-                              )}
-                            </button>
-
-                          </div>
-
+                        <td className="px-5 py-5">
+                          <span className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-700">
+                            <UserCheck size={15} />
+                            Registered
+                          </span>
                         </td>
 
+                        <td className="px-5 py-5">
+                          <span className="font-mono text-xs text-slate-400">
+                            {String(user?._id || "—")}
+                          </span>
+                        </td>
                       </tr>
                     );
-                  })}
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
 
-                </tbody>
-
-              </table>
-
-            </div>
-          )}
-
-        </div>
-
+        <p className="mt-4 text-center text-xs text-slate-400 lg:hidden">
+          Swipe horizontally to view all user details.
+        </p>
       </div>
     </main>
+  );
+}
+
+function StatCard({ label, value, icon }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="mb-4 flex items-center justify-between">
+        <span className="text-sm font-medium text-slate-500">
+          {label}
+        </span>
+
+        <span className="text-slate-400">
+          {icon}
+        </span>
+      </div>
+
+      <p className="text-3xl font-bold text-slate-950">
+        {value}
+      </p>
+    </div>
   );
 }

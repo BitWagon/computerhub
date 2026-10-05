@@ -49,7 +49,10 @@ export default function OrdersPage() {
           : []
       );
     } catch (error) {
-      console.error("Orders loading error:", error);
+      console.error(
+        "Orders loading error:",
+        error
+      );
 
       setError(
         error?.message ||
@@ -69,7 +72,7 @@ export default function OrdersPage() {
 
     try {
       return new Date(date).toLocaleDateString(
-        "en-US",
+        "en-PK",
         {
           year: "numeric",
           month: "short",
@@ -92,29 +95,33 @@ export default function OrdersPage() {
   }
 
   function getStatusClasses(status) {
-    switch (status) {
+    switch (
+      String(status || "").toLowerCase()
+    ) {
       case "delivered":
-        return "bg-emerald-50 text-emerald-700 border-emerald-200";
+        return "border-emerald-200 bg-emerald-50 text-emerald-700";
 
       case "shipped":
-        return "bg-blue-50 text-blue-700 border-blue-200";
+        return "border-blue-200 bg-blue-50 text-blue-700";
 
       case "processing":
-        return "bg-purple-50 text-purple-700 border-purple-200";
+        return "border-violet-200 bg-violet-50 text-violet-700";
 
       case "confirmed":
-        return "bg-cyan-50 text-cyan-700 border-cyan-200";
+        return "border-cyan-200 bg-cyan-50 text-cyan-700";
 
       case "cancelled":
-        return "bg-red-50 text-red-700 border-red-200";
+        return "border-red-200 bg-red-50 text-red-700";
 
       default:
-        return "bg-amber-50 text-amber-700 border-amber-200";
+        return "border-amber-200 bg-amber-50 text-amber-700";
     }
   }
 
   function getPaymentClasses(status) {
-    switch (status) {
+    switch (
+      String(status || "").toLowerCase()
+    ) {
       case "paid":
         return "bg-emerald-50 text-emerald-700";
 
@@ -122,7 +129,7 @@ export default function OrdersPage() {
         return "bg-red-50 text-red-700";
 
       case "refunded":
-        return "bg-purple-50 text-purple-700";
+        return "bg-violet-50 text-violet-700";
 
       default:
         return "bg-amber-50 text-amber-700";
@@ -130,7 +137,9 @@ export default function OrdersPage() {
   }
 
   function getStatusIcon(status) {
-    switch (status) {
+    switch (
+      String(status || "").toLowerCase()
+    ) {
       case "delivered":
         return CheckCircle2;
 
@@ -148,38 +157,51 @@ export default function OrdersPage() {
     }
   }
 
+  function formatStatus(status) {
+    if (!status) return "Pending";
+
+    return (
+      String(status).charAt(0).toUpperCase() +
+      String(status).slice(1)
+    );
+  }
+
   const totalOrders = orders.length;
 
   const deliveredOrders = orders.filter(
     (order) =>
-      order.orderStatus === "delivered"
+      String(
+        order.orderStatus || ""
+      ).toLowerCase() === "delivered"
   ).length;
 
   const activeOrders = orders.filter(
     (order) =>
       !["delivered", "cancelled"].includes(
-        order.orderStatus
+        String(
+          order.orderStatus || ""
+        ).toLowerCase()
       )
   ).length;
 
   if (loading) {
     return (
       <main className="min-h-screen bg-slate-50">
-        <div className="container-main flex min-h-[70vh] items-center justify-center">
-          <div className="rounded-3xl border border-slate-200 bg-white px-10 py-9 text-center shadow-sm">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50">
+        <div className="container-main flex min-h-[70vh] items-center justify-center px-4">
+          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white px-8 py-10 text-center shadow-sm">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50">
               <RefreshCw
-                size={24}
+                size={25}
                 className="animate-spin text-blue-600"
               />
             </div>
 
-            <p className="mt-4 text-sm font-semibold text-slate-600">
-              Loading your orders...
-            </p>
+            <h1 className="mt-5 text-lg font-bold text-slate-900">
+              Loading your orders
+            </h1>
 
-            <p className="mt-1 text-xs text-slate-400">
-              Please wait a moment.
+            <p className="mt-2 text-sm text-slate-500">
+              Please wait while we retrieve your order history.
             </p>
           </div>
         </div>
@@ -189,7 +211,7 @@ export default function OrdersPage() {
 
   return (
     <main className="min-h-screen bg-slate-50">
-      <div className="container-main py-8 sm:py-10 lg:py-12">
+      <div className="container-main px-4 py-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
 
         {/* Breadcrumb */}
         <div className="mb-7 flex items-center gap-2 text-sm">
@@ -200,7 +222,9 @@ export default function OrdersPage() {
             Home
           </Link>
 
-          <span className="text-slate-300">/</span>
+          <span className="text-slate-300">
+            /
+          </span>
 
           <span className="font-semibold text-slate-900">
             My Orders
@@ -208,12 +232,12 @@ export default function OrdersPage() {
         </div>
 
         {/* Header */}
-        <section className="overflow-hidden rounded-3xl border border-slate-200 bg-slate-950 text-white shadow-sm">
+        <section className="overflow-hidden rounded-3xl border border-slate-800 bg-slate-950 text-white shadow-sm">
           <div className="relative p-6 sm:p-8 lg:p-10">
 
-            <div className="absolute -right-20 -top-24 h-64 w-64 rounded-full bg-blue-600/20 blur-3xl" />
+            <div className="pointer-events-none absolute -right-24 -top-28 h-72 w-72 rounded-full bg-blue-600/20 blur-3xl" />
 
-            <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="relative flex flex-col gap-7 lg:flex-row lg:items-end lg:justify-between">
 
               <div>
                 <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-500/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-blue-300">
@@ -225,9 +249,8 @@ export default function OrdersPage() {
                   My Orders
                 </h1>
 
-                <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
-                  Track purchases, payment status and delivery
-                  progress from one place.
+                <p className="mt-3 max-w-xl text-sm leading-6 text-slate-300 sm:text-base">
+                  Track your purchases, payment status and delivery progress in one place.
                 </p>
               </div>
 
@@ -276,7 +299,7 @@ export default function OrdersPage() {
         {/* Error */}
         {error && (
           <section className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm font-black text-red-800">
                   Unable to load orders
@@ -290,7 +313,7 @@ export default function OrdersPage() {
               <button
                 type="button"
                 onClick={loadOrders}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-red-700"
               >
                 <RefreshCw size={15} />
                 Try Again
@@ -299,7 +322,7 @@ export default function OrdersPage() {
           </section>
         )}
 
-        {/* Empty */}
+        {/* Empty State */}
         {!error && orders.length === 0 && (
           <section className="mt-6 rounded-3xl border border-slate-200 bg-white px-6 py-16 text-center shadow-sm">
             <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-3xl bg-blue-50">
@@ -318,8 +341,7 @@ export default function OrdersPage() {
             </h2>
 
             <p className="mx-auto mt-3 max-w-md text-sm leading-7 text-slate-500">
-              Your completed purchases will appear here. Start
-              exploring ComputerHub products today.
+              Your purchases will appear here after you place an order.
             </p>
 
             <Link
@@ -336,29 +358,35 @@ export default function OrdersPage() {
         {!error && orders.length > 0 && (
           <section className="mt-7 space-y-5">
             {orders.map((order) => {
-              const itemCount = Array.isArray(
-                order.items
-              )
-                ? order.items.reduce(
-                    (total, item) =>
-                      total +
-                      Number(
-                        item?.quantity || 1
-                      ),
-                    0
-                  )
-                : 0;
+              const itemCount =
+                Array.isArray(order.items)
+                  ? order.items.reduce(
+                      (total, item) =>
+                        total +
+                        Number(
+                          item?.quantity || 1
+                        ),
+                      0
+                    )
+                  : 0;
 
-              const StatusIcon = getStatusIcon(
-                order.orderStatus
-              );
+              const StatusIcon =
+                getStatusIcon(
+                  order.orderStatus
+                );
+
+              const status =
+                String(
+                  order.orderStatus ||
+                    "pending"
+                ).toLowerCase();
 
               return (
                 <article
                   key={order._id}
                   className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:border-blue-200 hover:shadow-md"
                 >
-                  {/* Order top */}
+                  {/* Order Header */}
                   <div className="border-b border-slate-100 p-5 sm:p-6">
                     <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
 
@@ -371,22 +399,27 @@ export default function OrdersPage() {
                           <div className="flex flex-wrap items-center gap-3">
                             <h2 className="truncate text-lg font-black text-slate-950">
                               {order.orderNumber ||
-                                "Order"}
+                                `Order #${String(
+                                  order._id
+                                ).slice(-8)}`}
                             </h2>
 
                             <span
-                              className={`rounded-full border px-3 py-1 text-xs font-bold capitalize ${getStatusClasses(
-                                order.orderStatus
+                              className={`rounded-full border px-3 py-1 text-xs font-bold ${getStatusClasses(
+                                status
                               )}`}
                             >
-                              {order.orderStatus ||
-                                "pending"}
+                              {formatStatus(
+                                status
+                              )}
                             </span>
                           </div>
 
                           <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-medium text-slate-500">
                             <span className="inline-flex items-center gap-1.5">
-                              <CalendarDays size={14} />
+                              <CalendarDays
+                                size={14}
+                              />
                               {formatDate(
                                 order.createdAt
                               )}
@@ -417,11 +450,11 @@ export default function OrdersPage() {
                     </div>
                   </div>
 
-                  {/* Order body */}
+                  {/* Order Content */}
                   <div className="p-5 sm:p-6">
-                    <div className="grid gap-6 lg:grid-cols-[1fr_220px_auto] lg:items-center">
+                    <div className="grid gap-6 lg:grid-cols-[1fr_240px_auto] lg:items-center">
 
-                      {/* Products */}
+                      {/* Product Images */}
                       <div>
                         <p className="mb-3 text-xs font-bold uppercase tracking-[0.14em] text-slate-400">
                           Products
@@ -462,9 +495,7 @@ export default function OrdersPage() {
                                         />
                                       ) : (
                                         <Package
-                                          size={
-                                            23
-                                          }
+                                          size={23}
                                           className="text-slate-300"
                                         />
                                       )}
@@ -507,13 +538,15 @@ export default function OrdersPage() {
                               order.paymentStatus
                             )}`}
                           >
-                            {order.paymentStatus ||
-                              "pending"}
+                            {formatStatus(
+                              order.paymentStatus ||
+                                "pending"
+                            )}
                           </span>
                         </div>
                       </div>
 
-                      {/* Button */}
+                      {/* View Button */}
                       <Link
                         href={`/orders/${order._id}`}
                         className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3.5 text-sm font-bold text-white transition hover:bg-blue-700"

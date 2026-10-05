@@ -35,9 +35,7 @@ export default function OrderDetailsPage() {
         setError("");
 
         const response = await fetch(
-          `/api/orders/${encodeURIComponent(
-            orderId
-          )}`,
+          `/api/orders/${encodeURIComponent(orderId)}`,
           {
             method: "GET",
             credentials: "include",
@@ -85,7 +83,7 @@ export default function OrderDetailsPage() {
 
     try {
       return new Date(date).toLocaleDateString(
-        "en-US",
+        "en-PK",
         {
           year: "numeric",
           month: "long",
@@ -107,8 +105,19 @@ export default function OrderDetailsPage() {
     );
   }
 
+  function formatStatus(status) {
+    if (!status) return "Pending";
+
+    return (
+      String(status).charAt(0).toUpperCase() +
+      String(status).slice(1)
+    );
+  }
+
   function getStatusClasses(status) {
-    switch (status) {
+    switch (
+      String(status || "").toLowerCase()
+    ) {
       case "delivered":
         return "bg-emerald-50 text-emerald-700 border-emerald-200";
 
@@ -130,7 +139,9 @@ export default function OrderDetailsPage() {
   }
 
   function getStatusIcon(status) {
-    switch (status) {
+    switch (
+      String(status || "").toLowerCase()
+    ) {
       case "delivered":
         return CheckCircle2;
 
@@ -151,17 +162,25 @@ export default function OrderDetailsPage() {
   if (loading) {
     return (
       <main className="min-h-screen bg-slate-50">
-        <div className="container-main flex min-h-[70vh] items-center justify-center">
-          <div className="rounded-3xl border border-slate-200 bg-white px-10 py-9 text-center shadow-sm">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50">
+        <div className="container-main flex min-h-[70vh] items-center justify-center px-4">
+          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white px-8 py-10 text-center shadow-sm">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50">
               <Package
-                size={24}
+                size={26}
                 className="animate-pulse text-blue-600"
               />
             </div>
 
-            <p className="mt-4 text-sm font-semibold text-slate-600">
-              Loading order details...
+            <p className="mt-5 text-xs font-bold uppercase tracking-[0.18em] text-blue-600">
+              Order Center
+            </p>
+
+            <h1 className="mt-2 text-xl font-black text-slate-950">
+              Loading order details
+            </h1>
+
+            <p className="mt-2 text-sm leading-6 text-slate-500">
+              Please wait while we retrieve your order.
             </p>
           </div>
         </div>
@@ -172,7 +191,7 @@ export default function OrderDetailsPage() {
   if (error || !order) {
     return (
       <main className="min-h-screen bg-slate-50">
-        <div className="container-main flex min-h-[70vh] items-center justify-center py-12">
+        <div className="container-main flex min-h-[70vh] items-center justify-center px-4 py-12">
           <div className="w-full max-w-2xl rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm sm:p-12">
             <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-red-50">
               <Package
@@ -189,7 +208,7 @@ export default function OrderDetailsPage() {
               Order Not Found
             </h1>
 
-            <p className="mt-3 text-sm leading-6 text-slate-500">
+            <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-slate-500">
               {error ||
                 "We could not find this order."}
             </p>
@@ -234,6 +253,11 @@ export default function OrderDetailsPage() {
       subtotal + deliveryFee
   );
 
+  const currentStatus =
+    String(
+      order.orderStatus || "pending"
+    ).toLowerCase();
+
   const statusOrder = [
     "pending",
     "confirmed",
@@ -244,22 +268,22 @@ export default function OrderDetailsPage() {
 
   const currentIndex =
     statusOrder.indexOf(
-      order.orderStatus
+      currentStatus
     );
 
   const StatusIcon = getStatusIcon(
-    order.orderStatus
+    currentStatus
   );
 
   return (
     <main className="min-h-screen bg-slate-50">
-      <div className="container-main py-8 sm:py-10 lg:py-12">
+      <div className="container-main px-4 py-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
 
         {/* Breadcrumb */}
         <div className="mb-7 flex flex-wrap items-center gap-2 text-sm">
           <Link
             href="/"
-            className="font-medium text-slate-500 hover:text-blue-600"
+            className="font-medium text-slate-500 transition hover:text-blue-600"
           >
             Home
           </Link>
@@ -270,7 +294,7 @@ export default function OrderDetailsPage() {
 
           <Link
             href="/orders"
-            className="font-medium text-slate-500 hover:text-blue-600"
+            className="font-medium text-slate-500 transition hover:text-blue-600"
           >
             My Orders
           </Link>
@@ -288,14 +312,14 @@ export default function OrderDetailsPage() {
         <section className="overflow-hidden rounded-3xl bg-slate-950 text-white shadow-sm">
           <div className="relative p-6 sm:p-8 lg:p-10">
 
-            <div className="absolute -right-20 -top-24 h-64 w-64 rounded-full bg-blue-600/20 blur-3xl" />
+            <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-blue-600/20 blur-3xl" />
 
             <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
 
               <div>
                 <Link
                   href="/orders"
-                  className="inline-flex items-center gap-2 text-sm font-semibold text-slate-400 hover:text-white"
+                  className="inline-flex items-center gap-2 text-sm font-semibold text-slate-400 transition hover:text-white"
                 >
                   <ArrowLeft size={16} />
                   Back to My Orders
@@ -329,20 +353,21 @@ export default function OrderDetailsPage() {
 
               <div>
                 <span
-                  className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-bold capitalize ${getStatusClasses(
-                    order.orderStatus
+                  className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-bold ${getStatusClasses(
+                    currentStatus
                   )}`}
                 >
                   <StatusIcon size={16} />
-                  {order.orderStatus ||
-                    "pending"}
+                  {formatStatus(
+                    currentStatus
+                  )}
                 </span>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Status */}
+        {/* Delivery Progress */}
         <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
@@ -355,80 +380,81 @@ export default function OrderDetailsPage() {
               </p>
 
               <h2 className="mt-1 text-lg font-black text-slate-950">
-                {order.orderStatus ||
-                  "Pending"}
+                {formatStatus(
+                  currentStatus
+                )}
               </h2>
             </div>
           </div>
 
-          <div className="mt-8 grid grid-cols-2 gap-y-7 md:grid-cols-5">
-            {statusOrder.map(
-              (status, index) => {
-                const active =
-                  currentIndex >= index &&
-                  order.orderStatus !==
-                    "cancelled";
+          {currentStatus !==
+          "cancelled" ? (
+            <div className="mt-8 grid grid-cols-2 gap-y-7 md:grid-cols-5">
+              {statusOrder.map(
+                (status, index) => {
+                  const active =
+                    currentIndex >=
+                    index;
 
-                const isCurrent =
-                  order.orderStatus ===
-                  status;
+                  const isCurrent =
+                    currentStatus ===
+                    status;
 
-                return (
-                  <div
-                    key={status}
-                    className="relative text-center"
-                  >
-                    {index <
-                      statusOrder.length -
-                        1 && (
-                      <div
-                        className={`absolute left-1/2 top-5 hidden h-px w-full md:block ${
-                          currentIndex > index &&
-                          order.orderStatus !==
-                            "cancelled"
-                            ? "bg-blue-600"
-                            : "bg-slate-200"
-                        }`}
-                      />
-                    )}
-
+                  return (
                     <div
-                      className={`relative mx-auto flex h-10 w-10 items-center justify-center rounded-full ${
-                        active
-                          ? "bg-blue-600 text-white"
-                          : "bg-slate-100 text-slate-400"
-                      } ${
-                        isCurrent
-                          ? "ring-4 ring-blue-100"
-                          : ""
-                      }`}
+                      key={status}
+                      className="relative text-center"
                     >
-                      {active ? (
-                        <CheckCircle2 size={18} />
-                      ) : (
-                        <span className="text-xs font-black">
-                          {index + 1}
-                        </span>
+                      {index <
+                        statusOrder.length -
+                          1 && (
+                        <div
+                          className={`absolute left-1/2 top-5 hidden h-px w-full md:block ${
+                            currentIndex >
+                            index
+                              ? "bg-blue-600"
+                              : "bg-slate-200"
+                          }`}
+                        />
                       )}
+
+                      <div
+                        className={`relative mx-auto flex h-10 w-10 items-center justify-center rounded-full ${
+                          active
+                            ? "bg-blue-600 text-white"
+                            : "bg-slate-100 text-slate-400"
+                        } ${
+                          isCurrent
+                            ? "ring-4 ring-blue-100"
+                            : ""
+                        }`}
+                      >
+                        {active ? (
+                          <CheckCircle2
+                            size={18}
+                          />
+                        ) : (
+                          <span className="text-xs font-black">
+                            {index + 1}
+                          </span>
+                        )}
+                      </div>
+
+                      <p
+                        className={`mt-3 text-xs font-bold capitalize ${
+                          active
+                            ? "text-blue-600"
+                            : "text-slate-400"
+                        }`}
+                      >
+                        {status}
+                      </p>
                     </div>
-
-                    <p
-                      className={`mt-3 text-xs font-bold capitalize ${
-                        active
-                          ? "text-blue-600"
-                          : "text-slate-400"
-                      }`}
-                    >
-                      {status}
-                    </p>
-                  </div>
-                );
-              }
-            )}
-          </div>
-
-          {order.orderStatus ===
-            "cancelled" && (
+                  );
+                }
+              )}
+            </div>
+          ) : (
             <div className="mt-6 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4">
               <XCircle
                 size={19}
@@ -441,15 +467,14 @@ export default function OrderDetailsPage() {
                 </p>
 
                 <p className="mt-1 text-xs leading-5 text-red-700">
-                  Please contact support if you need
-                  assistance with this order.
+                  Please contact support if you need assistance with this order.
                 </p>
               </div>
             </div>
           )}
         </section>
 
-        {/* Main */}
+        {/* Main Content */}
         <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
 
           {/* Products */}
@@ -470,101 +495,118 @@ export default function OrderDetailsPage() {
               </div>
             </div>
 
-            <div className="divide-y divide-slate-100 px-6 sm:px-7">
-              {items.map(
-                (item, index) => {
-                  const image =
-                    item.image ||
-                    item.images?.[0] ||
-                    "";
+            {items.length === 0 ? (
+              <div className="px-6 py-14 text-center">
+                <Package
+                  size={34}
+                  className="mx-auto text-slate-300"
+                />
 
-                  const price = Number(
-                    item.price || 0
-                  );
+                <p className="mt-3 text-sm font-semibold text-slate-500">
+                  No products found in this order.
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-100 px-6 sm:px-7">
+                {items.map(
+                  (item, index) => {
+                    const image =
+                      item.image ||
+                      item.images?.[0] ||
+                      "";
 
-                  const quantity = Math.max(
-                    1,
-                    Number(
-                      item.quantity || 1
-                    )
-                  );
+                    const price =
+                      Number(
+                        item.price || 0
+                      );
 
-                  const itemTotal = Number(
-                    item.subtotal ||
-                      price * quantity
-                  );
+                    const quantity =
+                      Math.max(
+                        1,
+                        Number(
+                          item.quantity || 1
+                        )
+                      );
 
-                  return (
-                    <div
-                      key={
-                        item.productId ||
-                        index
-                      }
-                      className="flex gap-4 py-5"
-                    >
-                      <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
-                        {image ? (
-                          <img
-                            src={image}
-                            alt={
-                              item.name ||
-                              "Product"
-                            }
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <Package
-                            size={30}
-                            className="text-slate-300"
-                          />
-                        )}
-                      </div>
+                    const itemTotal =
+                      Number(
+                        item.subtotal ||
+                          price *
+                            quantity
+                      );
 
-                      <div className="min-w-0 flex-1">
-                        <h3 className="font-black text-slate-950">
-                          {item.name ||
-                            "Product"}
-                        </h3>
+                    return (
+                      <div
+                        key={
+                          item.productId ||
+                          index
+                        }
+                        className="flex flex-col gap-4 py-5 sm:flex-row sm:items-center"
+                      >
+                        <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+                          {image ? (
+                            <img
+                              src={image}
+                              alt={
+                                item.name ||
+                                "Product"
+                              }
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <Package
+                              size={30}
+                              className="text-slate-300"
+                            />
+                          )}
+                        </div>
 
-                        <p className="mt-1 text-sm text-slate-500">
-                          Quantity:{" "}
-                          {quantity}
-                        </p>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-black text-slate-950">
+                            {item.name ||
+                              "Product"}
+                          </h3>
 
-                        <p className="mt-2 text-sm text-slate-500">
-                          Unit Price:{" "}
-                          <span className="font-semibold text-slate-700">
+                          <p className="mt-1 text-sm text-slate-500">
+                            Quantity:{" "}
+                            {quantity}
+                          </p>
+
+                          <p className="mt-2 text-sm text-slate-500">
+                            Unit Price:{" "}
+                            <span className="font-semibold text-slate-700">
+                              PKR{" "}
+                              {formatMoney(
+                                price
+                              )}
+                            </span>
+                          </p>
+                        </div>
+
+                        <div className="shrink-0 text-left sm:text-right">
+                          <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                            Total
+                          </p>
+
+                          <p className="mt-1 font-black text-slate-950">
                             PKR{" "}
                             {formatMoney(
-                              price
+                              itemTotal
                             )}
-                          </span>
-                        </p>
+                          </p>
+                        </div>
                       </div>
-
-                      <div className="shrink-0 text-right">
-                        <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                          Total
-                        </p>
-
-                        <p className="mt-1 font-black text-slate-950">
-                          PKR{" "}
-                          {formatMoney(
-                            itemTotal
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                }
-              )}
-            </div>
+                    );
+                  }
+                )}
+              </div>
+            )}
           </section>
 
-          {/* Right */}
+          {/* Right Column */}
           <aside className="space-y-6">
 
-            {/* Delivery */}
+            {/* Delivery Information */}
             <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
@@ -582,7 +624,7 @@ export default function OrderDetailsPage() {
                 </div>
               </div>
 
-              <div className="mt-5 space-y-4 text-sm">
+              <div className="mt-5 space-y-4">
                 <InfoRow
                   label="Customer"
                   value={customerName}
@@ -591,14 +633,16 @@ export default function OrderDetailsPage() {
                 <InfoRow
                   label="Email"
                   value={
-                    customer.email || "—"
+                    customer.email ||
+                    "—"
                   }
                 />
 
                 <InfoRow
                   label="Phone"
                   value={
-                    customer.phone || "—"
+                    customer.phone ||
+                    "—"
                   }
                 />
 
@@ -610,15 +654,15 @@ export default function OrderDetailsPage() {
                   <p className="mt-1 text-sm leading-6 text-slate-700">
                     {customer.address ||
                       "—"}
-                    <br />
-                    {customer.city ||
-                      "—"}
+                    {customer.city
+                      ? `, ${customer.city}`
+                      : ""}
                     {customer.state
                       ? `, ${customer.state}`
                       : ""}
-                    <br />
-                    {customer.postalCode ||
-                      ""}
+                    {customer.postalCode
+                      ? `, ${customer.postalCode}`
+                      : ""}
                   </p>
                 </div>
               </div>
@@ -661,23 +705,31 @@ export default function OrderDetailsPage() {
 
                   <span
                     className={`rounded-full px-3 py-1 text-xs font-bold capitalize ${
-                      order.paymentStatus ===
+                      String(
+                        order.paymentStatus ||
+                          ""
+                      ).toLowerCase() ===
                       "paid"
                         ? "bg-emerald-50 text-emerald-700"
-                        : order.paymentStatus ===
+                        : String(
+                            order.paymentStatus ||
+                              ""
+                          ).toLowerCase() ===
                           "failed"
                         ? "bg-red-50 text-red-700"
                         : "bg-amber-50 text-amber-700"
                     }`}
                   >
-                    {order.paymentStatus ||
-                      "pending"}
+                    {formatStatus(
+                      order.paymentStatus ||
+                        "pending"
+                    )}
                   </span>
                 </div>
               </div>
             </section>
 
-            {/* Total */}
+            {/* Summary */}
             <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
               <p className="text-xs font-bold uppercase tracking-[0.15em] text-blue-600">
                 Payment Summary
@@ -730,7 +782,7 @@ export default function OrderDetailsPage() {
           </aside>
         </div>
 
-        {/* Bottom */}
+        {/* Bottom Actions */}
         <div className="mt-7 grid gap-3 sm:grid-cols-2">
           <Link
             href="/orders"
