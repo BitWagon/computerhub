@@ -9,7 +9,8 @@ import {
   ShieldCheck,
   Truck,
   Store,
-  CheckCircle2,
+  ArrowLeft,
+  PackageCheck,
 } from "lucide-react";
 
 import ProductImages from "@/components/products/ProductImages";
@@ -44,12 +45,16 @@ export default function ProductDetailsPage() {
         const data = await response.json();
 
         if (!response.ok || !data.success || !data.product) {
-          throw new Error(data.message || "Product not found.");
+          throw new Error(
+            data.message || "Product not found."
+          );
         }
 
         const apiProduct = data.product;
 
-        const productPrice = Number(apiProduct.price || 0);
+        const productPrice = Number(
+          apiProduct.price || 0
+        );
 
         const productOldPrice = Number(
           apiProduct.oldPrice ||
@@ -73,7 +78,9 @@ export default function ProductDetailsPage() {
           );
         }
 
-        const productImages = Array.isArray(apiProduct.images)
+        const productImages = Array.isArray(
+          apiProduct.images
+        )
           ? apiProduct.images.filter(Boolean)
           : apiProduct.image
             ? [apiProduct.image]
@@ -123,11 +130,17 @@ export default function ProductDetailsPage() {
 
           discount: productDiscount,
 
-          stock: Number(apiProduct.stock || 0),
+          stock: Number(
+            apiProduct.stock || 0
+          ),
 
-          rating: Number(apiProduct.rating || 0),
+          rating: Number(
+            apiProduct.rating || 0
+          ),
 
-          reviews: Number(apiProduct.reviews || 0),
+          reviews: Number(
+            apiProduct.reviews || 0
+          ),
 
           freeDelivery:
             apiProduct.freeDelivery !== false,
@@ -140,7 +153,6 @@ export default function ProductDetailsPage() {
         };
 
         setProduct(formattedProduct);
-
       } catch (err) {
         setError(
           err instanceof Error
@@ -155,256 +167,375 @@ export default function ProductDetailsPage() {
     loadProduct();
   }, [productId]);
 
+  /* ============================================================
+     LOADING
+  ============================================================ */
+
   if (loading) {
     return (
-      <main className="min-h-screen bg-gray-50">
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <main className="min-h-screen bg-slate-50">
+        <div className="container-main py-8">
           <div className="animate-pulse">
-            <div className="h-5 w-64 rounded bg-gray-200" />
+            <div className="h-4 w-72 rounded bg-slate-200" />
 
             <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-2">
-              <div className="h-[500px] rounded-xl bg-gray-200" />
+              <div className="min-h-[520px] rounded-2xl bg-slate-200" />
 
-              <div className="space-y-5 rounded-xl border border-gray-200 bg-white p-7">
-                <div className="h-8 w-3/4 rounded bg-gray-200" />
-                <div className="h-5 w-1/3 rounded bg-gray-200" />
-                <div className="h-10 w-1/2 rounded bg-gray-200" />
-                <div className="h-24 rounded bg-gray-200" />
-                <div className="h-12 rounded bg-gray-200" />
-                <div className="h-12 rounded bg-gray-200" />
+              <div className="rounded-2xl border border-slate-200 bg-white p-7">
+                <div className="h-4 w-32 rounded bg-slate-200" />
+
+                <div className="mt-5 h-9 w-4/5 rounded bg-slate-200" />
+
+                <div className="mt-3 h-9 w-3/5 rounded bg-slate-200" />
+
+                <div className="mt-7 h-12 w-1/2 rounded bg-slate-200" />
+
+                <div className="mt-7 space-y-3">
+                  <div className="h-12 rounded-xl bg-slate-200" />
+                  <div className="h-12 rounded-xl bg-slate-200" />
+                  <div className="h-12 rounded-xl bg-slate-200" />
+                </div>
               </div>
             </div>
+
+            <div className="mt-8 h-28 rounded-2xl bg-slate-200" />
           </div>
         </div>
       </main>
     );
   }
 
+  /* ============================================================
+     ERROR
+  ============================================================ */
+
   if (error || !product) {
     return (
-      <main className="min-h-screen bg-gray-50">
-        <div className="mx-auto max-w-7xl px-4 py-20 text-center sm:px-6 lg:px-8">
-          <h1 className="text-3xl font-bold text-gray-900">
-            Product Not Found
-          </h1>
+      <main className="min-h-screen bg-slate-50">
+        <div className="container-main flex min-h-[70vh] items-center justify-center py-16">
+          <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+              <PackageCheck size={30} />
+            </div>
 
-          <p className="mt-3 text-gray-500">
-            {error || "This product is unavailable."}
-          </p>
+            <h1 className="mt-5 text-2xl font-black text-slate-950">
+              Product unavailable
+            </h1>
 
-          <Link
-            href="/products"
-            className="mt-6 inline-flex items-center rounded-lg bg-blue-600 px-5 py-3 text-white hover:bg-blue-700"
-          >
-            Browse Products
-          </Link>
+            <p className="mt-3 text-sm leading-6 text-slate-500">
+              {error ||
+                "This product is no longer available in the ComputerHub marketplace."}
+            </p>
+
+            <Link
+              href="/products"
+              className="mt-7 inline-flex items-center gap-2 rounded-xl bg-slate-950 px-6 py-3 text-sm font-bold text-white transition hover:bg-blue-600"
+            >
+              <ArrowLeft size={17} />
+              Browse Products
+            </Link>
+          </div>
         </div>
       </main>
     );
   }
 
+  const stockCount = Number(
+    product.stock || 0
+  );
+
+  const isInStock = stockCount > 0;
+
   return (
-    <main className="min-h-screen bg-gray-50">
-      <div className="border-b bg-white">
-        <div className="mx-auto flex max-w-7xl items-center gap-2 px-4 py-4 text-sm text-gray-500 sm:px-6 lg:px-8">
-          <Link href="/" className="hover:text-blue-600">
+    <main className="min-h-screen bg-slate-50">
+      {/* ========================================================
+          BREADCRUMBS
+      ======================================================== */}
+
+      <div className="border-b border-slate-200 bg-white">
+        <div className="container-main flex min-w-0 items-center gap-2 overflow-hidden py-4 text-sm">
+          <Link
+            href="/"
+            className="shrink-0 font-medium text-slate-400 transition hover:text-blue-600"
+          >
             Home
           </Link>
 
-          <ChevronRight size={16} />
+          <ChevronRight
+            size={15}
+            className="shrink-0 text-slate-300"
+          />
 
           <Link
             href="/products"
-            className="hover:text-blue-600"
+            className="shrink-0 font-medium text-slate-400 transition hover:text-blue-600"
           >
             Products
           </Link>
 
           {product.category && (
             <>
-              <ChevronRight size={16} />
+              <ChevronRight
+                size={15}
+                className="shrink-0 text-slate-300"
+              />
 
-              <span>{product.category}</span>
+              <span className="shrink-0 font-medium text-slate-400">
+                {product.category}
+              </span>
             </>
           )}
 
-          <ChevronRight size={16} />
+          <ChevronRight
+            size={15}
+            className="shrink-0 text-slate-300"
+          />
 
-          <span className="truncate text-gray-900">
+          <span className="truncate font-semibold text-slate-800">
             {product.name}
           </span>
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-          <ProductImages product={product} />
+      {/* ========================================================
+          PRODUCT
+      ======================================================== */}
 
-          <ProductInfo product={product} />
-        </div>
+      <div className="container-main py-8 sm:py-10">
+        <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1.05fr)_minmax(420px,0.95fr)]">
+          {/* IMAGE AREA */}
 
-        <div className="mt-12 grid gap-4 rounded-2xl border border-gray-200 bg-white p-6 md:grid-cols-2 lg:grid-cols-4">
-          <div className="flex items-start gap-3">
-            <Truck className="mt-1 text-blue-600" size={22} />
-
-            <div>
-              <h3 className="font-semibold text-gray-900">
-                Fast Delivery
-              </h3>
-
-              <p className="text-sm text-gray-500">
-                Nationwide shipping across Pakistan.
-              </p>
-            </div>
+          <div className="min-w-0 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-5">
+            <ProductImages product={product} />
           </div>
 
-          <div className="flex items-start gap-3">
-            <ShieldCheck
-              className="mt-1 text-blue-600"
-              size={22}
-            />
+          {/* INFO AREA */}
 
-            <div>
-              <h3 className="font-semibold text-gray-900">
-                Genuine Products
-              </h3>
-
-              <p className="text-sm text-gray-500">
-                100% original hardware and accessories.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-3">
-            <RotateCcw className="mt-1 text-blue-600" size={22} />
-
-            <div>
-              <h3 className="font-semibold text-gray-900">
-                Easy Returns
-              </h3>
-
-              <p className="text-sm text-gray-500">
-                Return eligible products with ease.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-3">
-            <Store className="mt-1 text-blue-600" size={22} />
-
-            <div>
-              <h3 className="font-semibold text-gray-900">
-                Trusted Seller
-              </h3>
-
-              <p className="text-sm text-gray-500">
-                Verified ComputerHub marketplace sellers.
-              </p>
-            </div>
+          <div className="min-w-0">
+            <ProductInfo product={product} />
           </div>
         </div>
 
-        {/* PRODUCT DESCRIPTION */}
-                
+        {/* ======================================================
+            TRUST BAR
+        ====================================================== */}
 
-        <div className="mt-8 rounded-xl border border-gray-200 bg-white p-6">
-          <h2 className="text-xl font-bold text-gray-900">
-            Product Description
-          </h2>
+        <section className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="grid grid-cols-1 divide-y divide-slate-100 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
+            <div className="flex items-start gap-4 p-5">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                <Truck size={21} />
+              </div>
 
-          <div className="mt-4 whitespace-pre-line text-gray-600">
-            {product.description || "No description available."}
+              <div>
+                <h3 className="text-sm font-black text-slate-950">
+                  Fast Delivery
+                </h3>
+
+                <p className="mt-1 text-xs leading-5 text-slate-500">
+                  Nationwide shipping across Pakistan.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-4 p-5">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                <ShieldCheck size={21} />
+              </div>
+
+              <div>
+                <h3 className="text-sm font-black text-slate-950">
+                  Genuine Products
+                </h3>
+
+                <p className="mt-1 text-xs leading-5 text-slate-500">
+                  Quality hardware from trusted sellers.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-4 p-5">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+                <RotateCcw size={21} />
+              </div>
+
+              <div>
+                <h3 className="text-sm font-black text-slate-950">
+                  Easy Returns
+                </h3>
+
+                <p className="mt-1 text-xs leading-5 text-slate-500">
+                  Return eligible products with ease.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-4 p-5">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+                <Store size={21} />
+              </div>
+
+              <div>
+                <h3 className="text-sm font-black text-slate-950">
+                  Trusted Seller
+                </h3>
+
+                <p className="mt-1 text-xs leading-5 text-slate-500">
+                  Verified ComputerHub marketplace sellers.
+                </p>
+              </div>
+            </div>
           </div>
-        </div>
+        </section>
 
-        {/* SPECIFICATIONS */}
+        {/* ======================================================
+            DESCRIPTION
+        ====================================================== */}
+
+        <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+          <div className="flex flex-col gap-2 border-b border-slate-100 pb-5 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-blue-600">
+                Product Overview
+              </p>
+
+              <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950">
+                Product Description
+              </h2>
+            </div>
+
+            {product.brand && (
+              <p className="text-sm font-bold text-slate-400">
+                {product.brand}
+              </p>
+            )}
+          </div>
+
+          <div className="mt-6 max-w-4xl whitespace-pre-line text-sm leading-7 text-slate-600">
+            {product.description ||
+              "No description available for this product."}
+          </div>
+        </section>
+
+        {/* ======================================================
+            SPECIFICATIONS
+        ====================================================== */}
 
         {product.specifications &&
-          Object.keys(product.specifications).length > 0 && (
-            <div className="mt-8 rounded-xl border border-gray-200 bg-white p-6">
-              <h2 className="text-xl font-bold text-gray-900">
-                Specifications
-              </h2>
+          Object.keys(
+            product.specifications
+          ).length > 0 && (
+            <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+              <div className="border-b border-slate-100 pb-5">
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-blue-600">
+                  Technical Details
+                </p>
 
-              <div className="mt-4 divide-y divide-gray-200">
-                {Object.entries(product.specifications).map(
-                  ([key, value]) => (
+                <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950">
+                  Specifications
+                </h2>
+              </div>
+
+              <div className="mt-6 overflow-hidden rounded-xl border border-slate-200">
+                {Object.entries(
+                  product.specifications
+                ).map(
+                  ([key, value], index) => (
                     <div
                       key={key}
-                      className="grid grid-cols-2 gap-4 py-3"
+                      className={`grid grid-cols-1 gap-2 px-4 py-4 sm:grid-cols-[220px_1fr] sm:gap-6 ${
+                        index % 2 === 0
+                          ? "bg-slate-50/70"
+                          : "bg-white"
+                      }`}
                     >
-                      <div className="font-medium text-gray-700">
+                      <div className="text-xs font-black uppercase tracking-wide text-slate-500">
                         {key}
                       </div>
 
-                      <div className="text-gray-600">
+                      <div className="text-sm font-medium text-slate-800">
                         {String(value)}
                       </div>
                     </div>
                   )
                 )}
               </div>
-            </div>
+            </section>
           )}
 
-        {/* REVIEWS */}
+        {/* ======================================================
+            REVIEWS
+        ====================================================== */}
 
-        <div className="mt-8">
+        <section className="mt-8">
           <ProductReviews product={product} />
-        </div>
+        </section>
 
-        {/* RELATED PRODUCTS */}
+        {/* ======================================================
+            RELATED PRODUCTS
+        ====================================================== */}
 
-        <div className="mt-10">
+        <section className="mt-10">
           <RelatedProducts
             category={product.category}
             currentProductId={product.id}
           />
-        </div>
+        </section>
 
-        {/* JSON-LD PRODUCT SCHEMA */}
+        {/* ======================================================
+            JSON-LD
+        ====================================================== */}
 
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
-              "@context": "https://schema.org",
+              "@context":
+                "https://schema.org",
               "@type": "Product",
               name: product.name,
-              image: product.images || [],
-              description: product.description,
+              image:
+                product.images || [],
+              description:
+                product.description,
               sku: product.id,
               brand: {
                 "@type": "Brand",
-                name: product.brand || "ComputerHub",
+                name:
+                  product.brand ||
+                  "ComputerHub",
               },
               offers: {
                 "@type": "Offer",
                 priceCurrency: "PKR",
                 price: product.price,
                 availability:
-                  product.stock > 0
+                  isInStock
                     ? "https://schema.org/InStock"
                     : "https://schema.org/OutOfStock",
                 seller: {
-                  "@type": "Organization",
+                  "@type":
+                    "Organization",
                   name:
-                    product.sellerName || "ComputerHub",
+                    product.sellerName ||
+                    "ComputerHub",
                 },
               },
               aggregateRating:
                 product.rating > 0
                   ? {
-                      "@type": "AggregateRating",
-                      ratingValue: product.rating,
+                      "@type":
+                        "AggregateRating",
+                      ratingValue:
+                        product.rating,
                       reviewCount:
-                        product.reviews || 0,
+                        product.reviews ||
+                        0,
                     }
                   : undefined,
             }),
           }}
         />
-
       </div>
     </main>
   );

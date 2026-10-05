@@ -1,316 +1,607 @@
 "use client";
 
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
-  Suspense,
-} from "react";
-
-import Link from "next/link";
-
-import {
-  Search,
+  AlertCircle,
+  ChevronDown,
+  Loader2,
+  Search as SearchIcon,
+  SlidersHorizontal,
+  X,
 } from "lucide-react";
-
-import {
-  useSearchParams,
-} from "next/navigation";
 
 import ProductCard from "@/components/products/ProductCard";
 
-const products = [
-  {
-    id: 1,
-    name: "Dell Inspiron 15 Laptop - Intel Core i5, 8GB RAM, 512GB SSD",
-    image:
-      "https://images.unsplash.com/photo-1593642702749-b7d2a804fbcf?auto=format&fit=crop&w=900&q=80",
-    price: 699,
-    oldPrice: 799,
-    discount: 13,
-    rating: 4.6,
-    reviews: 124,
-    seller: "ComputerHub Store",
-    category: "Laptops",
-    brand: "Dell",
-    freeDelivery: true,
-  },
-  {
-    id: 2,
-    name: "HP Pavilion Gaming Laptop - Core i7, 16GB RAM, 1TB SSD",
-    image:
-      "https://images.unsplash.com/photo-1603302576837-37561b2e2302?auto=format&fit=crop&w=900&q=80",
-    price: 1099,
-    oldPrice: 1249,
-    discount: 12,
-    rating: 4.8,
-    reviews: 89,
-    seller: "Tech World",
-    category: "Laptops",
-    brand: "HP",
-    freeDelivery: true,
-  },
-  {
-    id: 3,
-    name: "Lenovo ThinkPad Business Laptop - Core i5, 16GB RAM",
-    image:
-      "https://images.unsplash.com/photo-1541807084-5c52b6b3adef?auto=format&fit=crop&w=900&q=80",
-    price: 849,
-    oldPrice: 949,
-    discount: 11,
-    rating: 4.7,
-    reviews: 76,
-    seller: "Laptop Center",
-    category: "Laptops",
-    brand: "Lenovo",
-    freeDelivery: true,
-  },
-  {
-    id: 4,
-    name: "Apple MacBook Air M3 - 13-inch, 16GB RAM, 512GB SSD",
-    image:
-      "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=900&q=80",
-    price: 1299,
-    oldPrice: 1399,
-    discount: 7,
-    rating: 4.9,
-    reviews: 215,
-    seller: "Apple Technology Store",
-    category: "Laptops",
-    brand: "Apple",
-    freeDelivery: true,
-  },
-  {
-    id: 5,
-    name: "ASUS ROG Gaming Desktop PC - Ryzen 7, 32GB RAM, RTX Graphics",
-    image:
-      "https://images.unsplash.com/photo-1587202372634-32705e3bf49c?auto=format&fit=crop&w=900&q=80",
-    price: 1599,
-    oldPrice: 1799,
-    discount: 11,
-    rating: 4.8,
-    reviews: 94,
-    seller: "Gaming Zone",
-    category: "Desktops",
-    brand: "ASUS",
-    freeDelivery: true,
-  },
-  {
-    id: 6,
-    name: "MSI Gaming Desktop - Intel Core i7, 32GB RAM, RTX 4070",
-    image:
-      "https://images.unsplash.com/photo-1593640408182-31c70c8268f5?auto=format&fit=crop&w=900&q=80",
-    price: 1899,
-    oldPrice: 2099,
-    discount: 10,
-    rating: 4.7,
-    reviews: 67,
-    seller: "PC Masters",
-    category: "Desktops",
-    brand: "MSI",
-    freeDelivery: true,
-  },
-  {
-    id: 7,
-    name: "Samsung 27-inch 4K UHD Monitor",
-    image:
-      "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?auto=format&fit=crop&w=900&q=80",
-    price: 399,
-    oldPrice: 469,
-    discount: 15,
-    rating: 4.5,
-    reviews: 143,
-    seller: "Display Store",
-    category: "Monitors",
-    brand: "Samsung",
-    freeDelivery: true,
-  },
-  {
-    id: 8,
-    name: "Acer 24-inch Gaming Monitor 165Hz",
-    image:
-      "https://images.unsplash.com/photo-1616763355548-1b606f439f86?auto=format&fit=crop&w=900&q=80",
-    price: 279,
-    oldPrice: 329,
-    discount: 15,
-    rating: 4.4,
-    reviews: 98,
-    seller: "Gaming Zone",
-    category: "Monitors",
-    brand: "Acer",
-    freeDelivery: true,
-  },
-  {
-    id: 9,
-    name: "Corsair 32GB DDR5 RAM Kit",
-    image:
-      "https://images.unsplash.com/photo-1562976540-1502c2145186?auto=format&fit=crop&w=900&q=80",
-    price: 119,
-    oldPrice: 149,
-    discount: 20,
-    rating: 4.8,
-    reviews: 187,
-    seller: "PC Components Hub",
-    category: "PC Components",
-    brand: "Corsair",
-    freeDelivery: true,
-  },
-  {
-    id: 10,
-    name: "Samsung 1TB NVMe SSD",
-    image:
-      "https://images.unsplash.com/photo-1597872200969-2b65d56bd16b?auto=format&fit=crop&w=900&q=80",
-    price: 89,
-    oldPrice: 109,
-    discount: 18,
-    rating: 4.9,
-    reviews: 241,
-    seller: "Storage World",
-    category: "PC Components",
-    brand: "Samsung",
-    freeDelivery: true,
-  },
-  {
-    id: 11,
-    name: "ASUS Mechanical Gaming Keyboard RGB",
-    image:
-      "https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=900&q=80",
-    price: 79,
-    oldPrice: 99,
-    discount: 20,
-    rating: 4.6,
-    reviews: 154,
-    seller: "Gaming Accessories",
-    category: "Accessories",
-    brand: "ASUS",
-    freeDelivery: true,
-  },
-  {
-    id: 12,
-    name: "Logitech Wireless Gaming Mouse",
-    image:
-      "https://images.unsplash.com/photo-1527814050087-3793815479db?auto=format&fit=crop&w=900&q=80",
-    price: 59,
-    oldPrice: 79,
-    discount: 25,
-    rating: 4.7,
-    reviews: 203,
-    seller: "Gaming Accessories",
-    category: "Accessories",
-    brand: "Logitech",
-    freeDelivery: true,
-  },
-];
-
-function SearchResults() {
+function SearchPageContent() {
   const searchParams = useSearchParams();
 
-  const rawQuery =
-    searchParams.get("q") || "";
+  const searchQuery = searchParams.get("q") || "";
+  const brandQuery = searchParams.get("brand") || "";
 
-  const searchQuery =
-    rawQuery.trim().toLowerCase();
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const results = products.filter(
-    (product) => {
-      if (!searchQuery) {
-        return true;
+  const [sortBy, setSortBy] = useState("featured");
+  const [showFilters, setShowFilters] = useState(false);
+
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadProducts() {
+      try {
+        setLoading(true);
+        setError("");
+
+        const response = await fetch("/api/products", {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data?.success) {
+          throw new Error(
+            data?.message || "Unable to load products."
+          );
+        }
+
+        if (!cancelled) {
+          setProducts(Array.isArray(data.products) ? data.products : []);
+        }
+      } catch (err) {
+        console.error("Search products error:", err);
+
+        if (!cancelled) {
+          setError(
+            err?.message || "Unable to load products right now."
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadProducts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const normalizedProducts = useMemo(() => {
+    return products.map((product) => {
+      const category =
+        typeof product.categoryId === "object"
+          ? product.categoryId
+          : null;
+
+      const images = Array.isArray(product.images)
+        ? product.images.filter(Boolean)
+        : [];
+
+      const image =
+        product.image ||
+        images[0] ||
+        "/placeholder-product.png";
+
+      const price = Number(product.price || 0);
+
+      const oldPrice =
+        Number(product.oldPrice || product.originalPrice || 0) ||
+        null;
+
+      return {
+        ...product,
+
+        id: product._id || product.id,
+
+        name: product.name || "Unnamed Product",
+
+        image,
+
+        images,
+
+        price,
+
+        oldPrice,
+
+        originalPrice: Number(product.originalPrice || 0),
+
+        stock: Number(product.stock || 0),
+
+        brand: product.brand || "",
+
+        categoryName:
+          category?.name ||
+          product.category ||
+          "",
+
+        categorySlug:
+          category?.slug ||
+          "",
+
+        sellerName:
+          product.sellerName ||
+          product.seller?.name ||
+          product.createdBy?.name ||
+          "",
+
+        description:
+          product.description ||
+          product.shortDescription ||
+          "",
+
+        sku: product.sku || "",
+
+        featured: Boolean(product.featured),
+
+        rating: Number(
+          product.rating ||
+            product.averageRating ||
+            0
+        ),
+
+        freeDelivery: Boolean(product.freeDelivery),
+      };
+    });
+  }, [products]);
+
+  const categories = useMemo(() => {
+    const values = normalizedProducts
+      .map((product) => product.categoryName)
+      .filter(Boolean);
+
+    return [...new Set(values)].sort((a, b) =>
+      a.localeCompare(b)
+    );
+  }, [normalizedProducts]);
+
+  const brands = useMemo(() => {
+    const values = normalizedProducts
+      .map((product) => product.brand)
+      .filter(Boolean);
+
+    return [...new Set(values)].sort((a, b) =>
+      a.localeCompare(b)
+    );
+  }, [normalizedProducts]);
+
+  const filteredProducts = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    const brand = brandQuery.trim().toLowerCase();
+
+    let result = normalizedProducts.filter((product) => {
+      const searchableText = [
+        product.name,
+        product.brand,
+        product.categoryName,
+        product.categorySlug,
+        product.sellerName,
+        product.description,
+        product.shortDescription,
+        product.sku,
+        product.processor,
+        product.ram,
+        product.storage,
+        product.graphics,
+        product.screenSize,
+        product.subcategory,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      const matchesSearch =
+        !query || searchableText.includes(query);
+
+      const matchesBrand =
+        !brand ||
+        product.brand.toLowerCase().includes(brand);
+
+      const matchesCategory =
+        !selectedCategory ||
+        product.categoryName === selectedCategory;
+
+      const matchesPrice =
+        !maxPrice ||
+        product.price <= Number(maxPrice);
+
+      return (
+        matchesSearch &&
+        matchesBrand &&
+        matchesCategory &&
+        matchesPrice
+      );
+    });
+
+    result = [...result].sort((a, b) => {
+      if (sortBy === "price-low") {
+        return a.price - b.price;
       }
 
-      const searchableText = `
-        ${product.name}
-        ${product.category}
-        ${product.brand}
-        ${product.seller}
-      `.toLowerCase();
+      if (sortBy === "price-high") {
+        return b.price - a.price;
+      }
 
-      return searchableText.includes(
-        searchQuery
-      );
-    }
-  );
+      if (sortBy === "rating") {
+        return b.rating - a.rating;
+      }
+
+      if (sortBy === "newest") {
+        return (
+          new Date(b.createdAt || 0).getTime() -
+          new Date(a.createdAt || 0).getTime()
+        );
+      }
+
+      if (sortBy === "featured") {
+        return Number(b.featured) - Number(a.featured);
+      }
+
+      return 0;
+    });
+
+    return result;
+  }, [
+    normalizedProducts,
+    searchQuery,
+    brandQuery,
+    selectedCategory,
+    maxPrice,
+    sortBy,
+  ]);
+
+  const heading = searchQuery.trim()
+    ? `Search results for "${searchQuery.trim()}"`
+    : brandQuery.trim()
+      ? `${brandQuery.trim()} products`
+      : "Search products";
+
+  const hasActiveFilters =
+    Boolean(brandQuery.trim()) ||
+    Boolean(selectedCategory) ||
+    Boolean(maxPrice);
+
+  function clearFilters() {
+    setSelectedCategory("");
+    setMaxPrice("");
+  }
 
   return (
-    <>
-      <section className="border-b border-gray-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-2 text-blue-600">
-            <Search size={20} />
+    <main className="min-h-screen bg-slate-50">
+      {/* Header */}
+      <section className="border-b border-slate-200 bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+          <div className="max-w-3xl">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-600">
+              <SearchIcon className="h-3.5 w-3.5" />
+              Product Search
+            </div>
 
-            <span className="text-sm font-semibold">
-              ComputerHub Search
-            </span>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
+              {heading}
+            </h1>
+
+            <p className="mt-3 text-sm leading-6 text-slate-500 sm:text-base">
+              Find laptops, desktops, components, accessories
+              and other technology from the ComputerHub marketplace.
+            </p>
           </div>
-
-          <h1 className="mt-2 text-2xl font-bold text-gray-900 md:text-3xl">
-            {searchQuery
-              ? `Search results for "${rawQuery}"`
-              : "Search Products"}
-          </h1>
-
-          <p className="mt-2 text-sm text-gray-500">
-            {results.length} product
-            {results.length !== 1
-              ? "s"
-              : ""}{" "}
-            found
-          </p>
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {results.length > 0 ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {results.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-xl border border-gray-200 bg-white px-6 py-16 text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
-              <Search
-                size={28}
-                className="text-gray-400"
-              />
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        {/* Toolbar */}
+        <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-slate-900">
+                {loading
+                  ? "Finding products..."
+                  : `${filteredProducts.length} ${
+                      filteredProducts.length === 1
+                        ? "product"
+                        : "products"
+                    } found`}
+              </p>
+
+              {(searchQuery || brandQuery) && (
+                <p className="mt-1 text-xs text-slate-500">
+                  {searchQuery
+                    ? `Search: ${searchQuery}`
+                    : `Brand: ${brandQuery}`}
+                </p>
+              )}
             </div>
 
-            <h2 className="mt-5 text-xl font-bold text-gray-900">
-              No products found
-            </h2>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={() =>
+                  setShowFilters((current) => !current)
+                }
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 lg:hidden"
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+                Filters
+              </button>
 
-            <p className="mx-auto mt-2 max-w-md text-sm text-gray-500">
-              We couldn't find any products matching
-              your search. Try another keyword such as
-              laptop, gaming, Dell, SSD or monitor.
-            </p>
+              <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3">
+                <span className="whitespace-nowrap text-xs font-semibold text-slate-500">
+                  Sort
+                </span>
 
-            <Link
-              href="/products"
-              className="mt-6 inline-flex rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
-            >
-              Browse All Products
-            </Link>
+                <select
+                  value={sortBy}
+                  onChange={(event) =>
+                    setSortBy(event.target.value)
+                  }
+                  className="bg-transparent py-2.5 text-sm font-semibold text-slate-800 outline-none"
+                >
+                  <option value="featured">
+                    Featured
+                  </option>
+
+                  <option value="newest">
+                    Newest
+                  </option>
+
+                  <option value="price-low">
+                    Price: Low to High
+                  </option>
+
+                  <option value="price-high">
+                    Price: High to Low
+                  </option>
+
+                  <option value="rating">
+                    Top Rated
+                  </option>
+                </select>
+
+                <ChevronDown className="h-4 w-4 text-slate-400" />
+              </label>
+            </div>
           </div>
-        )}
-      </section>
-    </>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
+          {/* Desktop Filters */}
+          <aside
+            className={`${
+              showFilters ? "block" : "hidden"
+            } lg:block`}
+          >
+            <div className="sticky top-24 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="mb-5 flex items-center justify-between">
+                <div>
+                  <h2 className="text-sm font-bold text-slate-950">
+                    Filters
+                  </h2>
+
+                  <p className="mt-1 text-xs text-slate-500">
+                    Refine your results
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowFilters(false)}
+                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 lg:hidden"
+                  aria-label="Close filters"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {brandQuery && (
+                <div className="mb-5 rounded-xl bg-slate-50 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    Brand
+                  </p>
+
+                  <p className="mt-1 text-sm font-semibold text-slate-800">
+                    {brandQuery}
+                  </p>
+                </div>
+              )}
+
+              {/* Category */}
+              <div className="border-b border-slate-100 pb-5">
+                <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
+                  Category
+                </label>
+
+                <select
+                  value={selectedCategory}
+                  onChange={(event) =>
+                    setSelectedCategory(event.target.value)
+                  }
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none transition focus:border-slate-400"
+                >
+                  <option value="">
+                    All categories
+                  </option>
+
+                  {categories.map((category) => (
+                    <option
+                      key={category}
+                      value={category}
+                    >
+                      {category}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Price */}
+              <div className="border-b border-slate-100 py-5">
+                <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
+                  Maximum price
+                </label>
+
+                <select
+                  value={maxPrice}
+                  onChange={(event) =>
+                    setMaxPrice(event.target.value)
+                  }
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none transition focus:border-slate-400"
+                >
+                  <option value="">Any price</option>
+                  <option value="25000">Up to 25,000</option>
+                  <option value="50000">Up to 50,000</option>
+                  <option value="100000">
+                    Up to 100,000
+                  </option>
+                  <option value="200000">
+                    Up to 200,000
+                  </option>
+                  <option value="500000">
+                    Up to 500,000
+                  </option>
+                </select>
+              </div>
+
+              {/* Brands */}
+              {brands.length > 0 && (
+                <div className="pt-5">
+                  <p className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Available brands
+                  </p>
+
+                  <div className="flex flex-wrap gap-2">
+                    {brands.slice(0, 12).map((brand) => {
+                      const active =
+                        brandQuery.toLowerCase() ===
+                        brand.toLowerCase();
+
+                      return (
+                        <span
+                          key={brand}
+                          className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium ${
+                            active
+                              ? "border-slate-900 bg-slate-900 text-white"
+                              : "border-slate-200 bg-white text-slate-600"
+                          }`}
+                        >
+                          {brand}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="mt-5 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Clear filters
+                </button>
+              )}
+            </div>
+          </aside>
+
+          {/* Products */}
+          <section>
+            {loading ? (
+              <div className="flex min-h-[420px] items-center justify-center rounded-2xl border border-slate-200 bg-white">
+                <div className="text-center">
+                  <Loader2 className="mx-auto h-8 w-8 animate-spin text-slate-400" />
+
+                  <p className="mt-4 text-sm font-semibold text-slate-700">
+                    Loading products
+                  </p>
+
+                  <p className="mt-1 text-xs text-slate-500">
+                    Please wait while we find the latest products.
+                  </p>
+                </div>
+              </div>
+            ) : error ? (
+              <div className="rounded-2xl border border-red-200 bg-white p-8 text-center">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-50">
+                  <AlertCircle className="h-6 w-6 text-red-500" />
+                </div>
+
+                <h2 className="mt-4 text-lg font-bold text-slate-950">
+                  Unable to load products
+                </h2>
+
+                <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
+                  {error}
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => window.location.reload()}
+                  className="mt-5 rounded-xl bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+                >
+                  Try again
+                </button>
+              </div>
+            ) : filteredProducts.length === 0 ? (
+              <div className="rounded-2xl border border-slate-200 bg-white px-6 py-16 text-center">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
+                  <SearchIcon className="h-6 w-6 text-slate-500" />
+                </div>
+
+                <h2 className="mt-5 text-xl font-bold text-slate-950">
+                  No products found
+                </h2>
+
+                <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
+                  Try a different search term or remove some
+                  filters to see more products.
+                </p>
+
+                {hasActiveFilters && (
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="mt-5 rounded-xl bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+                  >
+                    Clear filters
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                {filteredProducts.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+      </div>
+    </main>
   );
 }
 
 export default function SearchPage() {
   return (
-    <main className="min-h-screen bg-gray-50">
-      <Suspense
-        fallback={
-          <section className="flex min-h-[70vh] items-center justify-center">
-            <div className="text-sm text-gray-500">
-              Loading search...
-            </div>
-          </section>
-        }
-      >
-        <SearchResults />
-      </Suspense>
-    </main>
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center bg-slate-50">
+          <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+        </main>
+      }
+    >
+      <SearchPageContent />
+    </Suspense>
   );
 }
