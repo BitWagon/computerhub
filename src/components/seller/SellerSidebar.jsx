@@ -3,18 +3,19 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
-  Package,
-  ShoppingBag,
-  Plus,
-  Store,
   ArrowLeft,
+  LayoutDashboard,
   LogOut,
+  Package,
+  Plus,
+  ShoppingBag,
+  Store,
 } from "lucide-react";
 
 export default function SellerSidebar({
   onLogout,
   loggingOut = false,
+  onNavigate,
 }) {
   const pathname = usePathname();
 
@@ -50,22 +51,24 @@ export default function SellerSidebar({
   }
 
   return (
-    <aside className="flex h-full w-64 flex-col border-r border-gray-200 bg-white">
-      <div className="border-b border-gray-200 p-5">
+    <aside className="flex h-full min-h-[calc(100vh-4rem)] w-64 flex-col border-r border-slate-200 bg-white">
+
+      <div className="border-b border-slate-100 p-5">
         <Link
           href="/seller"
+          onClick={onNavigate}
           className="flex items-center gap-3"
         >
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm">
             <Store size={20} />
           </div>
 
           <div>
-            <p className="font-bold text-gray-900">
+            <p className="font-black text-slate-950">
               ComputerHub
             </p>
 
-            <p className="text-xs text-gray-500">
+            <p className="text-xs font-medium text-slate-500">
               Seller Center
             </p>
           </div>
@@ -73,46 +76,68 @@ export default function SellerSidebar({
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto p-4">
+        <p className="mb-3 px-3 text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+          Workspace
+        </p>
+
         {links.map((link) => {
           const Icon = link.icon;
-          const active = isActive(link.href);
+          const active = isActive(
+            link.href
+          );
 
           return (
             <Link
               key={link.href}
               href={link.href}
-              className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition ${
+              onClick={onNavigate}
+              className={`group flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold transition ${
                 active
-                  ? "bg-blue-50 text-blue-700"
-                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
               }`}
             >
-              <Icon size={19} />
+              <Icon
+                size={19}
+                className={
+                  active
+                    ? "text-white"
+                    : "text-slate-400 group-hover:text-blue-600"
+                }
+              />
 
               <span>{link.label}</span>
             </Link>
           );
         })}
 
-        <div className="my-4 border-t border-gray-200" />
+        <div className="my-5 border-t border-slate-100" />
+
+        <p className="mb-3 px-3 text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+          Store
+        </p>
 
         <Link
           href="/products"
-          className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-gray-600 transition hover:bg-gray-50 hover:text-gray-900"
+          onClick={onNavigate}
+          className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold text-slate-600 transition hover:bg-slate-50 hover:text-slate-950"
         >
-          <ArrowLeft size={19} />
+          <ArrowLeft
+            size={19}
+            className="text-slate-400"
+          />
 
           <span>View Store</span>
         </Link>
       </nav>
 
       {onLogout && (
-        <div className="border-t border-gray-200 p-4">
+        <div className="border-t border-slate-100 p-4">
           <button
             type="button"
             onClick={onLogout}
             disabled={loggingOut}
-            className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <LogOut size={19} />
 

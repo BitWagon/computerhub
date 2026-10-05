@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -48,35 +48,37 @@ export default function EditProductPage() {
     isActive: true,
   });
 
-  /*
-   * Load active categories
-   */
   useEffect(() => {
     async function loadCategories() {
       try {
         setLoadingCategories(true);
 
-        const response = await fetch(
-          "/api/categories",
-          {
-            credentials: "include",
-            cache: "no-store",
-          }
-        );
+        const response = await fetch("/api/categories", {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
+        });
 
         const data = await response.json();
 
         if (!response.ok) {
           throw new Error(
-            data.message ||
-              "Failed to load categories."
+            data?.message || "Failed to load categories."
           );
         }
 
+        const loadedCategories = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.categories)
+          ? data.categories
+          : Array.isArray(data?.data)
+          ? data.data
+          : [];
+
         setCategories(
-          Array.isArray(data.categories)
-            ? data.categories
-            : []
+          loadedCategories.filter(
+            (category) => category?.isActive !== false
+          )
         );
       } catch (error) {
         console.error(
@@ -85,8 +87,7 @@ export default function EditProductPage() {
         );
 
         toast.error(
-          error.message ||
-            "Failed to load categories."
+          error?.message || "Failed to load categories."
         );
       } finally {
         setLoadingCategories(false);
@@ -96,9 +97,6 @@ export default function EditProductPage() {
     loadCategories();
   }, []);
 
-  /*
-   * Load product
-   */
   useEffect(() => {
     async function loadProduct() {
       if (!productId) {
@@ -111,6 +109,7 @@ export default function EditProductPage() {
         const response = await fetch(
           "/api/products?includeInactive=true",
           {
+            method: "GET",
             credentials: "include",
             cache: "no-store",
           }
@@ -120,30 +119,28 @@ export default function EditProductPage() {
 
         if (!response.ok) {
           throw new Error(
-            data.message ||
-              "Failed to load products."
+            data?.message || "Failed to load products."
           );
         }
 
-        const product =
-          data.products?.find(
-            (item) =>
-              item._id?.toString() ===
-                productId ||
-              item.id?.toString() ===
-                productId
-          );
+        const products = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.products)
+          ? data.products
+          : Array.isArray(data?.data)
+          ? data.data
+          : [];
+
+        const product = products.find(
+          (item) =>
+            item?._id?.toString() === productId ||
+            item?.id?.toString() === productId
+        );
 
         if (!product) {
-          throw new Error(
-            "Product not found."
-          );
+          throw new Error("Product not found.");
         }
 
-        /*
-         * Get category ID from the new
-         * categoryId relationship.
-         */
         const existingCategoryId =
           product.categoryId?._id ||
           product.categoryId ||
@@ -158,26 +155,19 @@ export default function EditProductPage() {
           description:
             product.description || "",
 
-          price:
-            product.price ?? "",
+          price: product.price ?? "",
 
-          oldPrice:
-            product.oldPrice ?? "",
+          oldPrice: product.oldPrice ?? "",
 
-          stock:
-            product.stock ?? "",
+          stock: product.stock ?? "",
 
-          sku:
-            product.sku || "",
+          sku: product.sku || "",
 
-          brand:
-            product.brand || "",
+          brand: product.brand || "",
 
-          category:
-            product.category || "",
+          category: product.category || "",
 
-          categoryId:
-            existingCategoryId,
+          categoryId: existingCategoryId,
 
           subcategory:
             product.subcategory || "",
@@ -197,13 +187,11 @@ export default function EditProductPage() {
           screenSize:
             product.screenSize || "",
 
-          images:
-            Array.isArray(product.images)
-              ? product.images.join("\n")
-              : "",
+          images: Array.isArray(product.images)
+            ? product.images.join("\n")
+            : "",
 
-          featured:
-            Boolean(product.featured),
+          featured: Boolean(product.featured),
 
           freeDelivery:
             Boolean(product.freeDelivery),
@@ -212,16 +200,16 @@ export default function EditProductPage() {
             product.isActive !== false,
         });
       } catch (error) {
-        console.error(error);
+        console.error(
+          "Product loading error:",
+          error
+        );
 
         toast.error(
-          error.message ||
-            "Failed to load product."
+          error?.message || "Failed to load product."
         );
 
-        router.push(
-          "/seller/products"
-        );
+        router.push("/seller/products");
       } finally {
         setLoading(false);
       }
@@ -230,33 +218,26 @@ export default function EditProductPage() {
     loadProduct();
   }, [productId, router]);
 
-  /*
-   * For older products that have a category
-   * name but no categoryId, automatically find
-   * the matching active category.
-   */
   useEffect(() => {
     if (
       !formData.categoryId &&
       formData.category &&
       categories.length > 0
     ) {
-      const matchingCategory =
-        categories.find(
-          (category) =>
-            String(category.name)
-              .trim()
-              .toLowerCase() ===
-            String(formData.category)
-              .trim()
-              .toLowerCase()
-        );
+      const matchingCategory = categories.find(
+        (category) =>
+          String(category.name)
+            .trim()
+            .toLowerCase() ===
+          String(formData.category)
+            .trim()
+            .toLowerCase()
+      );
 
       if (matchingCategory) {
         setFormData((previous) => ({
           ...previous,
-          categoryId:
-            matchingCategory._id,
+          categoryId: matchingCategory._id,
         }));
       }
     }
@@ -274,10 +255,6 @@ export default function EditProductPage() {
       checked,
     } = event.target;
 
-    /*
-     * When seller selects a category,
-     * also store its name locally.
-     */
     if (name === "categoryId") {
       const selectedCategory =
         categories.find(
@@ -288,12 +265,9 @@ export default function EditProductPage() {
 
       setFormData((previous) => ({
         ...previous,
-
         categoryId: value,
-
         category:
-          selectedCategory?.name ||
-          "",
+          selectedCategory?.name || "",
       }));
 
       return;
@@ -301,7 +275,6 @@ export default function EditProductPage() {
 
     setFormData((previous) => ({
       ...previous,
-
       [name]:
         type === "checkbox"
           ? checked
@@ -309,20 +282,37 @@ export default function EditProductPage() {
     }));
   }
 
+  const calculatedDiscount = useMemo(() => {
+    const price = Number(formData.price);
+    const oldPrice = Number(formData.oldPrice);
+
+    if (
+      !Number.isFinite(price) ||
+      !Number.isFinite(oldPrice) ||
+      price <= 0 ||
+      oldPrice <= price
+    ) {
+      return 0;
+    }
+
+    return Math.round(
+      ((oldPrice - price) / oldPrice) * 100
+    );
+  }, [
+    formData.price,
+    formData.oldPrice,
+  ]);
+
   async function handleSubmit(event) {
     event.preventDefault();
 
     if (!productId) {
-      toast.error(
-        "Product ID is missing."
-      );
+      toast.error("Product ID is missing.");
       return;
     }
 
     if (!formData.name.trim()) {
-      toast.error(
-        "Product name is required."
-      );
+      toast.error("Product name is required.");
       return;
     }
 
@@ -333,10 +323,6 @@ export default function EditProductPage() {
       return;
     }
 
-    /*
-     * Category is now selected from the
-     * Category collection.
-     */
     if (!formData.categoryId) {
       toast.error(
         "Please select a product category."
@@ -348,9 +334,7 @@ export default function EditProductPage() {
       formData.price === "" ||
       Number(formData.price) < 0
     ) {
-      toast.error(
-        "Enter a valid price."
-      );
+      toast.error("Enter a valid price.");
       return;
     }
 
@@ -368,66 +352,46 @@ export default function EditProductPage() {
 
     try {
       const images = formData.images
-        .split("\n")
-        .map((image) =>
-          image.trim()
-        )
+        .split(/\r?\n|,/)
+        .map((image) => image.trim())
         .filter(Boolean);
 
       const response = await fetch(
         "/api/products",
         {
           method: "PATCH",
-
           headers: {
             "Content-Type":
               "application/json",
           },
-
           credentials: "include",
-
           body: JSON.stringify({
             id: productId,
 
-            name:
-              formData.name,
+            name: formData.name.trim(),
 
             shortDescription:
-              formData.shortDescription,
+              formData.shortDescription.trim(),
 
             description:
-              formData.description,
+              formData.description.trim(),
 
-            price:
-              Number(formData.price),
+            price: Number(formData.price),
 
             oldPrice:
               formData.oldPrice === ""
                 ? null
-                : Number(
-                    formData.oldPrice
-                  ),
+                : Number(formData.oldPrice),
 
-            stock:
-              Number(formData.stock),
+            stock: Number(formData.stock),
 
-            sku:
-              formData.sku,
+            sku: formData.sku,
 
-            brand:
-              formData.brand,
+            brand: formData.brand,
 
-            /*
-             * NEW:
-             * Send the Category ObjectId.
-             */
             categoryId:
               formData.categoryId,
 
-            /*
-             * Keep category name as well
-             * for backward compatibility.
-             */
             category:
               formData.category,
 
@@ -468,7 +432,7 @@ export default function EditProductPage() {
 
       if (!response.ok) {
         throw new Error(
-          data.message ||
+          data?.message ||
             "Failed to update product."
         );
       }
@@ -477,16 +441,16 @@ export default function EditProductPage() {
         "Product updated successfully."
       );
 
-      router.push(
-        "/seller/products"
-      );
-
+      router.push("/seller/products");
       router.refresh();
     } catch (error) {
-      console.error(error);
+      console.error(
+        "Update product error:",
+        error
+      );
 
       toast.error(
-        error.message ||
+        error?.message ||
           "Something went wrong."
       );
     } finally {
@@ -497,127 +461,314 @@ export default function EditProductPage() {
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-50">
-        <div className="flex items-center gap-3 text-slate-600">
-          <Loader2 className="h-6 w-6 animate-spin" />
-          Loading product...
+        <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-6 py-5 text-slate-600 shadow-sm">
+          <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+          <span className="font-semibold">
+            Loading product...
+          </span>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-8">
-      <div className="mx-auto max-w-6xl">
+    <main className="min-h-screen bg-slate-50 py-8">
+      <div className="container-main">
+        <div className="mx-auto max-w-5xl">
 
-        {/* Header */}
-        <div className="mb-8">
           <Link
             href="/seller/products"
-            className="mb-3 inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-blue-600"
+            className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-slate-600 transition hover:text-blue-600"
           >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Products
+            <ArrowLeft size={17} />
+            Back to My Products
           </Link>
 
-          <h1 className="flex items-center gap-3 text-3xl font-bold text-slate-900">
-            <Package className="h-8 w-8 text-blue-600" />
-            Edit Product
-          </h1>
+          <div className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-100 bg-gradient-to-r from-blue-50 to-white p-6">
+              <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm">
+                  <Package size={24} />
+                </div>
 
-          <p className="mt-2 text-slate-600">
-            Update your product information.
-          </p>
-        </div>
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-widest text-blue-600">
+                    Seller Center
+                  </p>
 
-        <form
-          onSubmit={handleSubmit}
-          className="space-y-6"
-        >
+                  <h1 className="mt-1 text-2xl font-black text-slate-900 sm:text-3xl">
+                    Edit Product
+                  </h1>
 
-          {/* Basic Information */}
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-5 text-xl font-bold text-slate-900">
-              Basic Information
-            </h2>
+                  <p className="mt-2 text-sm text-slate-500">
+                    Update product details, pricing,
+                    inventory and visibility.
+                  </p>
+                </div>
+              </div>
+            </div>
 
-            <div className="grid gap-5 md:grid-cols-2">
-
-              {/* Product Name */}
-              <div className="md:col-span-2">
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Product Name *
-                </label>
-
-                <input
-                  name="name"
-                  value={
-                    formData.name
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  required
-                />
+            <div className="grid grid-cols-3 divide-x border-t border-slate-100">
+              <div className="p-4">
+                <p className="text-xs font-semibold text-slate-400">
+                  SKU
+                </p>
+                <p className="mt-1 truncate text-sm font-bold text-slate-900">
+                  {formData.sku || "Auto"}
+                </p>
               </div>
 
-              {/* Short Description */}
-              <div className="md:col-span-2">
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Short Description
-                </label>
-
-                <input
-                  name="shortDescription"
-                  value={
-                    formData.shortDescription
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                />
+              <div className="p-4">
+                <p className="text-xs font-semibold text-slate-400">
+                  STATUS
+                </p>
+                <p className="mt-1 text-sm font-bold text-slate-900">
+                  {formData.isActive
+                    ? "Active"
+                    : "Inactive"}
+                </p>
               </div>
 
-              {/* Description */}
-              <div className="md:col-span-2">
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Description *
-                </label>
+              <div className="p-4">
+                <p className="text-xs font-semibold text-slate-400">
+                  DISCOUNT
+                </p>
+                <p className="mt-1 text-sm font-bold text-slate-900">
+                  {calculatedDiscount > 0
+                    ? `${calculatedDiscount}%`
+                    : "—"}
+                </p>
+              </div>
+            </div>
+          </div>
 
-                <textarea
-                  name="description"
-                  value={
-                    formData.description
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  rows={6}
-                  className="w-full resize-none rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  required
-                />
+          <form
+            onSubmit={handleSubmit}
+            className="space-y-6"
+          >
+
+            {/* BASIC INFORMATION */}
+            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="mb-5">
+                <h2 className="text-xl font-bold text-slate-900">
+                  Basic Information
+                </h2>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  Update the main product information.
+                </p>
               </div>
 
-              {/* Brand */}
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Brand
-                </label>
+              <div className="space-y-5">
 
-                <input
-                  name="brand"
-                  value={
-                    formData.brand
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                />
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                    Product Name *
+                  </label>
+
+                  <input
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                    Short Description
+                  </label>
+
+                  <input
+                    name="shortDescription"
+                    value={
+                      formData.shortDescription
+                    }
+                    onChange={handleChange}
+                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                    Description *
+                  </label>
+
+                  <textarea
+                    name="description"
+                    value={formData.description}
+                    onChange={handleChange}
+                    rows={6}
+                    className="w-full resize-none rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                    required
+                  />
+                </div>
               </div>
+            </section>
 
-              {/* SKU */}
+            {/* PRICE */}
+            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h2 className="mb-5 text-xl font-bold text-slate-900">
+                Pricing & Inventory
+              </h2>
+
+              <div className="grid gap-5 md:grid-cols-3">
+
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                    Selling Price *
+                  </label>
+
+                  <input
+                    name="price"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.price}
+                    onChange={handleChange}
+                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                    Original Price
+                  </label>
+
+                  <input
+                    name="oldPrice"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.oldPrice}
+                    onChange={handleChange}
+                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                    Stock *
+                  </label>
+
+                  <input
+                    name="stock"
+                    type="number"
+                    min="0"
+                    value={formData.stock}
+                    onChange={handleChange}
+                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                    required
+                  />
+                </div>
+              </div>
+            </section>
+
+            {/* CATEGORY */}
+            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h2 className="mb-5 text-xl font-bold text-slate-900">
+                Category
+              </h2>
+
+              <div className="grid gap-5 md:grid-cols-2">
+
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                    Category *
+                  </label>
+
+                  <select
+                    name="categoryId"
+                    value={formData.categoryId || ""}
+                    onChange={handleChange}
+                    disabled={loadingCategories}
+                    required
+                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 disabled:bg-slate-100"
+                  >
+                    <option value="">
+                      {loadingCategories
+                        ? "Loading categories..."
+                        : "Select a category"}
+                    </option>
+
+                    {categories.map((category) => (
+                      <option
+                        key={category._id}
+                        value={category._id}
+                      >
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                    Subcategory
+                  </label>
+
+                  <input
+                    name="subcategory"
+                    value={formData.subcategory}
+                    onChange={handleChange}
+                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                  />
+                </div>
+              </div>
+            </section>
+
+            {/* SPECIFICATIONS */}
+            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h2 className="mb-5 text-xl font-bold text-slate-900">
+                Product Specifications
+              </h2>
+
+              <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                    Brand
+                  </label>
+
+                  <input
+                    name="brand"
+                    value={formData.brand}
+                    onChange={handleChange}
+                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                  />
+                </div>
+
+                {[
+                  ["processor", "Processor"],
+                  ["ram", "RAM"],
+                  ["storage", "Storage"],
+                  ["graphics", "Graphics"],
+                  ["screenSize", "Screen Size"],
+                ].map(([name, label]) => (
+                  <div key={name}>
+                    <label className="mb-2 block text-sm font-semibold text-slate-700">
+                      {label}
+                    </label>
+
+                    <input
+                      name={name}
+                      value={formData[name]}
+                      onChange={handleChange}
+                      className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                    />
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* SKU */}
+            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h2 className="mb-4 text-xl font-bold text-slate-900">
+                Product Identification
+              </h2>
+
               <div>
                 <label className="mb-2 block text-sm font-semibold text-slate-700">
                   SKU
@@ -625,406 +776,106 @@ export default function EditProductPage() {
 
                 <input
                   name="sku"
-                  value={
-                    formData.sku
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  value={formData.sku}
+                  onChange={handleChange}
+                  className="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 />
               </div>
+            </section>
 
+            {/* IMAGES */}
+            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="mb-5 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                  <ImageIcon size={20} />
+                </div>
+
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900">
+                    Product Images
+                  </h2>
+
+                  <p className="text-sm text-slate-500">
+                    One image URL per line.
+                  </p>
+                </div>
+              </div>
+
+              <textarea
+                name="images"
+                value={formData.images}
+                onChange={handleChange}
+                rows={6}
+                className="w-full resize-none rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+              />
+            </section>
+
+            {/* OPTIONS */}
+            <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h2 className="mb-5 text-xl font-bold text-slate-900">
+                Product Options
+              </h2>
+
+              <div className="grid gap-4 md:grid-cols-3">
+
+                {[
+                  ["featured", "Featured Product"],
+                  ["freeDelivery", "Free Delivery"],
+                  ["isActive", "Active Product"],
+                ].map(([name, label]) => (
+                  <label
+                    key={name}
+                    className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 p-4 transition hover:border-blue-200 hover:bg-blue-50/40"
+                  >
+                    <input
+                      type="checkbox"
+                      name={name}
+                      checked={formData[name]}
+                      onChange={handleChange}
+                      className="h-5 w-5 rounded"
+                    />
+
+                    <span className="text-sm font-semibold text-slate-700">
+                      {label}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </section>
+
+            {/* ACTIONS */}
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <Link
+                href="/seller/products"
+                className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-6 py-3 font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                Cancel
+              </Link>
+
+              <button
+                type="submit"
+                disabled={
+                  saving ||
+                  loadingCategories
+                }
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-5 w-5" />
+                    Save Changes
+                  </>
+                )}
+              </button>
             </div>
-          </section>
 
-          {/* Pricing & Stock */}
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-5 text-xl font-bold text-slate-900">
-              Pricing & Stock
-            </h2>
-
-            <div className="grid gap-5 md:grid-cols-3">
-
-              {/* Price */}
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Price *
-                </label>
-
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  name="price"
-                  value={
-                    formData.price
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  required
-                />
-              </div>
-
-              {/* Original Price */}
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Original Price
-                </label>
-
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  name="oldPrice"
-                  value={
-                    formData.oldPrice
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                />
-              </div>
-
-              {/* Stock */}
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Stock *
-                </label>
-
-                <input
-                  type="number"
-                  min="0"
-                  name="stock"
-                  value={
-                    formData.stock
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  required
-                />
-              </div>
-
-            </div>
-          </section>
-
-          {/* Category */}
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-5 text-xl font-bold text-slate-900">
-              Category
-            </h2>
-
-            <div className="grid gap-5 md:grid-cols-2">
-
-              {/* Category Dropdown */}
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Category *
-                </label>
-
-                <select
-                  name="categoryId"
-                  value={
-                    formData.categoryId ||
-                    ""
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  disabled={
-                    loadingCategories
-                  }
-                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100"
-                  required
-                >
-                  <option value="">
-                    {loadingCategories
-                      ? "Loading categories..."
-                      : "Select a category"}
-                  </option>
-
-                  {categories.map(
-                    (category) => (
-                      <option
-                        key={
-                          category._id
-                        }
-                        value={
-                          category._id
-                        }
-                      >
-                        {
-                          category.name
-                        }
-                      </option>
-                    )
-                  )}
-                </select>
-
-                {!loadingCategories &&
-                  categories.length ===
-                    0 && (
-                    <p className="mt-2 text-xs text-red-600">
-                      No active categories
-                      are available.
-                      Create a category
-                      from the admin panel
-                      first.
-                    </p>
-                  )}
-              </div>
-
-              {/* Subcategory */}
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Subcategory
-                </label>
-
-                <input
-                  name="subcategory"
-                  value={
-                    formData.subcategory
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                />
-              </div>
-
-            </div>
-          </section>
-
-          {/* Computer Specifications */}
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-5 text-xl font-bold text-slate-900">
-              Computer Specifications
-            </h2>
-
-            <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-
-              {/* Processor */}
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Processor
-                </label>
-
-                <input
-                  name="processor"
-                  value={
-                    formData.processor
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                />
-              </div>
-
-              {/* RAM */}
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  RAM
-                </label>
-
-                <input
-                  name="ram"
-                  value={
-                    formData.ram
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                />
-              </div>
-
-              {/* Storage */}
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Storage
-                </label>
-
-                <input
-                  name="storage"
-                  value={
-                    formData.storage
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                />
-              </div>
-
-              {/* Graphics */}
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Graphics
-                </label>
-
-                <input
-                  name="graphics"
-                  value={
-                    formData.graphics
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                />
-              </div>
-
-              {/* Screen Size */}
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
-                  Screen Size
-                </label>
-
-                <input
-                  name="screenSize"
-                  value={
-                    formData.screenSize
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                />
-              </div>
-
-            </div>
-          </section>
-
-          {/* Product Images */}
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-5 flex items-center gap-2 text-xl font-bold text-slate-900">
-              <ImageIcon className="h-6 w-6 text-blue-600" />
-              Product Images
-            </h2>
-
-            <textarea
-              name="images"
-              value={
-                formData.images
-              }
-              onChange={
-                handleChange
-              }
-              rows={6}
-              placeholder="One image URL per line"
-              className="w-full resize-none rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-            />
-          </section>
-
-          {/* Product Options */}
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-5 text-xl font-bold text-slate-900">
-              Product Options
-            </h2>
-
-            <div className="grid gap-4 md:grid-cols-3">
-
-              {/* Featured */}
-              <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 p-4">
-                <input
-                  type="checkbox"
-                  name="featured"
-                  checked={
-                    formData.featured
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  className="h-5 w-5"
-                />
-
-                <span className="text-sm font-medium text-slate-700">
-                  Featured Product
-                </span>
-              </label>
-
-              {/* Free Delivery */}
-              <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 p-4">
-                <input
-                  type="checkbox"
-                  name="freeDelivery"
-                  checked={
-                    formData.freeDelivery
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  className="h-5 w-5"
-                />
-
-                <span className="text-sm font-medium text-slate-700">
-                  Free Delivery
-                </span>
-              </label>
-
-              {/* Active */}
-              <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 p-4">
-                <input
-                  type="checkbox"
-                  name="isActive"
-                  checked={
-                    formData.isActive
-                  }
-                  onChange={
-                    handleChange
-                  }
-                  className="h-5 w-5"
-                />
-
-                <span className="text-sm font-medium text-slate-700">
-                  Active Product
-                </span>
-              </label>
-
-            </div>
-          </section>
-
-          {/* Buttons */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-
-            <Link
-              href="/seller/products"
-              className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-6 py-3 font-semibold text-slate-700 transition hover:bg-slate-50"
-            >
-              Cancel
-            </Link>
-
-            <button
-              type="submit"
-              disabled={
-                saving ||
-                loadingCategories ||
-                categories.length === 0
-              }
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="h-5 w-5" />
-                  Save Changes
-                </>
-              )}
-            </button>
-
-          </div>
-
-        </form>
+          </form>
+        </div>
       </div>
     </main>
   );

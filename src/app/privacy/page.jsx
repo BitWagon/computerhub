@@ -1,17 +1,21 @@
+import Link from "next/link";
 import {
-  Shield,
-  Lock,
-  User,
-  ShoppingBag,
-  Mail,
-  Eye,
-  Cookie,
+  ArrowRight,
+  CheckCircle2,
   Clock,
+  Cookie,
+  Eye,
+  Lock,
+  Mail,
+  Shield,
+  ShoppingBag,
+  User,
 } from "lucide-react";
 
 export const metadata = {
   title: "Privacy Policy | ComputerHub",
-  description: "Learn how ComputerHub collects, uses and protects your personal information.",
+  description:
+    "Learn how ComputerHub collects, uses and protects your personal information.",
 };
 
 const sections = [
@@ -57,32 +61,31 @@ export default function PrivacyPage() {
   return (
     <main className="min-h-screen bg-slate-50">
       {/* Hero */}
-      <section className="bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 text-white">
-        <div className="mx-auto max-w-7xl px-6 py-20">
+      <section className="bg-slate-950 text-white">
+        <div className="container-main py-14 sm:py-18 lg:py-20">
           <div className="max-w-3xl">
-            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-blue-400/30 bg-blue-500/10 px-4 py-2 text-sm font-semibold text-blue-300">
-              <Shield size={16} />
+            <div className="inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-500/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-blue-300">
+              <Shield size={15} />
               Privacy & Security
             </div>
 
-            <h1 className="text-5xl font-bold leading-tight">
+            <h1 className="mt-6 text-4xl font-black tracking-tight sm:text-5xl">
               Your privacy matters.
             </h1>
 
-            <p className="mt-6 text-lg leading-8 text-slate-300">
-              ComputerHub is committed to protecting your personal information.
-              This policy explains what we collect, how we use it, and how we
-              keep it secure while you shop on our marketplace.
+            <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
+              This policy explains what information ComputerHub collects,
+              how it is used, and the measures used to help protect it.
             </p>
 
-            <div className="mt-8 flex flex-wrap gap-4 text-sm text-slate-300">
-              <div className="flex items-center gap-2">
-                <Clock size={16} />
-                Updated: September 2026
+            <div className="mt-7 flex flex-wrap gap-3">
+              <div className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-xs font-semibold text-slate-300">
+                <Clock size={15} />
+                Updated September 2026
               </div>
 
-              <div className="flex items-center gap-2">
-                <Lock size={16} />
+              <div className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-xs font-semibold text-slate-300">
+                <Lock size={15} />
                 Secure Marketplace
               </div>
             </div>
@@ -90,98 +93,153 @@ export default function PrivacyPage() {
         </div>
       </section>
 
-      {/* Quick Highlights */}
-      <section className="mx-auto -mt-10 max-w-7xl px-6">
-        <div className="grid gap-6 md:grid-cols-3">
-          <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-200">
-            <Shield className="mb-3 text-blue-600" size={32} />
-            <h3 className="font-bold text-slate-900">Secure Shopping</h3>
-            <p className="mt-2 text-sm text-slate-600">
-              We protect your account and order information using secure
-              technologies.
-            </p>
-          </div>
+      {/* Highlights */}
+      <section className="container-main -mt-8">
+        <div className="grid gap-4 md:grid-cols-3">
+          <Highlight
+            icon={Shield}
+            title="Secure Shopping"
+            text="Account and order information is handled using secure technologies."
+          />
 
-          <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-200">
-            <Eye className="mb-3 text-blue-600" size={32} />
-            <h3 className="font-bold text-slate-900">No Data Selling</h3>
-            <p className="mt-2 text-sm text-slate-600">
-              We do not sell your personal information to third parties.
-            </p>
-          </div>
+          <Highlight
+            icon={Eye}
+            title="No Data Selling"
+            text="We do not sell your personal information to third parties."
+          />
 
-          <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-200">
-            <Lock className="mb-3 text-blue-600" size={32} />
-            <h3 className="font-bold text-slate-900">Protected Payments</h3>
-            <p className="mt-2 text-sm text-slate-600">
-              Sensitive information is handled through secure encrypted
-              connections.
-            </p>
-          </div>
+          <Highlight
+            icon={Lock}
+            title="Protected Information"
+            text="Secure connections help protect information exchanged with the website."
+          />
         </div>
       </section>
 
-      {/* Policy Sections */}
-      <section className="mx-auto max-w-7xl px-6 py-16">
-        <div className="grid gap-6">
-          {sections.map((section, index) => {
+      {/* Policy */}
+      <section className="container-main py-12 sm:py-16">
+        <div className="mx-auto max-w-4xl space-y-4">
+          {sections.map((section) => {
             const Icon = section.icon;
 
             return (
-              <div
-                key={index}
-                className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm transition hover:shadow-md"
+              <article
+                key={section.title}
+                className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7"
               >
-                <div className="flex items-start gap-5">
-                  <div className="rounded-2xl bg-blue-50 p-4">
-                    <Icon className="text-blue-600" size={28} />
+                <div className="flex items-start gap-4 sm:gap-5">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                    <Icon size={21} />
                   </div>
 
-                  <div className="flex-1">
-                    <h2 className="text-2xl font-bold text-slate-900">
+                  <div>
+                    <h2 className="text-xl font-black text-slate-950">
                       {section.title}
                     </h2>
 
-                    <p className="mt-3 leading-8 text-slate-600">
+                    <p className="mt-3 text-sm leading-7 text-slate-600">
                       {section.content}
                     </p>
                   </div>
                 </div>
-              </div>
+              </article>
             );
           })}
         </div>
       </section>
 
+      {/* Good practices */}
+      <section className="container-main pb-12 sm:pb-16">
+        <div className="mx-auto max-w-4xl rounded-3xl border border-slate-200 bg-white p-7 shadow-sm sm:p-9">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600">
+            Account Security
+          </p>
+
+          <h2 className="mt-2 text-2xl font-black text-slate-950">
+            Keep your account information protected
+          </h2>
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            <SecurityTip text="Use a strong, unique password." />
+            <SecurityTip text="Keep your contact information up to date." />
+            <SecurityTip text="Do not share your account credentials." />
+            <SecurityTip text="Contact support if you notice unusual activity." />
+          </div>
+        </div>
+      </section>
+
       {/* Contact */}
-      <section className="mx-auto max-w-7xl px-6 pb-20">
-        <div className="rounded-3xl bg-gradient-to-r from-blue-600 to-indigo-700 p-10 text-white">
-          <div className="max-w-2xl">
-            <h2 className="text-3xl font-bold">Questions about your privacy?</h2>
+      <section className="container-main pb-14 sm:pb-20">
+        <div className="rounded-3xl bg-blue-600 p-8 text-white sm:p-10">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-2xl">
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-100">
+                Privacy Support
+              </p>
 
-            <p className="mt-4 text-blue-100 leading-7">
-              If you have any questions about this Privacy Policy or how your
-              information is handled, our support team is here to help.
-            </p>
+              <h2 className="mt-3 text-2xl font-black sm:text-3xl">
+                Questions about your privacy?
+              </h2>
 
-            <div className="mt-8 flex flex-wrap gap-4">
-              <a
+              <p className="mt-3 text-sm leading-6 text-blue-100">
+                Contact ComputerHub if you have questions about your
+                information or this Privacy Policy.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <Link
                 href="/contact"
-                className="rounded-xl bg-white px-6 py-3 font-semibold text-blue-700 transition hover:bg-slate-100"
+                className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3.5 text-sm font-bold text-blue-700 hover:bg-slate-100"
               >
                 Contact Support
-                  </a>
+                <ArrowRight size={16} />
+              </Link>
 
-                        <a
-                         href="mailto:support@computerhub.com?subject=ComputerHub%20Support"
-                         className="rounded-xl border border-white/30 px-6 py-3 font-semibold text-white transition hover:bg-white/10"
-                        >
-                      support@computerhub.com
-                  </a>
+              <a
+                href="mailto:support@computerhub.com?subject=ComputerHub%20Privacy%20Question"
+                className="inline-flex items-center gap-2 rounded-xl border border-white/25 px-5 py-3.5 text-sm font-bold text-white hover:bg-white/10"
+              >
+                <Mail size={16} />
+                Email Us
+              </a>
             </div>
           </div>
         </div>
       </section>
     </main>
+  );
+}
+
+function Highlight({ icon: Icon, title, text }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+        <Icon size={21} />
+      </div>
+
+      <h3 className="mt-4 text-base font-black text-slate-950">
+        {title}
+      </h3>
+
+      <p className="mt-2 text-sm leading-6 text-slate-500">
+        {text}
+      </p>
+    </div>
+  );
+}
+
+function SecurityTip({ text }) {
+  return (
+    <div className="flex items-start gap-3 rounded-xl bg-slate-50 p-4">
+      <CheckCircle2
+        size={18}
+        className="mt-0.5 shrink-0 text-blue-600"
+      />
+
+      <span className="text-sm font-semibold text-slate-700">
+        {text}
+      </span>
+    </div>
   );
 }
