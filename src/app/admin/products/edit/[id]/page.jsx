@@ -4,10 +4,13 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
+  CheckCircle2,
   Image as ImageIcon,
   Loader2,
   Package,
   Save,
+  Tag,
+  Truck,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -19,8 +22,7 @@ export default function AdminEditProductPage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [categoriesLoading, setCategoriesLoading] =
-    useState(true);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
 
   const [categories, setCategories] = useState([]);
 
@@ -47,11 +49,9 @@ export default function AdminEditProductPage() {
     isActive: true,
   });
 
-  /*
-  |--------------------------------------------------------------------------
-  | LOAD PRODUCT
-  |--------------------------------------------------------------------------
-  */
+  // ============================================================
+  // LOAD PRODUCT
+  // ============================================================
 
   useEffect(() => {
     if (!productId) {
@@ -75,8 +75,7 @@ export default function AdminEditProductPage() {
 
         if (!response.ok) {
           throw new Error(
-            data?.message ||
-              "Unable to load product."
+            data?.message || "Unable to load product."
           );
         }
 
@@ -85,32 +84,9 @@ export default function AdminEditProductPage() {
           data?.data ||
           data;
 
-        const firstImage =
-          Array.isArray(product?.images)
-            ? product.images[0] || ""
-            : product?.image || "";
-
-        /*
-         * IMPORTANT:
-         *
-         * categoryId can come from the API as either:
-         *
-         * 1. A normal ObjectId string
-         * 2. A populated category object
-         *
-         * Example populated object:
-         *
-         * {
-         *   _id: "64....",
-         *   name: "Laptops",
-         *   slug: "laptops"
-         * }
-         *
-         * We must extract the _id instead of doing
-         * String(categoryId), which produces:
-         *
-         * "[object Object]"
-         */
+        const firstImage = Array.isArray(product?.images)
+          ? product.images[0] || ""
+          : product?.image || "";
 
         let resolvedCategoryId = "";
 
@@ -124,9 +100,7 @@ export default function AdminEditProductPage() {
               ""
           );
         } else if (product?.categoryId) {
-          resolvedCategoryId = String(
-            product.categoryId
-          );
+          resolvedCategoryId = String(product.categoryId);
         }
 
         setFormData({
@@ -148,8 +122,7 @@ export default function AdminEditProductPage() {
             product?.oldPrice !== undefined &&
             product?.oldPrice !== null
               ? String(product.oldPrice)
-              : product?.originalPrice !==
-                    undefined &&
+              : product?.originalPrice !== undefined &&
                 product?.originalPrice !== null
               ? String(product.originalPrice)
               : "",
@@ -159,15 +132,13 @@ export default function AdminEditProductPage() {
           brand: product?.brand || "",
 
           category:
-            typeof product?.category ===
-            "object"
+            typeof product?.category === "object"
               ? product?.category?.name ||
                 product?.category?.slug ||
                 ""
               : product?.category || "",
 
-          categoryId:
-            resolvedCategoryId,
+          categoryId: resolvedCategoryId,
 
           subcategory:
             product?.subcategory || "",
@@ -224,11 +195,9 @@ export default function AdminEditProductPage() {
     loadProduct();
   }, [productId, router]);
 
-  /*
-  |--------------------------------------------------------------------------
-  | LOAD CATEGORIES
-  |--------------------------------------------------------------------------
-  */
+  // ============================================================
+  // LOAD CATEGORIES
+  // ============================================================
 
   useEffect(() => {
     async function loadCategories() {
@@ -288,63 +257,61 @@ export default function AdminEditProductPage() {
     loadCategories();
   }, []);
 
-/*
-|--------------------------------------------------------------------------
-| NORMAL INPUT CHANGE
-|--------------------------------------------------------------------------
-*/
+  // ============================================================
+  // INPUT CHANGE
+  // ============================================================
 
-function handleChange(event) {
-  const { name, value, type, checked } =
-    event.target;
+  function handleChange(event) {
+    const {
+      name,
+      value,
+      type,
+      checked,
+    } = event.target;
 
-  setFormData((previous) => ({
-    ...previous,
-    [name]:
-      type === "checkbox"
-        ? checked
-        : value,
-  }));
-}
+    setFormData((previous) => ({
+      ...previous,
+      [name]:
+        type === "checkbox"
+          ? checked
+          : value,
+    }));
+  }
 
-function handleCategoryChange(event) {
-  const selectedCategoryId =
-    event.target.value;
+  function handleCategoryChange(event) {
+    const selectedCategoryId =
+      event.target.value;
 
-  const selectedCategory =
-    categories.find(
-      (category) =>
-        String(
-          category?._id ||
-            category?.id ||
-            ""
-        ) === selectedCategoryId
-    );
+    const selectedCategory =
+      categories.find(
+        (category) =>
+          String(
+            category?._id ||
+              category?.id ||
+              ""
+          ) === selectedCategoryId
+      );
 
-  setFormData((previous) => ({
-    ...previous,
+    setFormData((previous) => ({
+      ...previous,
 
-    categoryId:
-      selectedCategoryId,
+      categoryId:
+        selectedCategoryId,
 
-    category:
-      selectedCategory?.name ||
-      selectedCategory?.slug ||
-      "",
-  }));
-}
+      category:
+        selectedCategory?.name ||
+        selectedCategory?.slug ||
+        "",
+    }));
+  }
 
-  /*
-  |--------------------------------------------------------------------------
-  | DISCOUNT
-  |--------------------------------------------------------------------------
-  */
+  // ============================================================
+  // DISCOUNT
+  // ============================================================
 
   const calculatedDiscount = useMemo(() => {
     const price = Number(formData.price);
-    const oldPrice = Number(
-      formData.oldPrice
-    );
+    const oldPrice = Number(formData.oldPrice);
 
     if (
       !Number.isFinite(price) ||
@@ -366,103 +333,68 @@ function handleCategoryChange(event) {
     formData.oldPrice,
   ]);
 
-
-
-  /*
-  |--------------------------------------------------------------------------
-  | SUBMIT
-  |--------------------------------------------------------------------------
-  */
+  // ============================================================
+  // SUBMIT
+  // ============================================================
 
   async function handleSubmit(event) {
     event.preventDefault();
 
     if (!productId) {
-      toast.error(
-        "Product ID is missing."
-      );
+      toast.error("Product ID is missing.");
       return;
     }
 
     if (!formData.name.trim()) {
-      toast.error(
-        "Please enter a product name."
-      );
+      toast.error("Please enter a product name.");
       return;
     }
 
     if (!formData.description.trim()) {
-      toast.error(
-        "Please enter a product description."
-      );
+      toast.error("Please enter a product description.");
       return;
     }
 
-   if (!formData.categoryId.trim()) {
-      toast.error(
-        "Please select a category."
-      );
+    if (!formData.categoryId.trim()) {
+      toast.error("Please select a category.");
       return;
     }
-
-    /*
-     * Make absolutely sure categoryId is a string.
-     *
-     * This prevents:
-     *
-     * [object Object]
-     *
-     * from ever being sent to the API.
-     */
 
     const cleanCategoryId =
-      typeof formData.categoryId ===
-      "object"
+      typeof formData.categoryId === "object"
         ? String(
             formData.categoryId?._id ||
               formData.categoryId?.id ||
               ""
           )
-        : String(
-            formData.categoryId || ""
-          );
+        : String(formData.categoryId || "");
 
     if (!cleanCategoryId) {
-      toast.error(
-        "Please select a valid category."
-      );
+      toast.error("Please select a valid category.");
       return;
     }
 
-    const price = Number(
-      formData.price
-    );
+    const price = Number(formData.price);
 
     if (
       formData.price === "" ||
       !Number.isFinite(price) ||
       price < 0
     ) {
-      toast.error(
-        "Please enter a valid selling price."
-      );
+      toast.error("Please enter a valid selling price.");
       return;
     }
 
     const oldPrice =
       formData.oldPrice === ""
         ? price
-        : Number(
-            formData.oldPrice
-          );
+        : Number(formData.oldPrice);
 
     if (
       !Number.isFinite(oldPrice) ||
       oldPrice < 0
     ) {
-      toast.error(
-        "Please enter a valid original price."
-      );
+      toast.error("Please enter a valid original price.");
       return;
     }
 
@@ -489,101 +421,94 @@ function handleCategoryChange(event) {
     }
 
     if (!formData.sku.trim()) {
-      toast.error(
-        "SKU is required."
-      );
+      toast.error("SKU is required.");
       return;
     }
 
     try {
       setSaving(true);
 
-      const response =
-        await fetch(
-          "/api/products",
-          {
-            method: "PATCH",
+      const response = await fetch(
+        "/api/products",
+        {
+          method: "PATCH",
 
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
 
-            credentials: "include",
+          credentials: "include",
 
-            body: JSON.stringify({
-              productId,
+          body: JSON.stringify({
+            productId,
 
-              name:
-                formData.name.trim(),
+            name:
+              formData.name.trim(),
 
-              shortDescription:
-                formData.shortDescription.trim(),
+            shortDescription:
+              formData.shortDescription.trim(),
 
-              description:
-                formData.description.trim(),
+            description:
+              formData.description.trim(),
 
-              price,
+            price,
 
+            oldPrice,
+
+            originalPrice:
               oldPrice,
 
-              originalPrice:
-                oldPrice,
+            sku:
+              formData.sku.trim(),
 
-              sku:
-                formData.sku.trim(),
+            brand:
+              formData.brand.trim(),
 
-              brand:
-                formData.brand.trim(),
+            categoryId:
+              cleanCategoryId,
 
-              /*
-               * IMPORTANT:
-               * Send only the real MongoDB ObjectId.
-               */
-              categoryId:
-                cleanCategoryId,
+            subcategory:
+              formData.subcategory.trim(),
 
-              subcategory:
-                formData.subcategory.trim(),
+            processor:
+              formData.processor.trim(),
 
-              processor:
-                formData.processor.trim(),
+            ram:
+              formData.ram.trim(),
 
-              ram:
-                formData.ram.trim(),
+            storage:
+              formData.storage.trim(),
 
-              storage:
-                formData.storage.trim(),
+            graphics:
+              formData.graphics.trim(),
 
-              graphics:
-                formData.graphics.trim(),
+            screenSize:
+              formData.screenSize.trim(),
 
-              screenSize:
-                formData.screenSize.trim(),
+            stock,
 
-              stock,
+            images:
+              formData.image.trim()
+                ? [
+                    formData.image.trim(),
+                  ]
+                : [],
 
-              images:
-                formData.image.trim()
-                  ? [
-                      formData.image.trim(),
-                    ]
-                  : [],
+            image:
+              formData.image.trim(),
 
-              image:
-                formData.image.trim(),
+            featured:
+              formData.featured,
 
-              featured:
-                formData.featured,
+            freeDelivery:
+              formData.freeDelivery,
 
-              freeDelivery:
-                formData.freeDelivery,
-
-              isActive:
-                formData.isActive,
-            }),
-          }
-        );
+            isActive:
+              formData.isActive,
+          }),
+        }
+      );
 
       const data =
         await response.json();
@@ -602,10 +527,7 @@ function handleCategoryChange(event) {
         "Product updated successfully."
       );
 
-      router.push(
-        "/admin/products"
-      );
-
+      router.push("/admin/products");
       router.refresh();
     } catch (error) {
       console.error(
@@ -622,308 +544,251 @@ function handleCategoryChange(event) {
     }
   }
 
-  /*
-  |--------------------------------------------------------------------------
-  | LOADING
-  |--------------------------------------------------------------------------
-  */
+  // ============================================================
+  // LOADING
+  // ============================================================
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-gray-50 px-4 py-10">
-        <div className="mx-auto flex min-h-[500px] max-w-4xl items-center justify-center">
-          <div className="text-center">
+      <main className="min-h-screen bg-slate-50 px-4 py-10 sm:px-6 lg:px-8">
+        <div className="mx-auto flex min-h-[600px] max-w-6xl items-center justify-center">
+          <div className="rounded-2xl border border-slate-200 bg-white px-10 py-12 text-center shadow-sm">
+            <Loader2 className="mx-auto h-9 w-9 animate-spin text-blue-600" />
 
-            <Loader2 className="mx-auto h-8 w-8 animate-spin text-blue-600" />
-
-            <p className="mt-3 text-sm text-gray-500">
+            <p className="mt-4 text-sm font-medium text-slate-600">
               Loading product...
             </p>
-
           </div>
         </div>
       </main>
     );
   }
 
-  /*
-  |--------------------------------------------------------------------------
-  | PAGE
-  |--------------------------------------------------------------------------
-  */
+  // ============================================================
+  // PAGE
+  // ============================================================
 
   return (
-    <main className="min-h-screen bg-gray-50 px-4 py-10 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-5xl">
+    <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl">
 
-        {/* BACK BUTTON */}
+        {/* TOP NAVIGATION */}
 
-        <button
-          type="button"
-          onClick={() =>
-            router.push(
-              "/admin/products"
-            )
-          }
-          className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-blue-600"
-        >
-          <ArrowLeft size={17} />
-          Back to Products
-        </button>
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <button
+            type="button"
+            onClick={() =>
+              router.push("/admin/products")
+            }
+            className="inline-flex w-fit items-center gap-2 text-sm font-semibold text-slate-600 transition hover:text-blue-600"
+          >
+            <ArrowLeft size={17} />
+            Back to Products
+          </button>
 
-        <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+            <Package size={15} />
+            Product Management
+          </div>
+        </div>
 
-          {/* HEADER */}
+        {/* HEADER */}
 
-          <div className="border-b border-gray-200 p-6 sm:p-8">
-            <div className="flex items-start gap-4">
+        <div className="mb-6 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+          <div className="relative overflow-hidden px-6 py-8 sm:px-8 lg:px-10">
+            <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-blue-50 blur-3xl" />
 
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-50">
-                <Package className="h-6 w-6 text-blue-600" />
+            <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-600/20">
+                <Package className="h-7 w-7" />
               </div>
 
               <div>
-
-                <p className="text-sm font-semibold uppercase tracking-wide text-blue-600">
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600">
                   Admin Dashboard
                 </p>
 
-                <h1 className="mt-1 text-3xl font-bold text-gray-900">
+                <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
                   Edit Product
                 </h1>
 
-                <p className="mt-2 text-sm text-gray-500">
-                  Update the product information shown on ComputerHub.
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+                  Update pricing, inventory, specifications,
+                  images and storefront settings.
                 </p>
-
               </div>
-
             </div>
           </div>
+        </div>
 
-          {/* FORM */}
+        {/* FORM */}
 
-          <form
-            onSubmit={handleSubmit}
-            className="p-6 sm:p-8"
-          >
+        <form onSubmit={handleSubmit}>
+          <div className="grid gap-6 lg:grid-cols-3">
 
-            <div className="grid gap-6">
+            {/* MAIN COLUMN */}
 
-              {/* PRODUCT NAME */}
+            <div className="space-y-6 lg:col-span-2">
 
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-gray-900">
-                  Product Name
-                </label>
+              {/* BASIC INFORMATION */}
 
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  placeholder="Example: ASUS Gaming Laptop"
-                  className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                />
-              </div>
+              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
+                <div className="mb-6">
+                  <h2 className="text-lg font-bold text-slate-900">
+                    Product Information
+                  </h2>
 
-              {/* SHORT DESCRIPTION */}
-
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-gray-900">
-                  Short Description
-                </label>
-
-                <input
-                  type="text"
-                  name="shortDescription"
-                  value={
-                    formData.shortDescription
-                  }
-                  onChange={handleChange}
-                  placeholder="Short product summary"
-                  className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                />
-              </div>
-
-              {/* DESCRIPTION */}
-
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-gray-900">
-                  Product Description
-                </label>
-
-                <textarea
-                  name="description"
-                  value={
-                    formData.description
-                  }
-                  onChange={handleChange}
-                  rows={6}
-                  placeholder="Write a detailed description..."
-                  className="w-full resize-none rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                />
-              </div>
-
-              {/* PRICE */}
-
-              <div className="grid gap-6 sm:grid-cols-2">
-
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-gray-900">
-                    Selling Price
-                  </label>
-
-                  <input
-                    type="number"
-                    name="price"
-                    min="0"
-                    step="0.01"
-                    value={formData.price}
-                    onChange={handleChange}
-                    className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                  />
+                  <p className="mt-1 text-sm text-slate-500">
+                    Keep the product title and description clear.
+                  </p>
                 </div>
 
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-gray-900">
-                    Original Price
-                  </label>
+                <div className="space-y-5">
 
-                  <input
-                    type="number"
-                    name="oldPrice"
-                    min="0"
-                    step="0.01"
-                    value={
-                      formData.oldPrice
-                    }
-                    onChange={handleChange}
-                    className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                  />
-                </div>
+                  <div>
+                    <label className="mb-2 block text-sm font-semibold text-slate-800">
+                      Product Name
+                    </label>
 
-              </div>
-
-              {/* DISCOUNT */}
-
-              {calculatedDiscount >
-                0 && (
-                <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3">
-
-                  <div className="flex items-center justify-between gap-3">
-
-                    <div>
-
-                      <p className="text-sm font-semibold text-green-800">
-                        Discount
-                      </p>
-
-                      <p className="text-xs text-green-700">
-                        Original price Rs.{" "}
-                        {Number(
-                          formData.oldPrice
-                        ).toLocaleString(
-                          "en-PK"
-                        )}
-
-                        {" → "}
-
-                        Selling price Rs.{" "}
-                        {Number(
-                          formData.price
-                        ).toLocaleString(
-                          "en-PK"
-                        )}
-                      </p>
-
-                    </div>
-
-                    <span className="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-bold text-white">
-                      {calculatedDiscount}
-                      % OFF
-                    </span>
-
+                    <input
+                      type="text"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleChange}
+                      placeholder="Example: ASUS Gaming Laptop"
+                      className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                    />
                   </div>
 
+                  <div>
+                    <label className="mb-2 block text-sm font-semibold text-slate-800">
+                      Short Description
+                    </label>
+
+                    <input
+                      type="text"
+                      name="shortDescription"
+                      value={formData.shortDescription}
+                      onChange={handleChange}
+                      placeholder="Short product summary"
+                      className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-semibold text-slate-800">
+                      Product Description
+                    </label>
+
+                    <textarea
+                      name="description"
+                      value={formData.description}
+                      onChange={handleChange}
+                      rows={7}
+                      placeholder="Write a detailed product description..."
+                      className="w-full resize-none rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                    />
+                  </div>
                 </div>
-              )}
+              </section>
 
-              {/* CATEGORY + BRAND */}
+              {/* PRICING */}
 
-              <div className="grid gap-6 sm:grid-cols-2">
+              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
+                <div className="mb-6 flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                    <Tag size={19} />
+                  </div>
 
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-gray-900">
-                    Category
-                  </label>
+                  <div>
+                    <h2 className="text-lg font-bold text-slate-900">
+                      Pricing & Inventory
+                    </h2>
 
-                  <select
-                      name="categoryId"
-                      value={
-                        formData.categoryId
-                    }
-                    onChange={
-                      handleCategoryChange
-                    }
-                    disabled={
-                      categoriesLoading
-                    }
-                    className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 disabled:bg-gray-100"
-                  >
-
-                    <option value="">
-                      {categoriesLoading
-                        ? "Loading categories..."
-                        : "Select category"}
-                    </option>
-
-                    {categories.map(
-                      (category) => (
-                        <option
-                          key={
-                            category._id ||
-                            category.id ||
-                            category.slug
-                          }
-                          value={
-                            category._id ||
-                            category.id
-                          }
-                        >
-                          {category.name}
-                        </option>
-                      )
-                    )}
-
-                  </select>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Manage pricing, SKU and available stock.
+                    </p>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-gray-900">
-                    Brand
-                  </label>
+                <div className="grid gap-5 sm:grid-cols-3">
 
-                  <input
-                    type="text"
-                    name="brand"
-                    value={
-                      formData.brand
-                    }
-                    onChange={handleChange}
-                    placeholder="Example: ASUS"
-                    className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                  />
+                  <div>
+                    <label className="mb-2 block text-sm font-semibold text-slate-800">
+                      Selling Price
+                    </label>
+
+                    <input
+                      type="number"
+                      name="price"
+                      min="0"
+                      step="0.01"
+                      value={formData.price}
+                      onChange={handleChange}
+                      className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-semibold text-slate-800">
+                      Original Price
+                    </label>
+
+                    <input
+                      type="number"
+                      name="oldPrice"
+                      min="0"
+                      step="0.01"
+                      value={formData.oldPrice}
+                      onChange={handleChange}
+                      className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-semibold text-slate-800">
+                      Stock Quantity
+                    </label>
+
+                    <input
+                      type="number"
+                      name="stock"
+                      min="0"
+                      step="1"
+                      value={formData.stock}
+                      onChange={handleChange}
+                      className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                    />
+                  </div>
                 </div>
 
-              </div>
+                {calculatedDiscount > 0 && (
+                  <div className="mt-5 flex flex-col gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm font-bold text-emerald-800">
+                        Active Discount
+                      </p>
 
-              {/* SKU + STOCK */}
+                      <p className="mt-1 text-xs text-emerald-700">
+                        Rs.{" "}
+                        {Number(
+                          formData.oldPrice
+                        ).toLocaleString("en-PK")}{" "}
+                        → Rs.{" "}
+                        {Number(
+                          formData.price
+                        ).toLocaleString("en-PK")}
+                      </p>
+                    </div>
 
-              <div className="grid gap-6 sm:grid-cols-2">
+                    <span className="w-fit rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-bold text-white">
+                      {calculatedDiscount}% OFF
+                    </span>
+                  </div>
+                )}
 
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-gray-900">
+                <div className="mt-5">
+                  <label className="mb-2 block text-sm font-semibold text-slate-800">
                     SKU
                   </label>
 
@@ -933,86 +798,132 @@ function handleCategoryChange(event) {
                     value={formData.sku}
                     onChange={handleChange}
                     placeholder="Product SKU"
-                    className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                    className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                   />
 
-                  <p className="mt-2 text-xs text-gray-500">
+                  <p className="mt-2 text-xs text-slate-500">
                     SKU must remain unique.
                   </p>
                 </div>
+              </section>
 
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-gray-900">
-                    Stock Quantity
-                  </label>
+              {/* CATALOG */}
 
-                  <input
-                    type="number"
-                    name="stock"
-                    min="0"
-                    step="1"
-                    value={formData.stock}
-                    onChange={handleChange}
-                    className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                  />
+              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
+                <div className="mb-6">
+                  <h2 className="text-lg font-bold text-slate-900">
+                    Catalog Details
+                  </h2>
+
+                  <p className="mt-1 text-sm text-slate-500">
+                    Organize the product for customers.
+                  </p>
                 </div>
-
-              </div>
-
-              {/* SUBCATEGORY */}
-
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-gray-900">
-                  Subcategory
-                </label>
-
-                <input
-                  type="text"
-                  name="subcategory"
-                  value={
-                    formData.subcategory
-                  }
-                  onChange={handleChange}
-                  placeholder="Optional"
-                  className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                />
-              </div>
-
-              {/* PRODUCT SPECIFICATIONS */}
-
-              <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5">
-
-                <h2 className="mb-5 text-lg font-bold text-gray-900">
-                  Product Specifications
-                </h2>
 
                 <div className="grid gap-5 sm:grid-cols-2">
 
-                  {/* PROCESSOR */}
+                  <div>
+                    <label className="mb-2 block text-sm font-semibold text-slate-800">
+                      Category
+                    </label>
+
+                    <select
+                      name="categoryId"
+                      value={formData.categoryId}
+                      onChange={handleCategoryChange}
+                      disabled={categoriesLoading}
+                      className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 disabled:bg-slate-100"
+                    >
+                      <option value="">
+                        {categoriesLoading
+                          ? "Loading categories..."
+                          : "Select category"}
+                      </option>
+
+                      {categories.map(
+                        (category) => (
+                          <option
+                            key={
+                              category._id ||
+                              category.id ||
+                              category.slug
+                            }
+                            value={
+                              category._id ||
+                              category.id
+                            }
+                          >
+                            {category.name}
+                          </option>
+                        )
+                      )}
+                    </select>
+                  </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-semibold text-gray-800">
+                    <label className="mb-2 block text-sm font-semibold text-slate-800">
+                      Brand
+                    </label>
+
+                    <input
+                      type="text"
+                      name="brand"
+                      value={formData.brand}
+                      onChange={handleChange}
+                      placeholder="Example: ASUS"
+                      className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="mb-2 block text-sm font-semibold text-slate-800">
+                      Subcategory
+                    </label>
+
+                    <input
+                      type="text"
+                      name="subcategory"
+                      value={formData.subcategory}
+                      onChange={handleChange}
+                      placeholder="Optional subcategory"
+                      className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                    />
+                  </div>
+                </div>
+              </section>
+
+              {/* SPECIFICATIONS */}
+
+              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
+                <div className="mb-6">
+                  <h2 className="text-lg font-bold text-slate-900">
+                    Technical Specifications
+                  </h2>
+
+                  <p className="mt-1 text-sm text-slate-500">
+                    Add the key hardware specifications.
+                  </p>
+                </div>
+
+                <div className="grid gap-5 sm:grid-cols-2">
+
+                  <div>
+                    <label className="mb-2 block text-sm font-semibold text-slate-800">
                       Processor
                     </label>
 
                     <input
                       type="text"
                       name="processor"
-                      value={
-                        formData.processor
-                      }
-                      onChange={
-                        handleChange
-                      }
+                      value={formData.processor}
+                      onChange={handleChange}
                       placeholder="Example: Intel Core i7"
-                      className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                      className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                     />
                   </div>
 
-                  {/* RAM */}
-
                   <div>
-                    <label className="mb-2 block text-sm font-semibold text-gray-800">
+                    <label className="mb-2 block text-sm font-semibold text-slate-800">
                       RAM
                     </label>
 
@@ -1020,248 +931,310 @@ function handleCategoryChange(event) {
                       type="text"
                       name="ram"
                       value={formData.ram}
-                      onChange={
-                        handleChange
-                      }
+                      onChange={handleChange}
                       placeholder="Example: 16GB"
-                      className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                      className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                     />
                   </div>
 
-                  {/* STORAGE */}
-
                   <div>
-                    <label className="mb-2 block text-sm font-semibold text-gray-800">
+                    <label className="mb-2 block text-sm font-semibold text-slate-800">
                       Storage
                     </label>
 
                     <input
                       type="text"
                       name="storage"
-                      value={
-                        formData.storage
-                      }
-                      onChange={
-                        handleChange
-                      }
+                      value={formData.storage}
+                      onChange={handleChange}
                       placeholder="Example: 512GB SSD"
-                      className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                      className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                     />
                   </div>
 
-                  {/* GRAPHICS */}
-
                   <div>
-                    <label className="mb-2 block text-sm font-semibold text-gray-800">
+                    <label className="mb-2 block text-sm font-semibold text-slate-800">
                       Graphics
                     </label>
 
                     <input
                       type="text"
                       name="graphics"
-                      value={
-                        formData.graphics
-                      }
-                      onChange={
-                        handleChange
-                      }
+                      value={formData.graphics}
+                      onChange={handleChange}
                       placeholder="Example: RTX 4060"
-                      className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                      className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                     />
                   </div>
 
-                  {/* SCREEN SIZE */}
-
                   <div>
-                    <label className="mb-2 block text-sm font-semibold text-gray-800">
+                    <label className="mb-2 block text-sm font-semibold text-slate-800">
                       Screen Size
                     </label>
 
                     <input
                       type="text"
                       name="screenSize"
-                      value={
-                        formData.screenSize
-                      }
-                      onChange={
-                        handleChange
-                      }
+                      value={formData.screenSize}
+                      onChange={handleChange}
                       placeholder="Example: 15.6 inch"
-                      className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                      className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                     />
                   </div>
-
                 </div>
-
-              </div>
+              </section>
 
               {/* IMAGE */}
 
-              <div>
-                <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-900">
+              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
+                <div className="mb-6 flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+                    <ImageIcon size={19} />
+                  </div>
 
-                  <ImageIcon className="h-4 w-4" />
+                  <div>
+                    <h2 className="text-lg font-bold text-slate-900">
+                      Product Image
+                    </h2>
 
-                  Product Image URL
-
-                </label>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Use a direct image URL for the product.
+                    </p>
+                  </div>
+                </div>
 
                 <input
                   type="url"
                   name="image"
-                  value={
-                    formData.image
-                  }
+                  value={formData.image}
                   onChange={handleChange}
                   placeholder="https://example.com/product-image.jpg"
-                  className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                  className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 />
 
                 {formData.image && (
-                  <div className="mt-4 overflow-hidden rounded-xl border border-gray-200 bg-gray-50 p-4">
-
-                    <p className="mb-3 text-sm font-semibold text-gray-700">
-                      Image Preview
+                  <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <p className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">
+                      Preview
                     </p>
 
-                    <img
-                      src={
-                        formData.image
-                      }
-                      alt="Product preview"
-                      className="h-64 w-full rounded-lg object-contain"
-                      onError={(
-                        event
-                      ) => {
-                        event.currentTarget.style.display =
-                          "none";
-                      }}
-                    />
-
+                    <div className="flex min-h-[240px] items-center justify-center rounded-xl bg-white p-4">
+                      <img
+                        src={formData.image}
+                        alt="Product preview"
+                        className="max-h-64 w-full object-contain"
+                        onError={(event) => {
+                          event.currentTarget.style.display =
+                            "none";
+                        }}
+                      />
+                    </div>
                   </div>
                 )}
-              </div>
+              </section>
+            </div>
 
-              {/* OPTIONS */}
+            {/* SIDE COLUMN */}
 
-              <div className="grid gap-4 sm:grid-cols-3">
+            <aside className="space-y-6">
 
-                {/* FEATURED */}
+              {/* STATUS */}
 
-                <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
+              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="mb-5">
+                  <h2 className="text-lg font-bold text-slate-900">
+                    Store Settings
+                  </h2>
 
-                  <input
-                    type="checkbox"
-                    name="featured"
-                    checked={
-                      formData.featured
-                    }
-                    onChange={
-                      handleChange
-                    }
-                    className="h-4 w-4"
-                  />
+                  <p className="mt-1 text-sm text-slate-500">
+                    Control how this product appears.
+                  </p>
+                </div>
 
-                  <span className="text-sm font-semibold text-gray-800">
-                    Featured Product
-                  </span>
+                <div className="space-y-3">
 
-                </label>
+                  <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-4 transition hover:border-blue-200 hover:bg-blue-50/40">
+                    <input
+                      type="checkbox"
+                      name="isActive"
+                      checked={formData.isActive}
+                      onChange={handleChange}
+                      className="mt-1 h-4 w-4"
+                    />
 
-                {/* FREE DELIVERY */}
+                    <span>
+                      <span className="block text-sm font-semibold text-slate-900">
+                        Product Active
+                      </span>
 
-                <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
+                      <span className="mt-1 block text-xs leading-5 text-slate-500">
+                        Customers can view this product.
+                      </span>
+                    </span>
+                  </label>
 
-                  <input
-                    type="checkbox"
-                    name="freeDelivery"
-                    checked={
-                      formData.freeDelivery
-                    }
-                    onChange={
-                      handleChange
-                    }
-                    className="h-4 w-4"
-                  />
+                  <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-4 transition hover:border-blue-200 hover:bg-blue-50/40">
+                    <input
+                      type="checkbox"
+                      name="featured"
+                      checked={formData.featured}
+                      onChange={handleChange}
+                      className="mt-1 h-4 w-4"
+                    />
 
-                  <span className="text-sm font-semibold text-gray-800">
-                    Free Delivery
-                  </span>
+                    <span>
+                      <span className="block text-sm font-semibold text-slate-900">
+                        Featured Product
+                      </span>
 
-                </label>
+                      <span className="mt-1 block text-xs leading-5 text-slate-500">
+                        Highlight this product on the store.
+                      </span>
+                    </span>
+                  </label>
 
-                {/* ACTIVE */}
+                  <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-4 transition hover:border-blue-200 hover:bg-blue-50/40">
+                    <input
+                      type="checkbox"
+                      name="freeDelivery"
+                      checked={formData.freeDelivery}
+                      onChange={handleChange}
+                      className="mt-1 h-4 w-4"
+                    />
 
-                <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
+                    <span>
+                      <span className="block text-sm font-semibold text-slate-900">
+                        Free Delivery
+                      </span>
 
-                  <input
-                    type="checkbox"
-                    name="isActive"
-                    checked={
+                      <span className="mt-1 block text-xs leading-5 text-slate-500">
+                        Show free delivery for this product.
+                      </span>
+                    </span>
+                  </label>
+                </div>
+              </section>
+
+              {/* QUICK STATUS */}
+
+              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="mb-5 flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                    <CheckCircle2 size={19} />
+                  </div>
+
+                  <div>
+                    <h2 className="font-bold text-slate-900">
+                      Product Status
+                    </h2>
+
+                    <p className="text-xs text-slate-500">
+                      Current storefront state
+                    </p>
+                  </div>
+                </div>
+
+                <div
+                  className={`rounded-xl px-4 py-3 ${
+                    formData.isActive
+                      ? "bg-emerald-50"
+                      : "bg-slate-100"
+                  }`}
+                >
+                  <p
+                    className={`text-sm font-bold ${
                       formData.isActive
-                    }
-                    onChange={
-                      handleChange
-                    }
-                    className="h-4 w-4"
-                  />
+                        ? "text-emerald-700"
+                        : "text-slate-600"
+                    }`}
+                  >
+                    {formData.isActive
+                      ? "Active"
+                      : "Inactive"}
+                  </p>
 
-                  <span className="text-sm font-semibold text-gray-800">
-                    Product Active
-                  </span>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {formData.isActive
+                      ? "Visible to customers."
+                      : "Hidden from the storefront."}
+                  </p>
+                </div>
+              </section>
 
-                </label>
+              {/* DELIVERY */}
 
+              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                    <Truck size={19} />
+                  </div>
+
+                  <div>
+                    <h2 className="font-bold text-slate-900">
+                      Delivery
+                    </h2>
+
+                    <p className="mt-1 text-sm leading-5 text-slate-500">
+                      {formData.freeDelivery
+                        ? "Free delivery is enabled."
+                        : "Standard delivery applies."}
+                    </p>
+                  </div>
+                </div>
+              </section>
+            </aside>
+          </div>
+
+          {/* ACTION BAR */}
+
+          <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-bold text-slate-900">
+                  Ready to save changes?
+                </p>
+
+                <p className="mt-1 text-xs text-slate-500">
+                  Your existing product data will be updated.
+                </p>
               </div>
 
+              <div className="flex flex-col-reverse gap-3 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={() =>
+                    router.push("/admin/products")
+                  }
+                  disabled={saving}
+                  className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={
+                    saving ||
+                    categoriesLoading
+                  }
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      Saving Changes...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-5 w-5" />
+                      Save Changes
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
-
-            {/* BUTTONS */}
-
-            <div className="mt-8 flex flex-col-reverse gap-3 border-t border-gray-200 pt-6 sm:flex-row sm:justify-end">
-
-              <button
-                type="button"
-                onClick={() =>
-                  router.push(
-                    "/admin/products"
-                  )
-                }
-                disabled={saving}
-                className="rounded-xl border border-gray-300 px-5 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-              >
-                Cancel
-              </button>
-
-              <button
-                type="submit"
-                disabled={
-                  saving ||
-                  categoriesLoading
-                }
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-
-                {saving ? (
-                  <>
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    Saving Changes...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-5 w-5" />
-                    Save Changes
-                  </>
-                )}
-
-              </button>
-
-            </div>
-
-          </form>
-
-        </div>
-
+          </div>
+        </form>
       </div>
     </main>
   );

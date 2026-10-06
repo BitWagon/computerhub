@@ -9,7 +9,10 @@ import {
   ShieldCheck,
   Store,
   User,
-  XCircle,
+  UserCheck,
+  UserX,
+  RefreshCw,
+  Mail,
 } from "lucide-react";
 
 export default function AdminSellersPage() {
@@ -38,11 +41,11 @@ export default function AdminSellersPage() {
 
       if (!response.ok) {
         throw new Error(
-          data.message || "Unable to load sellers."
+          data?.message || "Unable to load sellers."
         );
       }
 
-      const users = Array.isArray(data.users)
+      const users = Array.isArray(data?.users)
         ? data.users
         : Array.isArray(data)
         ? data
@@ -57,7 +60,9 @@ export default function AdminSellersPage() {
       console.error("Load sellers error:", err);
 
       setError(
-        err.message || "Unable to load sellers."
+        err instanceof Error
+          ? err.message
+          : "Unable to load sellers."
       );
     } finally {
       setIsLoading(false);
@@ -85,13 +90,13 @@ export default function AdminSellersPage() {
 
       if (!response.ok) {
         throw new Error(
-          data.message || "Unable to update seller."
+          data?.message || "Unable to update seller."
         );
       }
 
       setSellers((current) =>
         current.map((seller) =>
-          seller.id === userId
+          String(seller._id || seller.id) === String(userId)
             ? {
                 ...seller,
                 isActive,
@@ -103,7 +108,9 @@ export default function AdminSellersPage() {
       console.error("Update seller error:", err);
 
       setError(
-        err.message || "Unable to update seller."
+        err instanceof Error
+          ? err.message
+          : "Unable to update seller."
       );
     } finally {
       setActionLoading("");
@@ -118,9 +125,10 @@ export default function AdminSellersPage() {
     }
 
     return sellers.filter((seller) => {
-      const fullName = `${seller.firstName || ""} ${
-        seller.lastName || ""
-      }`.trim();
+      const fullName =
+        `${seller.firstName || ""} ${
+          seller.lastName || ""
+        }`.trim();
 
       return (
         fullName.toLowerCase().includes(query) ||
@@ -140,62 +148,62 @@ export default function AdminSellersPage() {
   ).length;
 
   return (
-    <main className="min-h-screen bg-gray-50 px-4 py-8 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
+
         {/* Header */}
-        <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <Link
-              href="/admin"
-              className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-blue-600 transition hover:text-blue-700"
-            >
-              <ArrowLeft size={17} />
-              Back to Admin Dashboard
-            </Link>
-
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
-                <Store size={25} />
-              </div>
-
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">
-                  Sellers
-                </h1>
-
-                <p className="mt-1 text-sm text-gray-500">
-                  Manage ComputerHub seller accounts.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={loadSellers}
-            className="rounded-xl border border-gray-300 bg-white px-5 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
+        <div className="mb-8">
+          <Link
+            href="/admin"
+            className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-slate-600 transition hover:text-slate-950"
           >
-            <div className="flex items-center gap-2">
-              {isLoading && (
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
-              )}
-              Refresh Sellers
+            <ArrowLeft size={17} />
+            Back to Admin Dashboard
+          </Link>
+
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-lg">
+                <Store size={26} />
+              </div>
+
+              <h1 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
+                Seller Management
+              </h1>
+
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 sm:text-base">
+                Manage verified ComputerHub seller accounts,
+                access, and account status.
+              </p>
             </div>
-          </button>
+
+            <button
+              type="button"
+              onClick={loadSellers}
+              disabled={isLoading}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <RefreshCw
+                size={17}
+                className={isLoading ? "animate-spin" : ""}
+              />
+              Refresh
+            </button>
+          </div>
         </div>
 
         {/* Error */}
         {error && (
-          <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4">
+          <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4">
             <div className="flex items-start gap-3">
-              <XCircle
-                className="mt-0.5 shrink-0 text-red-600"
+              <UserX
                 size={20}
+                className="mt-0.5 shrink-0 text-red-600"
               />
 
               <div>
-                <p className="font-semibold text-red-800">
-                  Unable to complete the request
+                <p className="font-semibold text-red-900">
+                  Request failed
                 </p>
 
                 <p className="mt-1 text-sm text-red-700">
@@ -208,47 +216,47 @@ export default function AdminSellersPage() {
 
         {/* Stats */}
         <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500">
+                <p className="text-sm font-medium text-slate-500">
                   Total Sellers
                 </p>
 
-                <p className="mt-2 text-3xl font-bold text-gray-900">
+                <p className="mt-2 text-3xl font-bold text-slate-950">
                   {sellers.length}
                 </p>
               </div>
 
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
-                <Store size={22} />
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
+                <Store size={21} />
               </div>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500">
-                  Active Sellers
+                <p className="text-sm font-medium text-slate-500">
+                  Active
                 </p>
 
-                <p className="mt-2 text-3xl font-bold text-green-600">
+                <p className="mt-2 text-3xl font-bold text-emerald-600">
                   {activeCount}
                 </p>
               </div>
 
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-green-100 text-green-600">
-                <CheckCircle2 size={22} />
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                <UserCheck size={21} />
               </div>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500">
-                  Inactive Sellers
+                <p className="text-sm font-medium text-slate-500">
+                  Inactive
                 </p>
 
                 <p className="mt-2 text-3xl font-bold text-red-600">
@@ -256,19 +264,19 @@ export default function AdminSellersPage() {
                 </p>
               </div>
 
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-100 text-red-600">
-                <XCircle size={22} />
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-50 text-red-600">
+                <UserX size={21} />
               </div>
             </div>
           </div>
         </div>
 
         {/* Search */}
-        <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
           <div className="relative">
             <Search
-              size={20}
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+              size={19}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
             />
 
             <input
@@ -277,80 +285,90 @@ export default function AdminSellersPage() {
               onChange={(event) =>
                 setSearch(event.target.value)
               }
-              placeholder="Search sellers by name or email..."
-              className="w-full rounded-xl border border-gray-300 bg-white py-3 pl-11 pr-4 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              placeholder="Search seller name or email..."
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-11 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:bg-white focus:ring-4 focus:ring-slate-100"
             />
           </div>
         </div>
 
-        {/* Sellers */}
-        <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-          <div className="border-b border-gray-200 px-5 py-4">
-            <h2 className="text-lg font-bold text-gray-900">
-              Seller Accounts
-            </h2>
+        {/* Seller list */}
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex flex-col gap-2 border-b border-slate-200 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-slate-950">
+                Seller Accounts
+              </h2>
 
-            <p className="mt-1 text-sm text-gray-500">
-              {filteredSellers.length} seller
-              {filteredSellers.length === 1 ? "" : "s"} shown
-            </p>
+              <p className="mt-1 text-sm text-slate-500">
+                {filteredSellers.length} seller
+                {filteredSellers.length === 1 ? "" : "s"} shown
+              </p>
+            </div>
+
+            <div className="inline-flex w-fit items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">
+              <ShieldCheck size={14} />
+              Seller Access
+            </div>
           </div>
 
           {isLoading ? (
-            <div className="p-10 text-center">
-              <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600" />
+            <div className="px-6 py-16 text-center">
+              <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-slate-900" />
 
-              <p className="mt-4 text-sm text-gray-500">
-                Loading sellers...
+              <p className="mt-4 text-sm font-medium text-slate-500">
+                Loading seller accounts...
               </p>
             </div>
           ) : filteredSellers.length === 0 ? (
-            <div className="p-10 text-center">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 text-gray-400">
-                <Store size={26} />
+            <div className="px-6 py-16 text-center">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+                <Store size={28} />
               </div>
 
-              <h3 className="mt-4 text-lg font-semibold text-gray-900">
+              <h3 className="mt-5 text-lg font-bold text-slate-950">
                 No sellers found
               </h3>
 
-              <p className="mt-2 text-sm text-gray-500">
+              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
                 {search
-                  ? "Try a different search."
+                  ? "No seller account matches your search."
                   : "There are currently no seller accounts."}
               </p>
             </div>
           ) : (
             <>
-              {/* Desktop Table */}
+              {/* Desktop */}
               <div className="hidden overflow-x-auto md:block">
                 <table className="w-full">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-slate-50">
                     <tr>
-                      <th className="px-5 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-500">
+                      <th className="px-5 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
                         Seller
                       </th>
 
-                      <th className="px-5 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-500">
-                        Email
+                      <th className="px-5 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
+                        Contact
                       </th>
 
-                      <th className="px-5 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-500">
+                      <th className="px-5 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
                         Role
                       </th>
 
-                      <th className="px-5 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-500">
+                      <th className="px-5 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
                         Status
                       </th>
 
-                      <th className="px-5 py-4 text-right text-xs font-bold uppercase tracking-wider text-gray-500">
+                      <th className="px-5 py-4 text-right text-xs font-bold uppercase tracking-wider text-slate-500">
                         Action
                       </th>
                     </tr>
                   </thead>
 
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-slate-100">
                     {filteredSellers.map((seller) => {
+                      const sellerId =
+                        seller._id || seller.id;
+
                       const fullName =
                         `${seller.firstName || ""} ${
                           seller.lastName || ""
@@ -361,33 +379,41 @@ export default function AdminSellersPage() {
 
                       return (
                         <tr
-                          key={seller._id}
-                          className="transition hover:bg-gray-50"
+                          key={sellerId}
+                          className="transition hover:bg-slate-50"
                         >
                           <td className="px-5 py-5">
                             <div className="flex items-center gap-3">
-                              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
                                 <User size={19} />
                               </div>
 
                               <div>
-                                <p className="font-semibold text-gray-900">
+                                <p className="font-semibold text-slate-950">
                                   {fullName}
                                 </p>
 
-                                <p className="text-xs text-gray-500">
-                                  Seller account
+                                <p className="mt-0.5 text-xs text-slate-500">
+                                  ComputerHub seller
                                 </p>
                               </div>
                             </div>
                           </td>
 
-                          <td className="px-5 py-5 text-sm text-gray-700">
-                            {seller.email || "No email"}
+                          <td className="px-5 py-5">
+                            <div className="flex items-center gap-2 text-sm text-slate-600">
+                              <Mail
+                                size={15}
+                                className="shrink-0 text-slate-400"
+                              />
+                              <span>
+                                {seller.email || "No email"}
+                              </span>
+                            </div>
                           </td>
 
                           <td className="px-5 py-5">
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700">
                               <ShieldCheck size={14} />
                               Seller
                             </span>
@@ -395,13 +421,13 @@ export default function AdminSellersPage() {
 
                           <td className="px-5 py-5">
                             {isActive ? (
-                              <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">
+                              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
                                 <CheckCircle2 size={14} />
                                 Active
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-700">
-                                <XCircle size={14} />
+                              <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700">
+                                <UserX size={14} />
                                 Inactive
                               </span>
                             )}
@@ -411,21 +437,21 @@ export default function AdminSellersPage() {
                             <button
                               type="button"
                               disabled={
-                                actionLoading === seller._id
+                                actionLoading === sellerId
                               }
                               onClick={() =>
                                 updateSellerStatus(
-                                  seller._id,
+                                  sellerId,
                                   !isActive
                                 )
                               }
-                              className={`rounded-lg px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                              className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
                                 isActive
                                   ? "bg-red-50 text-red-700 hover:bg-red-100"
-                                  : "bg-green-50 text-green-700 hover:bg-green-100"
+                                  : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
                               }`}
                             >
-                              {actionLoading === seller._id
+                              {actionLoading === sellerId
                                 ? "Updating..."
                                 : isActive
                                 ? "Deactivate"
@@ -439,9 +465,12 @@ export default function AdminSellersPage() {
                 </table>
               </div>
 
-              {/* Mobile Cards */}
-              <div className="divide-y divide-gray-100 md:hidden">
+              {/* Mobile */}
+              <div className="divide-y divide-slate-100 md:hidden">
                 {filteredSellers.map((seller) => {
+                  const sellerId =
+                    seller._id || seller.id;
+
                   const fullName =
                     `${seller.firstName || ""} ${
                       seller.lastName || ""
@@ -452,60 +481,68 @@ export default function AdminSellersPage() {
 
                   return (
                     <div
-                      key={seller._id}
+                      key={sellerId}
                       className="p-5"
                     >
                       <div className="flex items-start gap-3">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
                           <User size={20} />
                         </div>
 
                         <div className="min-w-0 flex-1">
-                          <h3 className="font-semibold text-gray-900">
-                            {fullName}
-                          </h3>
-
-                          <p className="mt-1 break-all text-sm text-gray-500">
-                            {seller.email || "No email"}
-                          </p>
-
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
-                              <ShieldCheck size={13} />
-                              Seller
-                            </span>
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <h3 className="font-bold text-slate-950">
+                              {fullName}
+                            </h3>
 
                             {isActive ? (
-                              <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">
+                              <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
                                 <CheckCircle2 size={13} />
                                 Active
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-700">
-                                <XCircle size={13} />
+                              <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-700">
+                                <UserX size={13} />
                                 Inactive
                               </span>
                             )}
                           </div>
 
+                          <div className="mt-2 flex items-center gap-2 text-sm text-slate-500">
+                            <Mail
+                              size={14}
+                              className="shrink-0"
+                            />
+                            <span className="break-all">
+                              {seller.email || "No email"}
+                            </span>
+                          </div>
+
+                          <div className="mt-3">
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700">
+                              <ShieldCheck size={13} />
+                              Seller Account
+                            </span>
+                          </div>
+
                           <button
                             type="button"
                             disabled={
-                              actionLoading === seller._id
+                              actionLoading === sellerId
                             }
                             onClick={() =>
                               updateSellerStatus(
-                                seller._id,
+                                sellerId,
                                 !isActive
                               )
                             }
-                            className={`mt-4 w-full rounded-lg px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                            className={`mt-4 w-full rounded-xl px-4 py-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
                               isActive
                                 ? "bg-red-50 text-red-700 hover:bg-red-100"
-                                : "bg-green-50 text-green-700 hover:bg-green-100"
+                                : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
                             }`}
                           >
-                            {actionLoading === seller._id
+                            {actionLoading === sellerId
                               ? "Updating..."
                               : isActive
                               ? "Deactivate Seller"
@@ -519,7 +556,7 @@ export default function AdminSellersPage() {
               </div>
             </>
           )}
-        </div>
+        </section>
       </div>
     </main>
   );

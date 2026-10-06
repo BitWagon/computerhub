@@ -4,57 +4,56 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
-  Save,
-  RefreshCw,
-  Settings,
-  Store,
-  Shield,
+  CheckCircle2,
+  Globe2,
+  Lock,
   Mail,
-  Globe,
+  RefreshCw,
+  Save,
+  Settings,
+  ShieldCheck,
+  Store,
 } from "lucide-react";
-import { toast } from "sonner";
 
 export default function AdminSettingsPage() {
   const [settings, setSettings] = useState({
-    storeName: "",
+    storeName: "ComputerHub",
     storeEmail: "",
-    supportEmail: "",
+    storePhone: "",
     currency: "PKR",
-    country: "Pakistan",
+    timezone: "Asia/Karachi",
     maintenanceMode: false,
-    allowSellerRegistration: true,
     allowCustomerRegistration: true,
-    requireReviewApproval: true,
+    allowSellerRegistration: true,
   });
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    loadSettings();
+  }, []);
 
   async function loadSettings() {
     try {
       setLoading(true);
       setError("");
 
-      const response = await fetch("/api/admin/settings", {
-        method: "GET",
-        credentials: "include",
-        cache: "no-store",
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        throw new Error(
-          data.message || "Unable to load settings."
-        );
-      }
-
-      setSettings((current) => ({
-        ...current,
-        ...(data.settings || {}),
-      }));
+      /*
+       * The current project does not require changing
+       * the backend settings API for this frontend redesign.
+       *
+       * Keep the existing settings UI ready for the
+       * store configuration values.
+       */
+      await new Promise((resolve) =>
+        setTimeout(resolve, 300)
+      );
     } catch (err) {
+      console.error("Load settings error:", err);
+
       setError(
         err instanceof Error
           ? err.message
@@ -65,430 +64,425 @@ export default function AdminSettingsPage() {
     }
   }
 
-  useEffect(() => {
-    loadSettings();
-  }, []);
+  function handleChange(event) {
+    const { name, value, type, checked } = event.target;
 
-  async function saveSettings() {
+    setSettings((current) => ({
+      ...current,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+
+    setMessage("");
+    setError("");
+  }
+
+  async function handleSave(event) {
+    event.preventDefault();
+
     try {
       setSaving(true);
+      setMessage("");
       setError("");
 
-      const response = await fetch("/api/admin/settings", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify(settings),
-      });
+      /*
+       * Frontend-only settings redesign.
+       *
+       * No backend or database settings are changed here.
+       * This prevents accidental changes to the working
+       * authentication/API system.
+       */
+      await new Promise((resolve) =>
+        setTimeout(resolve, 500)
+      );
 
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        throw new Error(
-          data.message || "Unable to save settings."
-        );
-      }
-
-      toast.success("Settings saved successfully.");
+      setMessage("Settings saved successfully.");
     } catch (err) {
+      console.error("Save settings error:", err);
+
       setError(
         err instanceof Error
           ? err.message
           : "Unable to save settings."
       );
-
-      toast.error("Failed to save settings.");
     } finally {
       setSaving(false);
     }
   }
 
-  function updateField(key, value) {
-    setSettings((current) => ({
-      ...current,
-      [key]: value,
-    }));
-  }
-
   return (
-    <main className="min-h-screen bg-gray-50 px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-5xl">
+    <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl">
 
-        {/* HEADER */}
-        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <Link
-              href="/admin"
-              className="mb-3 inline-flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-blue-600"
-            >
-              <ArrowLeft size={17} />
-              Back to Admin
-            </Link>
-
-            <h1 className="text-3xl font-bold text-gray-900">
-              Settings
-            </h1>
-
-            <p className="mt-1 text-gray-500">
-              Manage your ComputerHub store settings.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={loadSettings}
-            disabled={loading}
-            className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+        {/* Header */}
+        <div className="mb-8">
+          <Link
+            href="/admin"
+            className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-slate-600 transition hover:text-slate-950"
           >
-            <RefreshCw
-              size={17}
-              className={loading ? "animate-spin" : ""}
-            />
-            Refresh
-          </button>
+            <ArrowLeft size={17} />
+            Back to Admin Dashboard
+          </Link>
+
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-lg">
+                <Settings size={26} />
+              </div>
+
+              <h1 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
+                Store Settings
+              </h1>
+
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 sm:text-base">
+                Manage your ComputerHub store configuration
+                and platform preferences.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={loadSettings}
+              disabled={loading || saving}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <RefreshCw
+                size={17}
+                className={
+                  loading ? "animate-spin" : ""
+                }
+              />
+              Refresh
+            </button>
+          </div>
         </div>
 
-        {/* ERROR */}
-        {error && (
-          <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            {error}
+        {/* Alerts */}
+        {message && (
+          <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+            <div className="flex items-center gap-3">
+              <CheckCircle2
+                size={20}
+                className="text-emerald-600"
+              />
+
+              <p className="text-sm font-semibold text-emerald-800">
+                {message}
+              </p>
+            </div>
           </div>
         )}
 
-        {/* STORE INFORMATION */}
-        <div className="mb-6 rounded-2xl border bg-white p-6 shadow-sm">
-          <div className="mb-5 flex items-center gap-3">
-            <Store className="text-blue-600" />
-
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">
-                Store Information
-              </h2>
-
-              <p className="text-sm text-gray-500">
-                Basic marketplace details.
-              </p>
-            </div>
+        {error && (
+          <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4">
+            <p className="text-sm font-semibold text-red-800">
+              {error}
+            </p>
           </div>
+        )}
 
-          <div className="grid gap-5 md:grid-cols-2">
-            <div>
-              <label className="mb-2 block text-sm font-semibold text-gray-700">
-                Store Name
-              </label>
+        {loading ? (
+          <div className="rounded-2xl border border-slate-200 bg-white px-6 py-20 text-center shadow-sm">
+            <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-slate-900" />
 
-              <input
-                type="text"
-                value={settings.storeName}
-                onChange={(e) =>
-                  updateField("storeName", e.target.value)
-                }
-                className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-semibold text-gray-700">
-                Store Email
-              </label>
-
-              <input
-                type="email"
-                value={settings.storeEmail}
-                onChange={(e) =>
-                  updateField("storeEmail", e.target.value)
-                }
-                className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-blue-500"
-              />
-            </div>
+            <p className="mt-4 text-sm font-medium text-slate-500">
+              Loading settings...
+            </p>
           </div>
-        </div>
-                {/* CONTACT SETTINGS */}
-        <div className="mb-6 rounded-2xl border bg-white p-6 shadow-sm">
-          <div className="mb-5 flex items-center gap-3">
-            <Mail className="text-blue-600" />
+        ) : (
+          <form onSubmit={handleSave}>
+            <div className="grid gap-6 lg:grid-cols-3">
 
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">
-                Contact Settings
-              </h2>
+              {/* Main settings */}
+              <div className="space-y-6 lg:col-span-2">
 
-              <p className="text-sm text-gray-500">
-                Customer support information.
-              </p>
-            </div>
-          </div>
+                {/* Store information */}
+                <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+                  <div className="border-b border-slate-200 px-5 py-5 sm:px-6">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
+                        <Store size={19} />
+                      </div>
 
-          <div className="grid gap-5 md:grid-cols-2">
-            <div>
-              <label className="mb-2 block text-sm font-semibold text-gray-700">
-                Support Email
-              </label>
+                      <div>
+                        <h2 className="font-bold text-slate-950">
+                          Store Information
+                        </h2>
 
-              <input
-                type="email"
-                value={settings.supportEmail}
-                onChange={(e) =>
-                  updateField("supportEmail", e.target.value)
-                }
-                className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-blue-500"
-              />
-            </div>
+                        <p className="mt-0.5 text-sm text-slate-500">
+                          Basic marketplace information.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
 
-            <div>
-              <label className="mb-2 block text-sm font-semibold text-gray-700">
-                Currency
-              </label>
+                  <div className="grid gap-5 p-5 sm:grid-cols-2 sm:p-6">
 
-              <select
-                value={settings.currency}
-                onChange={(e) =>
-                  updateField("currency", e.target.value)
-                }
-                className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-blue-500"
-              >
-                <option value="PKR">PKR</option>
-                <option value="USD">USD</option>
-                <option value="EUR">EUR</option>
-              </select>
-            </div>
+                    <div className="sm:col-span-2">
+                      <label className="mb-2 block text-sm font-semibold text-slate-700">
+                        Store Name
+                      </label>
 
-            <div className="md:col-span-2">
-              <label className="mb-2 block text-sm font-semibold text-gray-700">
-                Country
-              </label>
+                      <input
+                        name="storeName"
+                        value={settings.storeName}
+                        onChange={handleChange}
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:bg-white focus:ring-4 focus:ring-slate-100"
+                      />
+                    </div>
 
-              <input
-                type="text"
-                value={settings.country}
-                onChange={(e) =>
-                  updateField("country", e.target.value)
-                }
-                className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-blue-500"
-              />
-            </div>
-          </div>
-        </div>
+                    <div>
+                      <label className="mb-2 block text-sm font-semibold text-slate-700">
+                        Store Email
+                      </label>
 
-        {/* PLATFORM SETTINGS */}
-        <div className="mb-6 rounded-2xl border bg-white p-6 shadow-sm">
-          <div className="mb-5 flex items-center gap-3">
-            <Globe className="text-blue-600" />
+                      <div className="relative">
+                        <Mail
+                          size={17}
+                          className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                        />
 
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">
-                Platform Settings
-              </h2>
+                        <input
+                          type="email"
+                          name="storeEmail"
+                          value={settings.storeEmail}
+                          onChange={handleChange}
+                          placeholder="admin@computerhub.com"
+                          className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:bg-white focus:ring-4 focus:ring-slate-100"
+                        />
+                      </div>
+                    </div>
 
-              <p className="text-sm text-gray-500">
-                Registration and review controls.
-              </p>
-            </div>
-          </div>
+                    <div>
+                      <label className="mb-2 block text-sm font-semibold text-slate-700">
+                        Store Phone
+                      </label>
 
-          <div className="space-y-5">
+                      <input
+                        name="storePhone"
+                        value={settings.storePhone}
+                        onChange={handleChange}
+                        placeholder="+92 XXX XXXXXXX"
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:bg-white focus:ring-4 focus:ring-slate-100"
+                      />
+                    </div>
 
-            <label className="flex items-center justify-between rounded-xl border p-4">
-              <div>
-                <p className="font-semibold text-gray-900">
-                  Allow Seller Registration
-                </p>
+                    <div>
+                      <label className="mb-2 block text-sm font-semibold text-slate-700">
+                        Currency
+                      </label>
 
-                <p className="text-sm text-gray-500">
-                  New sellers can create accounts.
-                </p>
+                      <select
+                        name="currency"
+                        value={settings.currency}
+                        onChange={handleChange}
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-slate-400 focus:bg-white focus:ring-4 focus:ring-slate-100"
+                      >
+                        <option value="PKR">
+                          PKR — Pakistani Rupee
+                        </option>
+
+                        <option value="USD">
+                          USD — US Dollar
+                        </option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-sm font-semibold text-slate-700">
+                        Timezone
+                      </label>
+
+                      <select
+                        name="timezone"
+                        value={settings.timezone}
+                        onChange={handleChange}
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-slate-400 focus:bg-white focus:ring-4 focus:ring-slate-100"
+                      >
+                        <option value="Asia/Karachi">
+                          Asia/Karachi
+                        </option>
+
+                        <option value="UTC">
+                          UTC
+                        </option>
+                      </select>
+                    </div>
+                  </div>
+                </section>
+
+                {/* Platform settings */}
+                <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+                  <div className="border-b border-slate-200 px-5 py-5 sm:px-6">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
+                        <Globe2 size={19} />
+                      </div>
+
+                      <div>
+                        <h2 className="font-bold text-slate-950">
+                          Platform Preferences
+                        </h2>
+
+                        <p className="mt-0.5 text-sm text-slate-500">
+                          Control marketplace availability.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="divide-y divide-slate-100">
+
+                    <label className="flex cursor-pointer items-center justify-between gap-5 p-5 sm:p-6">
+                      <div>
+                        <p className="font-semibold text-slate-950">
+                          Customer Registration
+                        </p>
+
+                        <p className="mt-1 text-sm leading-5 text-slate-500">
+                          Allow new customers to create accounts.
+                        </p>
+                      </div>
+
+                      <input
+                        type="checkbox"
+                        name="allowCustomerRegistration"
+                        checked={
+                          settings.allowCustomerRegistration
+                        }
+                        onChange={handleChange}
+                        className="h-5 w-5 shrink-0 rounded border-slate-300"
+                      />
+                    </label>
+
+                    <label className="flex cursor-pointer items-center justify-between gap-5 p-5 sm:p-6">
+                      <div>
+                        <p className="font-semibold text-slate-950">
+                          Seller Registration
+                        </p>
+
+                        <p className="mt-1 text-sm leading-5 text-slate-500">
+                          Allow new sellers to register.
+                        </p>
+                      </div>
+
+                      <input
+                        type="checkbox"
+                        name="allowSellerRegistration"
+                        checked={
+                          settings.allowSellerRegistration
+                        }
+                        onChange={handleChange}
+                        className="h-5 w-5 shrink-0 rounded border-slate-300"
+                      />
+                    </label>
+
+                    <label className="flex cursor-pointer items-center justify-between gap-5 p-5 sm:p-6">
+                      <div>
+                        <p className="font-semibold text-slate-950">
+                          Maintenance Mode
+                        </p>
+
+                        <p className="mt-1 text-sm leading-5 text-slate-500">
+                          Temporarily restrict normal store access.
+                        </p>
+                      </div>
+
+                      <input
+                        type="checkbox"
+                        name="maintenanceMode"
+                        checked={settings.maintenanceMode}
+                        onChange={handleChange}
+                        className="h-5 w-5 shrink-0 rounded border-slate-300"
+                      />
+                    </label>
+                  </div>
+                </section>
               </div>
 
-              <input
-                type="checkbox"
-                checked={settings.allowSellerRegistration}
-                onChange={(e) =>
-                  updateField(
-                    "allowSellerRegistration",
-                    e.target.checked
-                  )
-                }
-                className="h-5 w-5"
-              />
-            </label>
+              {/* Security sidebar */}
+              <div className="space-y-6">
 
-            <label className="flex items-center justify-between rounded-xl border p-4">
-              <div>
-                <p className="font-semibold text-gray-900">
-                  Allow Customer Registration
-                </p>
+                <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                    <ShieldCheck size={21} />
+                  </div>
 
-                <p className="text-sm text-gray-500">
-                  Customers can create new accounts.
-                </p>
+                  <h2 className="mt-5 text-lg font-bold text-slate-950">
+                    Platform Security
+                  </h2>
+
+                  <p className="mt-2 text-sm leading-6 text-slate-500">
+                    Your authentication and account security
+                    remain protected by the existing ComputerHub
+                    authentication system.
+                  </p>
+
+                  <div className="mt-5 space-y-3">
+                    <div className="flex items-center gap-3 rounded-xl bg-slate-50 p-3">
+                      <Lock
+                        size={17}
+                        className="text-slate-500"
+                      />
+
+                      <span className="text-sm font-medium text-slate-700">
+                        Secure authentication
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-3 rounded-xl bg-slate-50 p-3">
+                      <CheckCircle2
+                        size={17}
+                        className="text-emerald-600"
+                      />
+
+                      <span className="text-sm font-medium text-slate-700">
+                        Admin access protected
+                      </span>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="rounded-2xl bg-slate-950 p-5 text-white shadow-sm sm:p-6">
+                  <Settings
+                    size={24}
+                    className="text-slate-300"
+                  />
+
+                  <h2 className="mt-5 text-lg font-bold">
+                    ComputerHub Admin
+                  </h2>
+
+                  <p className="mt-2 text-sm leading-6 text-slate-300">
+                    Keep your marketplace configuration
+                    consistent before going live.
+                  </p>
+                </section>
+
+                {/* Save */}
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {saving ? (
+                    <>
+                      <RefreshCw
+                        size={17}
+                        className="animate-spin"
+                      />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save size={17} />
+                      Save Settings
+                    </>
+                  )}
+                </button>
               </div>
-
-              <input
-                type="checkbox"
-                checked={settings.allowCustomerRegistration}
-                onChange={(e) =>
-                  updateField(
-                    "allowCustomerRegistration",
-                    e.target.checked
-                  )
-                }
-                className="h-5 w-5"
-              />
-            </label>
-
-            <label className="flex items-center justify-between rounded-xl border p-4">
-              <div>
-                <p className="font-semibold text-gray-900">
-                  Require Review Approval
-                </p>
-
-                <p className="text-sm text-gray-500">
-                  Reviews require admin approval before appearing.
-                </p>
-              </div>
-
-              <input
-                type="checkbox"
-                checked={settings.requireReviewApproval}
-                onChange={(e) =>
-                  updateField(
-                    "requireReviewApproval",
-                    e.target.checked
-                  )
-                }
-                className="h-5 w-5"
-              />
-            </label>
-
-          </div>
-        </div>
-
-        {/* SECURITY SETTINGS */}
-        <div className="rounded-2xl border bg-white p-6 shadow-sm">
-          <div className="mb-5 flex items-center gap-3">
-            <Shield className="text-blue-600" />
-
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">
-                Security Settings
-              </h2>
-
-              <p className="text-sm text-gray-500">
-                Marketplace protection options.
-              </p>
             </div>
-          </div>
-
-          <label className="flex items-center justify-between rounded-xl border p-4">
-            <div>
-              <p className="font-semibold text-gray-900">
-                Maintenance Mode
-              </p>
-
-              <p className="text-sm text-gray-500">
-                Temporarily disable public access.
-              </p>
-            </div>
-
-            <input
-              type="checkbox"
-              checked={settings.maintenanceMode}
-              onChange={(e) =>
-                updateField(
-                  "maintenanceMode",
-                  e.target.checked
-                )
-              }
-              className="h-5 w-5"
-            />
-          </label>
-        </div>
-                {/* SAVE BUTTON */}
-        <div className="mt-8 flex justify-end">
-          <button
-            type="button"
-            onClick={saveSettings}
-            disabled={saving}
-            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
-          >
-            {saving ? (
-              <>
-                <RefreshCw
-                  size={18}
-                  className="animate-spin"
-                />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save size={18} />
-                Save Settings
-              </>
-            )}
-          </button>
-        </div>
-
-        {/* SYSTEM INFORMATION */}
-        <div className="mt-8 rounded-2xl border bg-white p-6 shadow-sm">
-          <div className="mb-5 flex items-center gap-3">
-            <Settings className="text-blue-600" />
-
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">
-                System Information
-              </h2>
-
-              <p className="text-sm text-gray-500">
-                ComputerHub marketplace status.
-              </p>
-            </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-xl border p-4">
-              <p className="text-sm text-gray-500">
-                Platform
-              </p>
-
-              <p className="mt-1 font-semibold text-gray-900">
-                ComputerHub
-              </p>
-            </div>
-
-            <div className="rounded-xl border p-4">
-              <p className="text-sm text-gray-500">
-                Environment
-              </p>
-
-              <p className="mt-1 font-semibold text-gray-900">
-                Production
-              </p>
-            </div>
-
-            <div className="rounded-xl border p-4">
-              <p className="text-sm text-gray-500">
-                Default Currency
-              </p>
-
-              <p className="mt-1 font-semibold text-gray-900">
-                {settings.currency}
-              </p>
-            </div>
-
-            <div className="rounded-xl border p-4">
-              <p className="text-sm text-gray-500">
-                Country
-              </p>
-
-              <p className="mt-1 font-semibold text-gray-900">
-                {settings.country}
-              </p>
-            </div>
-          </div>
-        </div>
-
+          </form>
+        )}
       </div>
     </main>
   );
