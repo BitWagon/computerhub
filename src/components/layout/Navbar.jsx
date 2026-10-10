@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 
 import MobileMenu from "./MobileMenu";
+import LanguageSwitcher from "@/components/language/LanguageSwitcher";
 
 import {
   useCart,
@@ -263,6 +264,12 @@ export default function Navbar() {
               </span>
             </Link>
           )}
+
+           {/* LANGUAGE SELECTOR */}
+            <div className="hidden sm:block">
+              <LanguageSwitcher />
+            </div>
+
 
           {/* CART */}
           <Link
